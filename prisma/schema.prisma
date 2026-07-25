@@ -1,0 +1,86 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Employee {
+  id              String          @id @default(uuid())
+  firstName       String
+  lastName        String
+  role            String          // Doctor, Nurse, Receptionist, Admin, Assistant
+  payType         String          // Fixed Monthly, Session-based, Hourly
+  basicSalary     Float           @default(0)
+  hourlyRate      Float           @default(0)
+  sessionRate     Float           @default(0)
+  commissionRate  Float           @default(0)
+  biometricId     String          @unique // Matched with Hikvision employeeNo
+  epfEligible     Boolean         @default(true)
+  taxable         Boolean         @default(false)
+  active          Boolean         @default(true)
+  shiftId         String?
+  branchId        String?
+  annualLeave     Int             @default(14)
+  sickLeave       Int             @default(7)
+  casualLeave     Int             @default(3)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  attendanceLogs  AttendanceLog[]
+  leaveRequests   LeaveRequest[]
+}
+
+model AttendanceLog {
+  id             String    @id @default(uuid())
+  employeeId     String
+  date           String    // YYYY-MM-DD
+  checkIn        String    // HH:mm:ss
+  checkOut       String?   // HH:mm:ss
+  status         String    // On-Time, Late, Half-Day, On-Leave, Absent
+  overtimeHours  Float     @default(0)
+  noPayHours     Float     @default(0)
+  authMethod     String?   // Face, Fingerprint, Card, Manual
+  deviceId       String?   // Hikvision Terminal Serial No
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model LeaveRequest {
+  id          String   @id @default(uuid())
+  employeeId  String
+  type        String   // Annual, Sick, Casual
+  startDate   String   // YYYY-MM-DD
+  endDate     String   // YYYY-MM-DD
+  reason      String
+  status      String   @default("Pending") // Pending, Approved, Rejected
+  createdAt   DateTime @default(now())
+
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model Shift {
+  id        String   @id @default(uuid())
+  name      String
+  startTime String   // e.g. "08:00"
+  endTime   String   // e.g. "17:00"
+  graceMins Int      @default(15)
+  createdAt DateTime @default(now())
+}
+
+model BiometricDevice {
+  id           String   @id @default(uuid())
+  name         String
+  model        String   @default("DS-K1T320EFWX")
+  serialNumber String   @unique
+  ipAddress    String?
+  protocol     String   @default("ISUP 5.0")
+  location     String   @default("Main Entrance")
+  status       String   @default("Connected")
+  lastSyncTime DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
