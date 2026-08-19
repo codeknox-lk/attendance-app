@@ -166,9 +166,21 @@ export interface CompanyProfile {
   etfRegNo: string;
 }
 
+export interface UserAccount {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+  biometricId?: string;
+  employeeId?: string;
+}
+
 // ─── Context Interface ────────────────────────────────────────────────────────
 
-interface AppContextProps {
+export interface AppContextProps {
+  currentUser: UserAccount | null;
+  loginUser: (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string }) => Promise<{ success: boolean; error?: string }>;
+  logoutUser: () => void;
   employees: Employee[];
   attendanceLogs: AttendanceLog[];
   allowances: Allowance[];
@@ -336,6 +348,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("medicflow_user_session");
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(parsed);
+        setIsAdminAuthenticated(true);
+      }
+    } catch {}
+  }, []);
+
+  const loginUser = async (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string }) => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.success && data.user) {
+        setCurrentUser(data.user);
+        setIsAdminAuthenticated(true);
+        try {
+          localStorage.setItem("medicflow_user_session", JSON.stringify(data.user));
+        } catch {}
+        pushAudit({ action: "UPDATE", entity: "Auth", entityId: data.user.id, details: `Logged in as ${data.user.name} (${data.user.role})` });
+        return { success: true };
+      }
+      return { success: false, error: data.error || "Authentication failed" };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Network error";
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const logoutUser = () => {
+    setCurrentUser(null);
+    setIsAdminAuthenticated(false);
+    try {
+      localStorage.removeItem("medicflow_user_session");
+    } catch {}
+    pushAudit({ action: "UPDATE", entity: "Auth", entityId: "LOGOUT", details: "User signed out" });
+  };
+
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const verifyAdminPin = (pin: string) => {
     if (pin === adminPin || pin === "1234" || pin === "0000") {
@@ -345,7 +404,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return false;
   };
-  const logoutAdmin = () => setIsAdminAuthenticated(false);
+  const logoutAdmin = () => logoutUser();
 
   useEffect(() => {
     const hydrateFromDatabase = async () => {
@@ -775,6 +834,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
+      currentUser, loginUser, logoutUser,
       employees, attendanceLogs, allowances, employeeAllowances, shifts, leaveRequests,
       payrollHistory, branches, auditLogs, publicHolidays, apitSlabs, biometricSettings,
       epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,

@@ -338,6 +338,7 @@ function SalaryTrendChart({ history, isDark }: { history: PayrollPeriodSummary[]
 
 export default function Home() {
   const {
+    currentUser, loginUser, logoutUser,
     employees, attendanceLogs, allowances, employeeAllowances, shifts, leaveRequests,
     payrollHistory, auditLogs, publicHolidays, apitSlabs,
     biometricSettings, epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
@@ -359,6 +360,14 @@ export default function Home() {
   const [isDark, setIsDark] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => { const h = requestAnimationFrame(() => setHasMounted(true)); return () => cancelAnimationFrame(h); }, []);
+
+  // ── Authentication Portal state ──
+  const [loginType, setLoginType] = useState<"admin" | "staff">("admin");
+  const [loginUsername, setLoginUsername] = useState("admin");
+  const [loginPassword, setLoginPassword] = useState("admin123");
+  const [loginBiometricId, setLoginBiometricId] = useState("2");
+  const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // ── Admin Security state ──
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
@@ -609,7 +618,144 @@ export default function Home() {
 
   if (!hasMounted) return <div className="flex flex-1 min-h-screen items-center justify-center bg-zinc-950 text-zinc-500 text-xs font-bold">Initializing MedicFlow…</div>;
 
-  // ─── RENDER ───────────────────────────────────────────────────────────────
+  // ─── LOGIN PORTAL (UNAUTHENTICATED) ───────────────────────────────────────────
+  if (!currentUser) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-4 sm:p-6 ${isDark ? "bg-[#080c14] text-slate-100" : "bg-slate-100 text-slate-900"}`}>
+        <div className="w-full max-w-md space-y-6">
+          {/* Brand Logo Header */}
+          <div className="text-center space-y-2">
+            <div className="mx-auto h-14 w-14 bg-gradient-to-tr from-indigo-600 via-purple-600 to-emerald-400 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl glow-indigo">
+              MF
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-indigo-200 to-emerald-400 bg-clip-text text-transparent">
+              MedicFlow Dental OS
+            </h1>
+            <p className="text-xs text-slate-400">Cloud Biometric Attendance &amp; Payroll Management</p>
+          </div>
+
+          {/* Login Card */}
+          <div className={`p-6 sm:p-8 rounded-2xl border shadow-2xl backdrop-blur-xl ${isDark ? "bg-slate-900/90 border-slate-800/80" : "bg-white border-slate-200"}`}>
+            {/* Tabs: Admin vs Staff */}
+            <div className="flex p-1 bg-slate-950/40 rounded-xl border border-slate-800/50 mb-6">
+              <button
+                type="button"
+                onClick={() => { setLoginType("admin"); setLoginError(""); }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "admin" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : "text-slate-400 hover:text-slate-200"}`}
+              >
+                Clinic Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLoginType("staff"); setLoginError(""); }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "staff" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : "text-slate-400 hover:text-slate-200"}`}
+              >
+                Staff Portal
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setIsLoggingIn(true);
+                setLoginError("");
+                const res = await loginUser({
+                  loginType,
+                  username: loginUsername,
+                  password: loginPassword,
+                  biometricId: loginBiometricId,
+                });
+                setIsLoggingIn(false);
+                if (!res.success) {
+                  setLoginError(res.error || "Invalid login credentials");
+                }
+              }}
+              className="space-y-4"
+            >
+              {loginType === "admin" ? (
+                <>
+                  <div>
+                    <label className={labelCls}>Administrator Username</label>
+                    <input
+                      type="text"
+                      className={inputCls(isDark)}
+                      value={loginUsername}
+                      onChange={e => setLoginUsername(e.target.value)}
+                      placeholder="admin"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Password</label>
+                    <input
+                      type="password"
+                      className={inputCls(isDark)}
+                      value={loginPassword}
+                      onChange={e => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className={labelCls}>Staff Biometric ID / Staff No.</label>
+                    <input
+                      type="text"
+                      className={inputCls(isDark)}
+                      value={loginBiometricId}
+                      onChange={e => setLoginBiometricId(e.target.value)}
+                      placeholder="e.g. 2 or 1"
+                      required
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">Enter your assigned biometric ID (e.g. 2 for Ruwantha Alwis or 1 for Lakmina Ekanayake)</p>
+                  </div>
+                </>
+              )}
+
+              {loginError && (
+                <div className="p-3 rounded-lg text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg transition-all glow-indigo"
+              >
+                {isLoggingIn ? "Signing In..." : `Sign In to ${loginType === "admin" ? "Clinic Admin" : "Staff Portal"}`}
+              </button>
+            </form>
+
+            {/* Quick Demo Access */}
+            <div className="mt-6 pt-5 border-t border-slate-800/60 text-center space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Quick Demo Sign-In</span>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => loginUser({ loginType: "admin", username: "admin", password: "admin123" })}
+                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-indigo-300 rounded border border-slate-700 text-[10px] font-bold transition"
+                >
+                  👑 Admin Sign-In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => loginUser({ loginType: "staff", biometricId: "2" })}
+                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-emerald-300 rounded border border-slate-700 text-[10px] font-bold transition"
+                >
+                  🩺 Staff Sign-In (#2)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── MAIN APPLICATION RENDER ──────────────────────────────────────────────────
   return (
     <div className={`flex flex-1 min-h-screen ${isDark ? "dark bg-[#090d16] text-slate-100" : "bg-slate-50 text-slate-800"}`} style={isDark ? { colorScheme: "dark" } : {}}>
       {/* ── Sidebar ── */}
@@ -729,11 +875,21 @@ export default function Home() {
               <span>{biometricSettings.status === "Syncing" ? "🔄 Syncing Logs..." : "↻ Refresh Cloud Logs"}</span>
             </button>
 
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${isDark ? "bg-slate-900 border-slate-800 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}>
-              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-[10px] font-extrabold shadow">
-                A
+            <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border text-xs font-semibold ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-indigo-500 via-purple-500 to-emerald-400 flex items-center justify-center text-white text-[11px] font-black shadow glow-indigo">
+                {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
               </div>
-              <span>Clinic Administrator</span>
+              <div className="flex flex-col text-left">
+                <span className="font-bold text-xs leading-none">{currentUser?.name || "Clinic Administrator"}</span>
+                <span className="text-[9px] text-indigo-400 font-semibold uppercase tracking-wider leading-none mt-0.5">{currentUser?.role || "Admin"}</span>
+              </div>
+              <button
+                onClick={logoutUser}
+                className="ml-1 px-2 py-1 text-[10px] font-bold rounded border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition"
+                title="Sign Out"
+              >
+                Sign Out
+              </button>
             </div>
           </div>
         </header>
