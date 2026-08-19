@@ -32,3 +32,60 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
+
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, name, startTime, endTime, gracePeriod, overtimeStart, color } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Shift ID required" }, { status: 400 });
+    }
+
+    let shift = null;
+    try {
+      shift = await db.shift.update({
+        where: { id },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(startTime !== undefined && { startTime }),
+          ...(endTime !== undefined && { endTime }),
+          ...(gracePeriod !== undefined && { gracePeriod: Number(gracePeriod) }),
+          ...(overtimeStart !== undefined && { overtimeStart }),
+          ...(color !== undefined && { color }),
+        },
+      });
+    } catch {
+      // Fallback
+    }
+
+    return NextResponse.json({ success: true, shift: shift || body });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error updating shift";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Shift ID required" }, { status: 400 });
+    }
+
+    try {
+      await db.shift.delete({
+        where: { id },
+      });
+    } catch {
+      // Fallback
+    }
+
+    return NextResponse.json({ success: true, message: "Shift deleted successfully" });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error deleting shift";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}

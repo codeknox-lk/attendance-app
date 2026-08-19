@@ -462,7 +462,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Offline fallback
     }
   };
-  const updateEmployee = (id: string, f: Partial<Employee>) => { setEmployees(p => p.map(e => e.id===id ? {...e,...f} : e)); pushAudit({ action: "UPDATE", entity: "Employee", entityId: id, details: "Updated profile" }); };
+  const updateEmployee = async (id: string, f: Partial<Employee>) => {
+    setEmployees(p => p.map(e => e.id === id ? { ...e, ...f } : e));
+    pushAudit({ action: "UPDATE", entity: "Employee", entityId: id, details: "Updated profile" });
+    try {
+      await fetch("/api/employees", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...f }),
+      });
+    } catch {}
+  };
+
   const deleteEmployee = async (id: string) => {
     setEmployees(p => p.filter(e => e.id !== id));
     pushAudit({ action: "DELETE", entity: "Employee", entityId: id, details: "Deleted employee" });
@@ -476,11 +487,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addAttendanceLog = (log: Omit<AttendanceLog,"id">) => setAttendanceLogs(p => [{ ...log, id: `LOG-${Date.now()}-${log.employeeId}` }, ...p]);
-  const updateAttendanceLog = (id: string, f: Partial<AttendanceLog>) => { setAttendanceLogs(p => p.map(l => l.id===id ? {...l,...f} : l)); pushAudit({ action: "UPDATE", entity: "AttendanceLog", entityId: id, details: "Adjusted log" }); };
+  
+  const updateAttendanceLog = async (id: string, f: Partial<AttendanceLog>) => {
+    setAttendanceLogs(p => p.map(l => l.id === id ? { ...l, ...f } : l));
+    pushAudit({ action: "UPDATE", entity: "AttendanceLog", entityId: id, details: "Adjusted log" });
+    try {
+      await fetch("/api/attendance", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...f }),
+      });
+    } catch {}
+  };
 
-  const addAllowance = (a: Omit<Allowance,"id">) => { const na: Allowance = { ...a, id: `ALL-${String(Date.now()).slice(-4)}` }; setAllowances(p => [...p, na]); pushAudit({ action: "CREATE", entity: "Allowance", entityId: na.id, details: `Added: ${na.name}` }); };
+  const addAllowance = async (a: Omit<Allowance,"id">) => {
+    const na: Allowance = { ...a, id: `ALL-${String(Date.now()).slice(-4)}` };
+    setAllowances(p => [...p, na]);
+    pushAudit({ action: "CREATE", entity: "Allowance", entityId: na.id, details: `Added: ${na.name}` });
+    try {
+      await fetch("/api/allowances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(na),
+      });
+    } catch {}
+  };
+
   const updateAllowance = (id: string, f: Partial<Allowance>) => setAllowances(p => p.map(a => a.id===id ? {...a,...f} : a));
-  const deleteAllowance = (id: string) => { setAllowances(p => p.filter(a => a.id!==id)); setEmployeeAllowances(p => p.filter(ea => ea.allowanceId!==id)); pushAudit({ action: "DELETE", entity: "Allowance", entityId: id, details: "Deleted allowance" }); };
+  
+  const deleteAllowance = async (id: string) => {
+    setAllowances(p => p.filter(a => a.id !== id));
+    setEmployeeAllowances(p => p.filter(ea => ea.allowanceId !== id));
+    pushAudit({ action: "DELETE", entity: "Allowance", entityId: id, details: "Deleted allowance" });
+    try {
+      await fetch(`/api/allowances?id=${id}`, {
+        method: "DELETE",
+      });
+    } catch {}
+  };
 
   const assignAllowanceToEmployee = (employeeId: string, allowanceId: string, overrideAmount?: number) => {
     if (employeeAllowances.some(ea => ea.employeeId===employeeId && ea.allowanceId===allowanceId)) return;
@@ -492,29 +536,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmployees(p => p.map(e => e.id===employeeId ? { ...e, allowanceIds: e.allowanceIds.filter(id => id!==allowanceId) } : e));
   };
 
-  const addShift = (s: Omit<Shift,"id">) => { const ns: Shift = { ...s, id: `SHF-${String(Date.now()).slice(-4)}` }; setShifts(p => [...p, ns]); pushAudit({ action: "CREATE", entity: "Shift", entityId: ns.id, details: `Added shift: ${ns.name}` }); };
-  const updateShift = (id: string, f: Partial<Shift>) => setShifts(p => p.map(s => s.id===id ? {...s,...f} : s));
-  const deleteShift = (id: string) => { setShifts(p => p.filter(s => s.id!==id)); setEmployees(p => p.map(e => e.shiftId===id ? {...e,shiftId:null} : e)); };
-
-  const addLeaveRequest = (req: Omit<LeaveRequest,"id"|"appliedAt">) => { const nr: LeaveRequest = { ...req, id: `LVR-${String(Date.now()).slice(-4)}`, appliedAt: nowStr() }; setLeaveRequests(p => [nr,...p]); pushAudit({ action: "CREATE", entity: "LeaveRequest", entityId: nr.id, details: `${req.type} leave by ${req.employeeId}` }); };
-  const updateLeaveRequest = (id: string, f: Partial<LeaveRequest>) => setLeaveRequests(p => p.map(r => r.id===id ? {...r,...f} : r));
-  const approveLeave = (id: string) => {
-    setLeaveRequests(p => p.map(r => r.id===id ? {...r, status:"Approved"} : r));
-    const req = leaveRequests.find(r => r.id===id); if (!req) return;
-    const start = new Date(req.startDate); const end = new Date(req.endDate);
-    const newLogs: AttendanceLog[] = [];
-    for (const d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
-      const ds = d.toISOString().split("T")[0];
-      newLogs.push({ id: `LOG-${ds}-${req.employeeId}-LV`, employeeId: req.employeeId, date: ds, checkIn: "--:--:--", checkOut: null, status: "On-Leave", overtimeHours: 0, noPayHours: req.type==="Unpaid"?8:0, leaveRequestId: id });
-    }
-    setAttendanceLogs(p => { const filtered = p.filter(l => !newLogs.some(nl => nl.employeeId===l.employeeId && nl.date===l.date)); return [...newLogs, ...filtered]; });
-    if (req.type !== "Unpaid") {
-      const days = Math.round((end.getTime()-start.getTime())/(86400000))+1;
-      setEmployees(p => p.map(e => { if(e.id!==req.employeeId) return e; const lb={...e.leaveBalances}; const k=req.type.toLowerCase() as "annual"|"sick"|"casual"; lb[k]=Math.max(0,lb[k]-days); return {...e,leaveBalances:lb}; }));
-    }
-    pushAudit({ action: "APPROVE", entity: "LeaveRequest", entityId: id, details: `Approved ${req.type} leave` });
+  const addShift = async (s: Omit<Shift,"id">) => {
+    const ns: Shift = { ...s, id: `SHF-${String(Date.now()).slice(-4)}` };
+    setShifts(p => [...p, ns]);
+    pushAudit({ action: "CREATE", entity: "Shift", entityId: ns.id, details: `Added shift: ${ns.name}` });
+    try {
+      await fetch("/api/shifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ns),
+      });
+    } catch {}
   };
-  const rejectLeave = (id: string) => { setLeaveRequests(p => p.map(r => r.id===id ? {...r,status:"Rejected"} : r)); pushAudit({ action: "REJECT", entity: "LeaveRequest", entityId: id, details: "Rejected leave" }); };
+
+  const updateShift = async (id: string, f: Partial<Shift>) => {
+    setShifts(p => p.map(s => s.id === id ? { ...s, ...f } : s));
+    try {
+      await fetch("/api/shifts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...f }),
+      });
+    } catch {}
+  };
+
+  const deleteShift = async (id: string) => {
+    setShifts(p => p.filter(s => s.id !== id));
+    setEmployees(p => p.map(e => e.shiftId === id ? { ...e, shiftId: null } : e));
+    try {
+      await fetch(`/api/shifts?id=${id}`, {
+        method: "DELETE",
+      });
+    } catch {}
+  };
+
+  const addLeaveRequest = async (req: Omit<LeaveRequest,"id"|"appliedAt">) => {
+    const nr: LeaveRequest = { ...req, id: `LVR-${String(Date.now()).slice(-4)}`, appliedAt: nowStr() };
+    setLeaveRequests(p => [nr,...p]);
+    pushAudit({ action: "CREATE", entity: "LeaveRequest", entityId: nr.id, details: `${req.type} leave by ${req.employeeId}` });
+    try {
+      await fetch("/api/leaves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      });
+    } catch {}
+  };
+
+  const updateLeaveRequest = (id: string, f: Partial<LeaveRequest>) => setLeaveRequests(p => p.map(r => r.id===id ? {...r,...f} : r));
+  
+  const approveLeave = async (id: string) => {
+    setLeaveRequests(p => p.map(r => r.id === id ? { ...r, status: "Approved" } : r));
+    pushAudit({ action: "APPROVE", entity: "LeaveRequest", entityId: id, details: "Approved leave" });
+    try {
+      await fetch("/api/leaves", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "Approved" }),
+      });
+    } catch {}
+  };
+
+  const rejectLeave = async (id: string) => {
+    setLeaveRequests(p => p.map(r => r.id === id ? { ...r, status: "Rejected" } : r));
+    pushAudit({ action: "REJECT", entity: "LeaveRequest", entityId: id, details: "Rejected leave" });
+    try {
+      await fetch("/api/leaves", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "Rejected" }),
+      });
+    } catch {}
+  };
 
   const finalizePayroll = (period: Omit<PayrollPeriod,"id"|"finalizedAt"|"status">) => {
     if (payrollHistory.find(p => p.month===period.month)) return;

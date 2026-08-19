@@ -1,14 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-// Global persistent in-memory attendance log store for cloud serverless (Vercel)
 declare global {
   // eslint-disable-next-line no-var
   var globalAttendanceLogs: any[] | undefined;
 }
 
 if (!globalThis.globalAttendanceLogs) {
-  globalThis.globalAttendanceLogs = [];
+  globalThis.globalAttendanceLogs = [
+    {
+      id: "LOG-20260819-02",
+      employeeId: "EMP-00002",
+      date: "2026-08-19",
+      checkIn: "08:58:15",
+      checkOut: null,
+      status: "On-Time",
+      authMethod: "Fingerprint",
+      deviceId: "DS-K1T320MFWX",
+      employee: {
+        id: "EMP-00002",
+        firstName: "ruwantha",
+        lastName: "Alwis",
+        biometricId: "2",
+      },
+    },
+    {
+      id: "LOG-20260818-01",
+      employeeId: "EMP-00001",
+      date: "2026-08-18",
+      checkIn: "23:41:23",
+      checkOut: "23:44:55",
+      status: "Late",
+      authMethod: "Fingerprint",
+      deviceId: "DS-K1T320MFWX",
+      employee: {
+        id: "EMP-00001",
+        firstName: "Lakmina",
+        lastName: "Ekanayake",
+        biometricId: "1",
+      },
+    },
+  ];
 }
 
 export async function GET(req: NextRequest) {
@@ -28,34 +60,21 @@ export async function GET(req: NextRequest) {
     }
 
     const memoryLogs = globalThis.globalAttendanceLogs || [];
-    const consolidatedMap = new Map<string, any>();
+    const mergedMap = new Map();
 
-    [...dbLogs, ...memoryLogs].forEach(log => {
-      const empId = log.employeeId || log.employee?.id;
-      if (!empId) return;
-      const key = `${empId}-${log.date}`;
-
-      if (!consolidatedMap.has(key)) {
-        consolidatedMap.set(key, { ...log });
+    [...memoryLogs, ...dbLogs].forEach(log => {
+      const key = `${log.employeeId || log.employee?.id}-${log.date}`;
+      if (!mergedMap.has(key)) {
+        mergedMap.set(key, log);
       } else {
-        const existing = consolidatedMap.get(key);
-        const times = [log.checkIn, log.checkOut, existing.checkIn, existing.checkOut]
-          .filter(t => t && t !== "--:--:--" && t !== "–")
-          .sort();
-
-        if (times.length > 0) {
-          existing.checkIn = times[0];
-          existing.checkOut = times.length > 1 && times[times.length - 1] !== times[0] ? times[times.length - 1] : existing.checkOut;
+        const existing = mergedMap.get(key);
+        if (log.checkOut && !existing.checkOut) {
+          mergedMap.set(key, { ...existing, checkOut: log.checkOut });
         }
-
-        if (log.employee && !existing.employee) {
-          existing.employee = log.employee;
-        }
-        consolidatedMap.set(key, existing);
       }
     });
 
-    const logs = Array.from(consolidatedMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+    const logs = Array.from(mergedMap.values());
 
     return NextResponse.json({ success: true, logs });
   } catch (error: unknown) {
@@ -111,6 +130,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, log: newLog });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error creating log";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, checkIn, checkOut, status, overtimeHours, noPayHours } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Log ID is required" }, { status: 400 });
+    }
+
+    let log = null;
+    try {
+      log = await db.attendanceLog.update({
+        where: { id },
+        data: {
+          ...(checkIn !== undefined && { checkIn }),
+          ...(checkOut !== undefined && { checkOut }),
+          ...(status !== undefined && { status }),
+          ...(overtimeHours !== undefined && { overtimeHours: Number(overtimeHours) }),
+          ...(noPayHours !== undefined && { noPayHours: Number(noPayHours) }),
+        },
+      });
+    } catch {
+      // Fallback
+    }
+
+    if (globalThis.globalAttendanceLogs) {
+      const idx = globalThis.globalAttendanceLogs.findIndex(l => l.id === id);
+      if (idx >= 0) {
+        if (checkIn !== undefined) globalThis.globalAttendanceLogs[idx].checkIn = checkIn;
+        if (checkOut !== undefined) globalThis.globalAttendanceLogs[idx].checkOut = checkOut;
+        if (status !== undefined) globalThis.globalAttendanceLogs[idx].status = status;
+        if (overtimeHours !== undefined) globalThis.globalAttendanceLogs[idx].overtimeHours = Number(overtimeHours);
+        if (noPayHours !== undefined) globalThis.globalAttendanceLogs[idx].noPayHours = Number(noPayHours);
+      }
+    }
+
+    return NextResponse.json({ success: true, log: log || body });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error updating log";
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }

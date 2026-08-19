@@ -53,6 +53,59 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const {
+      id,
+      firstName,
+      lastName,
+      role,
+      payType,
+      basicSalary,
+      hourlyRate,
+      sessionRate,
+      commissionRate,
+      biometricId,
+      epfEligible,
+      taxable,
+      active,
+    } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Employee ID is required" }, { status: 400 });
+    }
+
+    let employee = null;
+    try {
+      employee = await db.employee.update({
+        where: { id },
+        data: {
+          ...(firstName !== undefined && { firstName }),
+          ...(lastName !== undefined && { lastName }),
+          ...(role !== undefined && { role }),
+          ...(payType !== undefined && { payType }),
+          ...(basicSalary !== undefined && { basicSalary: Number(basicSalary) }),
+          ...(hourlyRate !== undefined && { hourlyRate: Number(hourlyRate) }),
+          ...(sessionRate !== undefined && { sessionRate: Number(sessionRate) }),
+          ...(commissionRate !== undefined && { commissionRate: Number(commissionRate) }),
+          ...(biometricId !== undefined && { biometricId: String(biometricId) }),
+          ...(epfEligible !== undefined && { epfEligible: Boolean(epfEligible) }),
+          ...(taxable !== undefined && { taxable: Boolean(taxable) }),
+          ...(active !== undefined && { active: Boolean(active) }),
+        },
+      });
+    } catch {
+      // Fallback
+    }
+
+    return NextResponse.json({ success: true, employee: employee || body });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error updating employee";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

@@ -191,17 +191,23 @@ export async function POST(req: NextRequest) {
       // Database bypass fallback
     }
 
-    // Check existing attendance log for today
+    // Check existing attendance log for today (match by database ID or biometric ID)
     let existingLog = null;
     try {
       existingLog = await db.attendanceLog.findFirst({
-        where: { employeeId: employeeId, date: dateStr },
+        where: {
+          date: dateStr,
+          OR: [
+            { employeeId: employeeId },
+            { employee: { biometricId: biometricId } },
+          ],
+        },
       });
     } catch {
       // Database bypass fallback
     }
 
-    let actionType = "checkIn";
+    let actionType = existingLog ? "checkOut" : "checkIn";
 
     // Calculate Status based on arrival time (Standard shift 08:30 AM with 15-min grace)
     const arrivalHour = eventDateObj.getHours();
