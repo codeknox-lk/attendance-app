@@ -123,6 +123,41 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
     </svg>
   ),
+  Download: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+  ),
+  Shield: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
+  User: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  FileText: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  Check: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  X: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
+  Moon: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+    </svg>
+  ),
 };
 
 // ─── Salary Trend Chart (needs own state for hover tooltips) ────────────────
@@ -808,16 +843,18 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => loginUser({ loginType: "admin", username: "admin", password: "admin123" })}
-                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-indigo-300 rounded border border-slate-700 text-[10px] font-bold transition"
+                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-indigo-300 rounded border border-slate-700 text-[10px] font-bold transition flex items-center justify-center gap-1.5"
                 >
-                  👑 Admin Sign-In
+                  <Icons.Shield className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Admin Sign-In</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => loginUser({ loginType: "staff", biometricId: "2" })}
-                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-emerald-300 rounded border border-slate-700 text-[10px] font-bold transition"
+                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-emerald-300 rounded border border-slate-700 text-[10px] font-bold transition flex items-center justify-center gap-1.5"
                 >
-                  🩺 Staff Sign-In (#2)
+                  <Icons.User className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Staff Sign-In (#2)</span>
                 </button>
               </div>
             </div>
@@ -911,8 +948,11 @@ export default function Home() {
             </span>
             <span className="text-[10px] opacity-75">{isAdminAuthenticated ? "Lock" : "Unlock"}</span>
           </button>
-          <button onClick={()=>setIsDark(!isDark)} className={`w-full flex items-center gap-2 px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
-            {isDark?"☀ Light Mode":"☾ Dark Mode"}
+          <button onClick={()=>setIsDark(!isDark)} className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
+            <span className="flex items-center gap-2">
+              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-indigo-500" />}
+              <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+            </span>
           </button>
         </div>
       </aside>
@@ -944,7 +984,8 @@ export default function Home() {
                   : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
               }`}
             >
-              <span>{biometricSettings.status === "Syncing" ? "🔄 Syncing Logs..." : "↻ Refresh Cloud Logs"}</span>
+              <Icons.Refresh className={`w-3.5 h-3.5 ${biometricSettings.status === "Syncing" ? "animate-spin text-amber-400" : "text-indigo-400"}`} />
+              <span>{biometricSettings.status === "Syncing" ? "Syncing Logs..." : "Refresh Cloud Logs"}</span>
             </button>
 
             <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border text-xs font-semibold ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
@@ -1151,7 +1192,10 @@ export default function Home() {
                   <input value={attendanceSearch} onChange={e=>setAttendanceSearch(e.target.value)} placeholder="Search staff…" className={`${inputCls(isDark)} w-48`}/>
                   {monthSelector(selectedMonth, setSelectedMonth)}
                 </div>
-                <button onClick={downloadAttendanceCSV} className={`px-3 py-1.5 text-xs font-bold rounded border ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>⬇ Export CSV</button>
+                <button onClick={downloadAttendanceCSV} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <Icons.Download className="w-3.5 h-3.5" />
+                  <span>Export CSV</span>
+                </button>
               </div>
               {/* Status filters */}
               <div className="flex gap-1.5 flex-wrap">
@@ -1310,8 +1354,14 @@ export default function Home() {
                           <td className="px-4 py-3">
                             {req.status==="Pending"&&(
                               <div className="flex gap-1.5">
-                                <button onClick={()=>approveLeave(req.id)} className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-700 transition">✓ Approve</button>
-                                <button onClick={()=>rejectLeave(req.id)} className="px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded hover:bg-rose-700 transition">✗ Reject</button>
+                                <button onClick={()=>approveLeave(req.id)} className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-700 transition flex items-center gap-1">
+                                  <Icons.Check className="w-3 h-3" />
+                                  <span>Approve</span>
+                                </button>
+                                <button onClick={()=>rejectLeave(req.id)} className="px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded hover:bg-rose-700 transition flex items-center gap-1">
+                                  <Icons.X className="w-3 h-3" />
+                                  <span>Reject</span>
+                                </button>
                               </div>
                             )}
                           </td>
@@ -1343,12 +1393,18 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   {monthSelector(selectedMonth, setSelectedMonth)}
                   <span className={`text-[10px] font-mono ${isDark?"text-zinc-500":"text-zinc-400"}`}>{dateRange.startDate} → {dateRange.endDate}</span>
-                  {isCurrentMonthFinalized && <span className={`px-2 py-1 rounded text-[10px] font-bold border ${statusColor("Finalized",isDark)}`}>🔒 Finalized</span>}
+                  {isCurrentMonthFinalized && <span className={`px-2 py-1 rounded text-[10px] font-bold border flex items-center gap-1 ${statusColor("Finalized",isDark)}`}><Icons.LockClosed className="w-3 h-3" /><span>Finalized</span></span>}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={downloadPayrollCSV} className={`px-3 py-1.5 text-xs font-bold rounded border ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>⬇ Export CSV</button>
-                  {!isCurrentMonthFinalized&&<button onClick={handleFinalizePayroll} className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 text-white hover:bg-indigo-700 transition shadow">🔒 Finalize Month</button>}
-                  <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-bold rounded border ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>⬇ EPF Form C3</button>
+                  <button onClick={downloadPayrollCSV} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                    <Icons.Download className="w-3.5 h-3.5" />
+                    <span>Export CSV</span>
+                  </button>
+                  {!isCurrentMonthFinalized&&<button onClick={handleFinalizePayroll} className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 text-white hover:bg-indigo-700 transition shadow flex items-center gap-1.5"><Icons.LockClosed className="w-3.5 h-3.5" /><span>Finalize Month</span></button>}
+                  <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                    <Icons.Download className="w-3.5 h-3.5" />
+                    <span>EPF Form C3</span>
+                  </button>
                 </div>
               </div>
 
@@ -1772,7 +1828,7 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => {
-                            setSettingsSaveMsg("✓ Biometric settings updated successfully!");
+                            setSettingsSaveMsg("Biometric settings updated successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
                           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition"
@@ -1794,7 +1850,8 @@ export default function Home() {
                           onClick={fetchMachinePersons}
                           className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
                         >
-                          ↻ Fetch Machine Persons
+                          <Icons.Refresh className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Fetch Machine Persons</span>
                         </button>
                       </div>
 
@@ -1826,7 +1883,7 @@ export default function Home() {
                                   <td className="px-4 py-3 text-right">
                                     {matchedEmp ? (
                                       <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
-                                        ✓ Linked ({matchedEmp.firstName})
+                                        Linked ({matchedEmp.firstName})
                                       </span>
                                     ) : (
                                       <button
@@ -1836,7 +1893,7 @@ export default function Home() {
                                         }}
                                         className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20"
                                       >
-                                        + Import to Staff
+                                        Import to Staff
                                       </button>
                                     )}
                                   </td>
@@ -1878,9 +1935,9 @@ export default function Home() {
                               setSimulatingScan(false);
                               const info = res as { success?: boolean; receiverResponse?: { data?: { action?: string; time?: string } } } | undefined;
                               if (info?.success) {
-                                setSimResult(`✓ Face Verified! ${info.receiverResponse?.data?.action || "punch"} recorded at ${info.receiverResponse?.data?.time || "now"}`);
+                                setSimResult(`Face Verified! ${info.receiverResponse?.data?.action || "punch"} recorded at ${info.receiverResponse?.data?.time || "now"}`);
                               } else {
-                                setSimResult("✗ Event simulation failed");
+                                setSimResult("Event simulation failed");
                               }
                             }}
                             disabled={simulatingScan}
@@ -1951,7 +2008,7 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => {
-                            setSettingsSaveMsg("✓ Clinic profile saved successfully!");
+                            setSettingsSaveMsg("Clinic profile saved successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
                           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition"
@@ -1976,10 +2033,10 @@ export default function Home() {
                       onSubmit={(e) => {
                         e.preventDefault();
                         if (updateAdminPin(newPinInput)) {
-                          setPinChangeMsg("✓ Admin PIN updated successfully!");
+                          setPinChangeMsg("Admin PIN updated successfully!");
                           setNewPinInput("");
                         } else {
-                          setPinChangeMsg("✗ PIN must be exactly 4 digits");
+                          setPinChangeMsg("PIN must be exactly 4 digits");
                         }
                       }}
                       className={`p-5 rounded-xl border space-y-4 text-xs ${isDark ? "border-zinc-800 bg-zinc-950/40" : "border-zinc-200 bg-white shadow-sm"}`}
@@ -2097,12 +2154,13 @@ export default function Home() {
                         <button
                           onClick={async () => {
                             await importMachinePersonsToStaff();
-                            setSettingsSaveMsg("✓ Imported enrolled staff from fingerprint machine!");
+                            setSettingsSaveMsg("Imported enrolled staff from fingerprint machine!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
-                          className={`px-3 py-1.5 text-xs font-bold rounded border shadow transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200"}`}
+                          className={`px-3 py-1.5 text-xs font-bold rounded border shadow transition flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200"}`}
                         >
-                          ↻ Import Staff from Terminal
+                          <Icons.Refresh className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Import Staff from Terminal</span>
                         </button>
                         <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftId:null,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
                       </div>
@@ -2791,11 +2849,13 @@ export default function Home() {
               {/* Footer Actions */}
               <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-200 dark:border-zinc-800">
                 <div className="flex gap-2">
-                  <button onClick={downloadPayrollCSV} className={`px-3 py-1.5 text-xs font-bold rounded border ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
-                    ⬇ Export Period CSV
+                  <button onClick={downloadPayrollCSV} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                    <Icons.Download className="w-3.5 h-3.5" />
+                    <span>Export Period CSV</span>
                   </button>
-                  <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-bold rounded border ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
-                    ⬇ EPF Form C3
+                  <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                    <Icons.Download className="w-3.5 h-3.5" />
+                    <span>EPF Form C3</span>
                   </button>
                 </div>
                 <button onClick={() => setSelectedHistoryPeriodId(null)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>
