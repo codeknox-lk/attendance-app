@@ -487,11 +487,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     hydrateFromDatabase();
 
-    // Live background polling every 5 seconds for instant biometric scan updates
+    // Live background polling every 4 seconds for instant biometric scan & staff updates
     const pollInterval = setInterval(async () => {
       try {
-        const attRes = await fetch("/api/attendance");
-        const attData = await attRes.json();
+        const [attRes, empRes] = await Promise.all([
+          fetch("/api/attendance"),
+          fetch("/api/employees"),
+        ]);
+        const [attData, empData] = await Promise.all([
+          attRes.json(),
+          empRes.json(),
+        ]);
+
+        if (empData.success && empData.employees && Array.isArray(empData.employees)) {
+          const dbEmployees: Employee[] = empData.employees.map((e: Record<string, unknown>) => ({
+            id: String(e.id),
+            firstName: String(e.firstName),
+            lastName: String(e.lastName),
+            role: (e.role as Employee["role"]) || "Doctor",
+            payType: (e.payType as Employee["payType"]) || "Fixed Monthly",
+            basicSalary: Number(e.basicSalary) || 0,
+            hourlyRate: Number(e.hourlyRate) || 0,
+            sessionRate: Number(e.sessionRate) || 0,
+            commissionRate: Number(e.commissionRate) || 0,
+            biometricId: String(e.biometricId),
+            epfEligible: Boolean(e.epfEligible),
+            taxable: Boolean(e.taxable),
+            active: Boolean(e.active),
+            shiftId: (e.shiftId as string) || null,
+            branchId: (e.branchId as string) || null,
+            allowanceIds: [],
+            leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
+          }));
+          setEmployees(dbEmployees);
+        }
+
         if (attData.success && attData.logs) {
           const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
             id: String(l.id),
@@ -509,7 +539,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setAttendanceLogs(dbLogs);
         }
       } catch {}
-    }, 5000);
+    }, 4000);
 
     return () => clearInterval(pollInterval);
   }, []);
