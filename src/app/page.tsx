@@ -626,6 +626,13 @@ export default function Home() {
       const punctualCount = empLogs.filter(l => l.status==="On-Time").length;
       const absentCount = empLogs.filter(l => l.status==="Absent").length;
       const totalOtHours = empLogs.reduce((s,l) => s+l.overtimeHours, 0);
+      const totalWorkHours = empLogs.reduce((s, l) => {
+        if (!l.checkIn || !l.checkOut) return s;
+        const [hIn, mIn] = l.checkIn.split(':').map(Number);
+        const [hOut, mOut] = l.checkOut.split(':').map(Number);
+        const duration = (hOut + mOut/60) - (hIn + mIn/60);
+        return s + (duration > 0 ? duration : 0);
+      }, 0);
 
       // Per-employee allowances
       const empAllowanceIds = employeeAllowances.filter(ea => ea.employeeId===emp.id).map(ea => ea.allowanceId);
@@ -682,7 +689,7 @@ export default function Home() {
       const netSalary = Math.max(0, preNetSalary - apitMonthly);
 
       return { 
-        employee:emp, sessionCount, punctualCount, absentCount, totalOtHours, 
+        employee:emp, sessionCount, punctualCount, absentCount, totalOtHours, totalWorkHours,
         basicEarnings, otPay, sessionPay, totalAllowances:totalAllowancesVal, 
         noPayDeduction, manualBonus, manualDeduction, payslipNote: adj.note, 
         employeeEpf, employerEpf, employerEtf, grossEarnings, apitMonthly, netSalary,
@@ -1109,7 +1116,7 @@ export default function Home() {
               </div>
 
               {/* Charts Row */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {/* ── Premium Area Chart with hover tooltips ── */}
                 <div className={`${cardCls(isDark)} col-span-2`}>
                   {payrollHistory.length >= 2 && (
@@ -1290,7 +1297,7 @@ export default function Home() {
                     <thead className={`${isDark?"bg-zinc-900 border-zinc-800":"bg-zinc-50 border-zinc-200"} border-b`}>
                       <tr>
                         {["Date","Employee","Status","Check In","Check Out","OT Hrs","No-Pay Hrs",""].map(h=>(
-                          <th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400 ws-nowrap">{h}</th>
+                          <th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -1302,7 +1309,7 @@ export default function Home() {
                           <tr key={log.id} className={`hover:${isDark?"bg-zinc-900/50":"bg-zinc-50/80"} transition`}>
                             <td className="px-4 py-3 font-mono text-zinc-400">{log.date}</td>
                             <td className="px-4 py-3 font-semibold">{empName}</td>
-                            <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold border ws-nowrap ${statusColor(log.status,isDark)}`}>{log.status}</span></td>
+                            <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap ${statusColor(log.status,isDark)}`}>{log.status}</span></td>
                             <td className="px-4 py-3 font-mono">{log.checkIn}</td>
                             <td className="px-4 py-3 font-mono">{log.checkOut||"–"}</td>
                             <td className="px-4 py-3 text-center">{log.overtimeHours}</td>
@@ -1456,7 +1463,7 @@ export default function Home() {
           {activeTab==="payroll" && (
             <div className="space-y-4">
               {/* Summary cards */}
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[{label:"Gross Salaries Pool",value:`LKR ${payrollTotals.gross.toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"Net Remittances",value:`LKR ${payrollTotals.net.toLocaleString()}`,color:isDark ? "text-indigo-400" : "text-indigo-600"},{label:"EPF (8%+12%)",value:`LKR ${(payrollTotals.epfEmp+payrollTotals.epfEmr).toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"APIT Total",value:`LKR ${Math.round(payrollTotals.apit).toLocaleString()}`,color:isDark ? "text-amber-400" : "text-amber-600"}].map(s=>(
                   <div key={s.label} className={cardCls(isDark)}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">{s.label}</p>
@@ -1491,42 +1498,44 @@ export default function Home() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead className={`border-b ${isDark?"bg-zinc-900/60 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                      <tr>{["Staff Name","Pay Basis","Base Earning","OT Earn","Allowances","No-Pay Cut","EPF (8%)","APIT","Net Salary",""].map(h=><th key={h} className="px-5 py-3.5 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400 ws-nowrap">{h}</th>)}</tr>
+                      <tr>{["Staff Name","Pay Basis","Base Earning","OT Earn","Allowances","No-Pay Cut","EPF (8%)","APIT","Net Salary",""].map(h=><th key={h} className="px-5 py-3.5 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400 whitespace-nowrap">{h}</th>)}</tr>
                     </thead>
                     <tbody className={`divide-y ${isDark?"divide-zinc-800/70":"divide-zinc-100"}`}>
                       {payrollCalcs.map(c=>(
                         <tr key={c.employee.id} className={`hover:${isDark?"bg-zinc-900/30":"bg-zinc-50"} transition ${isCurrentMonthFinalized?"opacity-80":""}`}>
-                          <td className="px-5 py-3.5 ws-nowrap">
+                          <td className="px-5 py-3.5 whitespace-nowrap">
                             <p className="font-bold">{c.employee.firstName} {c.employee.lastName}</p>
                             <p className="text-[10px] text-zinc-400">{c.employee.role}</p>
                           </td>
-                          <td className="px-5 py-3.5"><span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ws-nowrap ${isDark?"bg-zinc-900 border-zinc-700 text-zinc-400":"bg-zinc-50 border-zinc-200 text-zinc-600"}`}>{c.employee.payType}</span></td>
-                          <td className="px-5 py-3.5 font-mono font-semibold ws-nowrap">
+                          <td className="px-5 py-3.5"><span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${isDark?"bg-zinc-900 border-zinc-700 text-zinc-400":"bg-zinc-50 border-zinc-200 text-zinc-600"}`}>{c.employee.payType}</span></td>
+                          <td className="px-5 py-3.5 font-mono font-semibold whitespace-nowrap">
                             <p>LKR {c.basicEarnings.toLocaleString()}</p>
                             {c.employee.payType==="Session-based"&&<p className="text-[9px] text-indigo-400 mt-0.5">{c.sessionCount} sessions</p>}
                           </td>
-                          <td className="px-5 py-3.5 font-mono text-zinc-500 ws-nowrap">LKR {c.otPay.toLocaleString()}</td>
-                          <td className="px-5 py-3.5 font-mono text-emerald-500 font-bold ws-nowrap">+LKR {c.totalAllowances.toLocaleString()}</td>
-                          <td className="px-5 py-3.5 font-mono text-rose-500 ws-nowrap">{c.noPayDeduction>0?`-LKR ${Math.round(c.noPayDeduction).toLocaleString()}`:"LKR 0"}</td>
-                          <td className="px-5 py-3.5 font-mono text-zinc-400 ws-nowrap">{c.employee.epfEligible?`-LKR ${Math.round(c.employeeEpf).toLocaleString()}`:"Exempt"}</td>
-                          <td className="px-5 py-3.5 font-mono text-amber-500 ws-nowrap">{c.apitMonthly>0?`-LKR ${Math.round(c.apitMonthly).toLocaleString()}`:"—"}</td>
-                          <td className="px-5 py-3.5 font-mono font-extrabold text-indigo-500 ws-nowrap">LKR {Math.round(c.netSalary).toLocaleString()}</td>
-                          <td className="px-5 py-3.5 text-right ws-nowrap space-x-1.5">
-                            <button
-                              onClick={() => {
-                                const adjKey = `${selectedMonth}_${c.employee.id}`;
-                                const existing = manualAdjustments[adjKey] || { bonusAmount: 0, deductionAmount: 0, note: "" };
-                                setAdjustingPayslipEmpId(c.employee.id);
-                                setManualBonusInput(existing.bonusAmount);
-                                setManualDeductionInput(existing.deductionAmount);
-                                setPayslipNoteInput(existing.note);
-                              }}
-                              className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition flex items-center gap-1 ${isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"}`}
-                            >
-                              <Icons.Edit className="w-3 h-3" />
-                              <span>Adjust</span>
-                            </button>
-                            <button onClick={()=>setSelectedPaySlip(c.employee.id)} className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition ${isDark?"bg-zinc-850 border-zinc-700 text-white hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 shadow-sm hover:bg-zinc-50"}`}>Pay Slip</button>
+                          <td className="px-5 py-3.5 font-mono text-zinc-500 whitespace-nowrap">LKR {c.otPay.toLocaleString()}</td>
+                          <td className="px-5 py-3.5 font-mono text-emerald-500 font-bold whitespace-nowrap">+LKR {c.totalAllowances.toLocaleString()}</td>
+                          <td className="px-5 py-3.5 font-mono text-rose-500 whitespace-nowrap">{c.noPayDeduction>0?`-LKR ${Math.round(c.noPayDeduction).toLocaleString()}`:"LKR 0"}</td>
+                          <td className="px-5 py-3.5 font-mono text-zinc-400 whitespace-nowrap">{c.employee.epfEligible?`-LKR ${Math.round(c.employeeEpf).toLocaleString()}`:"Exempt"}</td>
+                          <td className="px-5 py-3.5 font-mono text-amber-500 whitespace-nowrap">{c.apitMonthly>0?`-LKR ${Math.round(c.apitMonthly).toLocaleString()}`:"—"}</td>
+                          <td className="px-5 py-3.5 font-mono font-extrabold text-indigo-500 whitespace-nowrap">LKR {Math.round(c.netSalary).toLocaleString()}</td>
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  const adjKey = `${selectedMonth}_${c.employee.id}`;
+                                  const existing = manualAdjustments[adjKey] || { bonusAmount: 0, deductionAmount: 0, note: "" };
+                                  setAdjustingPayslipEmpId(c.employee.id);
+                                  setManualBonusInput(existing.bonusAmount);
+                                  setManualDeductionInput(existing.deductionAmount);
+                                  setPayslipNoteInput(existing.note);
+                                }}
+                                className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition inline-flex items-center gap-1 ${isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"}`}
+                              >
+                                <Icons.Edit className="w-3 h-3" />
+                                <span>Adjust</span>
+                              </button>
+                              <button onClick={()=>setSelectedPaySlip(c.employee.id)} className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition ${isDark?"bg-zinc-850 border-zinc-700 text-white hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 shadow-sm hover:bg-zinc-50"}`}>Pay Slip</button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2108,7 +2117,7 @@ export default function Home() {
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Global Dynamic Bonuses</h3>
                       <p className="text-[10px] text-zinc-500">These rates apply to all employees by default unless overridden in their specific staff profile.</p>
                       
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className={labelCls}>Worked Day Bonus (LKR)</label>
                           <input type="number" className={inputCls(isDark)} value={salarySettings.globalWorkedDayBonus} onChange={e=>updateSalarySettings({globalWorkedDayBonus: parseFloat(e.target.value)||0})}/>
@@ -2133,7 +2142,7 @@ export default function Home() {
                     {/* EPF / ETF */}
                     <div className="space-y-4">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Statutory Rates (EPF/ETF)</h3>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><label className={labelCls}>Employee EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employeeRate} onChange={e=>setEpfForm(p=>({...p, employeeRate: parseFloat(e.target.value)||0}))}/></div>
                         <div><label className={labelCls}>Employer EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employerRate} onChange={e=>setEpfForm(p=>({...p, employerRate: parseFloat(e.target.value)||0}))}/></div>
                         <div><label className={labelCls}>ETF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.etfRate} onChange={e=>setEpfForm(p=>({...p, etfRate: parseFloat(e.target.value)||0}))}/></div>
@@ -2541,7 +2550,7 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2"><label className={labelCls}>Biometric ID</label><input required className={inputCls(isDark)} value={newEmp.biometricId} onChange={e=>setNewEmp(p=>({...p,biometricId:e.target.value}))}/></div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className={labelCls}>Worked Day Bonus (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.attendanceBonusRate} onChange={e=>setNewEmp(p=>({...p,attendanceBonusRate:parseFloat(e.target.value)||0}))}/></div>
                 <div><label className={labelCls}>Punctual Bonus (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.punctualBonusRate} onChange={e=>setNewEmp(p=>({...p,punctualBonusRate:parseFloat(e.target.value)||0}))}/></div>
                 <div><label className={labelCls}>Income Bonus (%)</label><input type="number" className={inputCls(isDark)} value={newEmp.incomeBonusPercentage} onChange={e=>setNewEmp(p=>({...p,incomeBonusPercentage:parseFloat(e.target.value)||0}))}/></div>
@@ -2695,6 +2704,11 @@ export default function Home() {
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
                     <span className="text-zinc-500">Basic / Session Pay</span>
                     <span className="font-mono font-semibold">LKR {calc.basicEarnings.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                  </div>
+
+                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                    <span className="text-zinc-500">Total Worked Hours</span>
+                    <span className="font-mono font-semibold">{calc.totalWorkHours ? calc.totalWorkHours.toFixed(1) : "0"}h</span>
                   </div>
                   
                   {empAllowances.map((a, i) => (
