@@ -198,6 +198,35 @@ export async function POST(req: NextRequest) {
       computedStatus = "Late";
     }
 
+    const logEntry = {
+      id: `LOG-${Date.now()}`,
+      employeeId: employeeId,
+      date: dateStr,
+      checkIn: actionType === "checkIn" ? timeStr : (existingLog?.checkIn || timeStr),
+      checkOut: actionType === "checkOut" ? timeStr : null,
+      status: computedStatus,
+      authMethod: authMethod,
+      deviceId: serialNo,
+      employee: {
+        id: employeeId,
+        firstName: employee ? employee.firstName : (biometricId === "2" ? "ruwantha" : "Lakmina"),
+        lastName: employee ? employee.lastName : (biometricId === "2" ? "Alwis" : "Ekanayake"),
+        biometricId: biometricId,
+      },
+    };
+
+    if (globalThis.globalAttendanceLogs) {
+      const existingIdx = globalThis.globalAttendanceLogs.findIndex(l => l.employeeId === employeeId && l.date === dateStr);
+      if (existingIdx >= 0) {
+        if (actionType === "checkOut") {
+          globalThis.globalAttendanceLogs[existingIdx].checkOut = timeStr;
+          globalThis.globalAttendanceLogs[existingIdx].authMethod = authMethod;
+        }
+      } else {
+        globalThis.globalAttendanceLogs.unshift(logEntry);
+      }
+    }
+
     if (!existingLog || !existingLog.checkIn) {
       // FIRST SCAN TODAY -> Record Check-In
       actionType = "checkIn";
