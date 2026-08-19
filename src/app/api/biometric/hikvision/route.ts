@@ -7,6 +7,20 @@ import { db } from "@/lib/db";
  * Handles real-time face, fingerprint, and card scanning events pushed by the terminal.
  */
 
+interface LogRecord {
+  id?: string;
+  employeeId?: string;
+  date?: string;
+  checkIn?: string;
+  checkOut?: string | null;
+  authMethod?: string;
+  employee?: {
+    id?: string;
+    biometricId?: string;
+  } | null;
+  [key: string]: unknown;
+}
+
 interface HikvisionEventBody {
   AccessControllerEvent?: {
     deviceName?: string;
@@ -192,7 +206,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check existing attendance log for today in DB or Memory
-    let existingLog: any = null;
+    let existingLog: LogRecord | null = null;
     try {
       existingLog = await db.attendanceLog.findFirst({
         where: {
@@ -208,8 +222,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (!existingLog && globalThis.globalAttendanceLogs) {
-      existingLog = globalThis.globalAttendanceLogs.find(
-        (l: any) =>
+      existingLog = (globalThis.globalAttendanceLogs as LogRecord[]).find(
+        (l: LogRecord) =>
           l.date === dateStr &&
           (l.employeeId === employeeId || l.employee?.biometricId === biometricId)
       ) || null;
@@ -233,12 +247,12 @@ export async function POST(req: NextRequest) {
     if (isCheckOut && existingLog) {
       // SECOND SCAN TODAY -> Record Check-Out
       if (globalThis.globalAttendanceLogs) {
-        const idx = globalThis.globalAttendanceLogs.findIndex(
-          (l: any) =>
+        const idx = (globalThis.globalAttendanceLogs as LogRecord[]).findIndex(
+          (l: LogRecord) =>
             l.date === dateStr &&
             (l.employeeId === employeeId || l.employee?.biometricId === biometricId)
         );
-        if (idx >= 0) {
+        if (idx >= 0 && globalThis.globalAttendanceLogs[idx]) {
           globalThis.globalAttendanceLogs[idx].checkOut = timeStr;
           globalThis.globalAttendanceLogs[idx].authMethod = authMethod;
         }
