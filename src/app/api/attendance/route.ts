@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+interface LogRecord {
+  employeeId?: string;
+  date?: string;
+  checkOut?: string | null;
+  employee?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    biometricId?: string;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+}
+
 declare global {
-  var globalAttendanceLogs: Record<string, unknown>[] | undefined;
+  var globalAttendanceLogs: LogRecord[] | undefined;
 }
 
 if (!globalThis.globalAttendanceLogs) {
@@ -61,7 +75,7 @@ export async function GET(req: NextRequest) {
     const memoryLogs = globalThis.globalAttendanceLogs || [];
     const mergedMap = new Map();
 
-    [...memoryLogs, ...dbLogs].forEach((log: any) => {
+    [...memoryLogs, ...dbLogs].forEach((log: LogRecord) => {
       const key = `${log.employeeId || log.employee?.id}-${log.date}`;
       if (!mergedMap.has(key)) {
         mergedMap.set(key, log);
