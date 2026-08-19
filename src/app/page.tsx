@@ -471,6 +471,7 @@ export default function Home() {
     isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
     updateCompanyProfile, updatePayslipAdjustment,
     machinePersons, fetchMachinePersons, isFetchingPersons,
+    monthlyExcessIncome, updateMonthlyExcessIncome,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
@@ -519,7 +520,7 @@ export default function Home() {
     firstName:"", lastName:"", role:"Nurse", payType:"Fixed Monthly",
     basicSalary:50000, hourlyRate:300, sessionRate:0, commissionRate:0,
     biometricId:"", epfEligible:true, taxable:false, shiftIds:[], branchId:null,
-    allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3},
+    allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3}, attendanceBonusRate:0, punctualBonusRate:0, incomeBonusPercentage:0,
   });
 
   const [drawerLogId, setDrawerLogId] = useState<string|null>(null);
@@ -623,6 +624,7 @@ export default function Home() {
     return activeEmployees.map(emp => {
       const empLogs = attendanceLogs.filter(l => l.employeeId===emp.id && l.date>=dateRange.startDate && l.date<=dateRange.endDate);
       const sessionCount = empLogs.filter(l => ["On-Time","Late","Half-Day"].includes(l.status)).length;
+      const punctualCount = empLogs.filter(l => l.status==="On-Time").length;
       const absentCount = empLogs.filter(l => l.status==="Absent").length;
       const totalOtHours = empLogs.reduce((s,l) => s+l.overtimeHours, 0);
 
@@ -662,17 +664,29 @@ export default function Home() {
       const manualBonus = adj.bonusAmount || 0;
       const manualDeduction = adj.deductionAmount || 0;
 
+      // Dynamic Bonuses
+      const workedDaysBonus = sessionCount * (emp.attendanceBonusRate || 0);
+      const punctualDaysBonus = punctualCount * (emp.punctualBonusRate || 0);
+      const exceedIncomeBonus = (monthlyExcessIncome[selectedMonth] || 0) * ((emp.incomeBonusPercentage || 0) / 100);
+
       const employeeEpf = emp.epfEligible ? epfBase * (epfSettings.employeeRate/100) : 0;
       const employerEpf = emp.epfEligible ? epfBase * (epfSettings.employerRate/100) : 0;
       const employerEtf = emp.epfEligible ? epfBase * (epfSettings.etfRate/100) : 0;
-      const grossEarnings = basicEarnings + otPay + totalAllowancesVal + manualBonus;
+      
+      const grossEarnings = basicEarnings + otPay + totalAllowancesVal + manualBonus + workedDaysBonus + punctualDaysBonus + exceedIncomeBonus;
       const preNetSalary = grossEarnings - employeeEpf - noPayDeduction - manualDeduction;
       const apitMonthly = emp.taxable ? calcApit(Math.max(0, preNetSalary * 12)) : 0;
       const netSalary = Math.max(0, preNetSalary - apitMonthly);
 
-      return { employee:emp, sessionCount, absentCount, totalOtHours, basicEarnings, otPay, sessionPay, totalAllowances:totalAllowancesVal, noPayDeduction, manualBonus, manualDeduction, payslipNote: adj.note, employeeEpf, employerEpf, employerEtf, grossEarnings, apitMonthly, netSalary };
+      return { 
+        employee:emp, sessionCount, punctualCount, absentCount, totalOtHours, 
+        basicEarnings, otPay, sessionPay, totalAllowances:totalAllowancesVal, 
+        noPayDeduction, manualBonus, manualDeduction, payslipNote: adj.note, 
+        employeeEpf, employerEpf, employerEtf, grossEarnings, apitMonthly, netSalary,
+        workedDaysBonus, punctualDaysBonus, exceedIncomeBonus
+      };
     });
-  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, shifts, calcApit, manualAdjustments, selectedMonth]);
+  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, shifts, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome]);
 
   const payrollTotals = useMemo(() => payrollCalcs.reduce((t,c) => ({ gross:t.gross+c.grossEarnings, net:t.net+c.netSalary, epfEmp:t.epfEmp+c.employeeEpf, epfEmr:t.epfEmr+c.employerEpf, etf:t.etf+c.employerEtf, apit:t.apit+c.apitMonthly }), {gross:0,net:0,epfEmp:0,epfEmr:0,etf:0,apit:0}), [payrollCalcs]);
 
@@ -680,9 +694,9 @@ export default function Home() {
 
   // ── Handlers ──
 
-  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, epfEligible:emp.epfEligible, taxable:emp.taxable, shiftIds:emp.shiftIds || [], branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances }); setShowAddEmpModal(true); };
+  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, epfEligible:emp.epfEligible, taxable:emp.taxable, shiftIds:emp.shiftIds || [], branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage }); setShowAddEmpModal(true); };
 
-  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}}); };
+  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0}); };
 
   const openDrawer = (log: AttendanceLog) => { setPunchEdit({checkIn:log.checkIn,checkOut:log.checkOut||"",status:log.status,overtimeHours:log.overtimeHours,noPayHours:log.noPayHours}); setDrawerLogId(log.id); };
 
@@ -1447,6 +1461,19 @@ export default function Home() {
                 ))}
               </div>
 
+              {/* Monthly Excess Income Input */}
+              <div className={cardCls(isDark)}>
+                <label className="text-xs font-bold mr-3">Clinic Excess Income (above target) for this month (LKR):</label>
+                <input 
+                  type="number" 
+                  className={inputCls(isDark) + " w-48 inline-block"} 
+                  value={monthlyExcessIncome[selectedMonth] || ""} 
+                  onChange={e => updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value) || 0)} 
+                  placeholder="e.g. 320000" 
+                />
+                <span className="text-[10px] ml-3 text-zinc-500">Used to calculate 1% Exceed Income Bonus for eligible staff.</span>
+              </div>
+
               {/* Toolbar */}
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
@@ -2172,6 +2199,9 @@ export default function Home() {
                               branchId: null,
                               allowanceIds: [],
                               leaveBalances: { annual: 14, sick: 7, casual: 3 },
+                              attendanceBonusRate: 0,
+                              punctualBonusRate: 0,
+                              incomeBonusPercentage: 0,
                             });
                             setShowAddEmpModal(true);
                           }}
@@ -2180,7 +2210,7 @@ export default function Home() {
                           <Icons.Refresh className="w-3.5 h-3.5 text-indigo-400" />
                           <span>Import Staff from Terminal</span>
                         </button>
-                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
+                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
                       </div>
                     </div>
                     <div className="space-y-2 max-w-3xl">
@@ -2246,6 +2276,9 @@ export default function Home() {
                                 branchId: null,
                                 allowanceIds: [],
                                 leaveBalances: { annual: 14, sick: 7, casual: 3 },
+                                attendanceBonusRate: 0,
+                                punctualBonusRate: 0,
+                                incomeBonusPercentage: 0,
                               });
                             }}
                             className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 hover:bg-indigo-500 text-white shadow transition flex items-center gap-1.5"
@@ -2318,7 +2351,7 @@ export default function Home() {
                                       <button
                                         type="button"
                                         onClick={() => {
-                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true, shiftIds: [], branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 } });
+                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true, shiftIds: [], branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 }, attendanceBonusRate: 0, punctualBonusRate: 0, incomeBonusPercentage: 0 });
                                         }}
                                         className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20"
                                       >
@@ -2500,6 +2533,11 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2"><label className={labelCls}>Biometric ID</label><input required className={inputCls(isDark)} value={newEmp.biometricId} onChange={e=>setNewEmp(p=>({...p,biometricId:e.target.value}))}/></div>
               </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className={labelCls}>Worked Day Bonus (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.attendanceBonusRate} onChange={e=>setNewEmp(p=>({...p,attendanceBonusRate:parseFloat(e.target.value)||0}))}/></div>
+                <div><label className={labelCls}>Punctual Bonus (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.punctualBonusRate} onChange={e=>setNewEmp(p=>({...p,punctualBonusRate:parseFloat(e.target.value)||0}))}/></div>
+                <div><label className={labelCls}>Income Bonus (%)</label><input type="number" className={inputCls(isDark)} value={newEmp.incomeBonusPercentage} onChange={e=>setNewEmp(p=>({...p,incomeBonusPercentage:parseFloat(e.target.value)||0}))}/></div>
+              </div>
               <div><label className={labelCls}>Assign Shifts</label><div className="flex flex-wrap gap-2 mt-1">{shifts.map(s=>{const has=newEmp.shiftIds?.includes(s.id);return(<label key={s.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,shiftIds:has?p.shiftIds.filter((id: string)=>id!==s.id):[...(p.shiftIds||[]),s.id]}))}/>{s.name}</label>);})}</div></div>
 
               <div><label className={labelCls}>Assign Allowances</label><div className="flex flex-wrap gap-2 mt-1">{allowances.map(al=>{const has=newEmp.allowanceIds.includes(al.id);return(<label key={al.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,allowanceIds:has?p.allowanceIds.filter(id=>id!==al.id):[...p.allowanceIds,al.id]}))}/>{al.name}</label>);})}</div></div>
@@ -2622,48 +2660,109 @@ export default function Home() {
         const calc = payrollCalcs.find(c=>c.employee.id===selectedPaySlip);
         if (!calc) return null;
         const emp = calc.employee;
+        
+        // Calculate detailed allowances for payslip
+        const empAllowances = employeeAllowances.filter(ea => ea.employeeId === emp.id).map(ea => {
+          const allDef = allowances.find(a => a.id === ea.allowanceId);
+          const amt = ea.overrideAmount ?? allDef?.amount ?? 0;
+          return { name: allDef?.name || "Allowance", amount: amt, epfApplicable: allDef?.epfApplicable };
+        });
+        const epfBase = calc.basicEarnings + empAllowances.filter(a => a.epfApplicable).reduce((sum, a) => sum + a.amount, 0);
+        
+        // Date formatting for month
+        const [year, month] = selectedMonth.split("-");
+        const monthName = new Date(parseInt(year), parseInt(month)-1, 1).toLocaleString('default', { month: 'long' });
+
         return (
           <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm print:bg-white print:inset-0 ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-            <div className="bg-white text-zinc-900 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl print:shadow-none print:rounded-none">
-              <div className="p-6">
-                <div className="text-center mb-4 pb-4 border-b-2 border-dashed border-zinc-300">
-                  <p className="font-extrabold text-base tracking-wider uppercase text-zinc-900">{companyProfile.clinicName}</p>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{companyProfile.address}</p>
-                  <p className="text-[10px] font-mono text-zinc-500 mt-1">EPF Reg: {companyProfile.epfRegNo} · Salary Period: {dateRange.startDate} → {dateRange.endDate}</p>
+            <div className="bg-white text-zinc-900 w-full max-w-4xl rounded-xl overflow-hidden shadow-2xl print:shadow-none print:rounded-none text-xs">
+              <div className="p-8">
+                <div className="text-center mb-6">
+                  <p className="font-bold text-lg uppercase tracking-wider">{companyProfile.clinicName}</p>
+                  <p className="text-sm">PAY SLIP</p>
                 </div>
-                <div className="text-center mb-4">
-                  <p className="font-extrabold text-base">{emp.firstName} {emp.lastName}</p>
-                  <p className="text-[10px] text-zinc-500">{emp.role} · Biometric ID: {emp.biometricId}</p>
-                </div>
-                <div className="space-y-2 text-xs border-t border-dashed border-zinc-300 pt-4 mb-4">
-                  {[
-                    ["Basic / Session Pay", `LKR ${calc.basicEarnings.toLocaleString()}`],
-                    ["Overtime Pay", `LKR ${calc.otPay.toLocaleString()}`],
-                    ["Allowances", `LKR ${calc.totalAllowances.toLocaleString()}`],
-                    ...(calc.manualBonus > 0 ? [["Manual Addition / Bonus", `+LKR ${calc.manualBonus.toLocaleString()}`]] : []),
-                    ["No-Pay Deduction", calc.noPayDeduction > 0 ? `-LKR ${Math.round(calc.noPayDeduction).toLocaleString()}` : "LKR 0"],
-                    ...(calc.manualDeduction > 0 ? [["Manual Deduction", `-LKR ${calc.manualDeduction.toLocaleString()}`]] : []),
-                    ["EPF Employee 8%", calc.employee.epfEligible ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString()}` : "Exempt"],
-                    ["APIT Tax", calc.apitMonthly > 0 ? `-LKR ${Math.round(calc.apitMonthly).toLocaleString()}` : "—"]
-                  ].map(([l, v]) => (
-                    <div key={l} className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
-                      <span className="text-zinc-500">{l}</span>
-                      <span className="font-mono font-semibold">{v}</span>
-                    </div>
-                  ))}
-                </div>
+                
+                <table className="w-full text-left border-collapse">
+                  <tbody>
+                    <tr className="border-b border-t border-zinc-200">
+                      <td className="py-2 w-1/4">Employee Name</td>
+                      <td className="py-2 w-1/3">Ms. {emp.firstName} {emp.lastName}</td>
+                      <td className="py-2 w-1/5">{emp.role}</td>
+                      <td className="py-2 text-right">{monthName}</td>
+                    </tr>
+                    <tr><td colSpan={4} className="h-4"></td></tr>
+                    
+                    <tr>
+                      <td className="py-1">Basic Salary</td>
+                      <td></td>
+                      <td className="text-right pr-4">{calc.basicEarnings.toLocaleString()}</td>
+                      <td className="text-right">{calc.basicEarnings.toFixed(2)}</td>
+                    </tr>
+                    
+                    {empAllowances.map((a, i) => (
+                      <tr key={i}>
+                        <td className="py-1">{a.name}</td>
+                        <td></td>
+                        <td className="text-right pr-4">{a.amount.toLocaleString()}</td>
+                        <td className="text-right">{a.amount.toFixed(2)}</td>
+                      </tr>
+                    ))}
+
+                    <tr>
+                      <td className="py-1">Worked Days Bonus</td>
+                      <td>Number of days physically present</td>
+                      <td className="text-right pr-4">{calc.sessionCount} &nbsp;&nbsp;&nbsp;&nbsp; {emp.attendanceBonusRate}</td>
+                      <td className="text-right">{calc.workedDaysBonus?.toFixed(2) || "0.00"}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1">Punctual Days Bonus</td>
+                      <td>Number of days arrived on time</td>
+                      <td className="text-right pr-4">{calc.punctualCount} &nbsp;&nbsp;&nbsp;&nbsp; {emp.punctualBonusRate}</td>
+                      <td className="text-right">{calc.punctualDaysBonus?.toFixed(2) || "0.00"}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1">OT Hours</td>
+                      <td>Total overtime hours worked</td>
+                      <td className="text-right pr-4">{calc.totalOtHours} &nbsp;&nbsp;&nbsp;&nbsp; {Math.round(calc.otPay / (calc.totalOtHours || 1))}</td>
+                      <td className="text-right">{calc.otPay.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1">Exceed Income bonus</td>
+                      <td>Clinic income above the target</td>
+                      <td className="text-right pr-4">{emp.incomeBonusPercentage}% &nbsp;&nbsp;&nbsp;&nbsp; {monthlyExcessIncome[selectedMonth] || 0}</td>
+                      <td className="text-right">{calc.exceedIncomeBonus?.toFixed(2) || "0.00"}</td>
+                    </tr>
+                    
+                    <tr className="border-t border-zinc-200">
+                      <td className="py-2 font-bold">Gross Salary</td>
+                      <td className="py-2 font-bold">The Final Calculation</td>
+                      <td></td>
+                      <td className="py-2 text-right font-bold">{calc.grossEarnings.toFixed(2)}</td>
+                    </tr>
+                    
+                    <tr>
+                      <td className="py-1">Deductions</td>
+                      <td>EPF Contribution</td>
+                      <td className="text-right pr-4">8% &nbsp;&nbsp;&nbsp;&nbsp; {epfBase.toLocaleString()}</td>
+                      <td className="text-right">{Math.round(calc.employeeEpf).toFixed(2)}</td>
+                    </tr>
+                    
+                    <tr className="border-t border-zinc-200">
+                      <td className="py-2 font-bold">Net Pay</td>
+                      <td></td>
+                      <td></td>
+                      <td className="py-2 text-right font-bold text-base">{Math.round(calc.netSalary).toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
 
                 {calc.payslipNote && (
-                  <div className="p-2.5 rounded bg-zinc-50 border border-zinc-200 text-[10px] text-zinc-600 mb-4 italic">
+                  <div className="mt-4 p-2.5 rounded bg-zinc-50 border border-zinc-200 text-[10px] text-zinc-600 italic">
                     <span className="font-bold not-italic text-zinc-800">Remark: </span>{calc.payslipNote}
                   </div>
                 )}
-
-                <div className="flex justify-between border-t-2 border-dashed border-zinc-300 pt-3 mb-5">
-                  <span className="font-extrabold">NET SALARY</span>
-                  <span className="font-extrabold text-lg text-indigo-700">LKR {Math.round(calc.netSalary).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-[10px] text-zinc-400 border-t border-dashed border-zinc-200 pt-3">
+                
+                <div className="flex justify-between text-[10px] text-zinc-400 mt-12 pt-4">
                   <div><p className="mb-4">___________________</p><p>Authorized Signature</p></div>
                   <div className="text-right"><p className="mb-4">___________________</p><p>Employee Signature</p></div>
                 </div>

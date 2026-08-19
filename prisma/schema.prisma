@@ -32,8 +32,11 @@ model Employee {
   epfEligible     Boolean          @default(true)
   taxable         Boolean          @default(false)
   active          Boolean          @default(true)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  attendanceBonusRate Float          @default(0)
+  punctualBonusRate   Float          @default(0)
+  incomeBonusPercentage Float        @default(0)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   shiftIds        String[]         @default([])
 
@@ -87,9 +90,10 @@ model Allowance {
   name        String
   description String?
   amount      Float
-  type        String              @default("Monthly") // Monthly, Daily, Per-Session
-  isTaxable   Boolean             @default(false)
-  employees   EmployeeAllowance[]
+  type          String              @default("Monthly") // Monthly, Daily, Per-Session
+  isTaxable     Boolean             @default(false)
+  epfApplicable Boolean             @default(false)
+  employees     EmployeeAllowance[]
 }
 
 model EmployeeAllowance {

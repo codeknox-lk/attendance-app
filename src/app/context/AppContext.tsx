@@ -22,6 +22,9 @@ export interface Employee {
   branchId: string | null;
   allowanceIds: string[];
   leaveBalances: { annual: number; sick: number; casual: number };
+  attendanceBonusRate: number;
+  punctualBonusRate: number;
+  incomeBonusPercentage: number;
 }
 
 export interface AttendanceLog {
@@ -236,6 +239,8 @@ export interface AppContextProps {
   updatePayslipAdjustment: (key: string, adj: PayslipAdjustment) => void;
   updatePayrollCycleStartDay: (day: number) => void;
   updateApitSlabs: (slabs: ApitSlab[]) => void;
+  monthlyExcessIncome: Record<string, number>;
+  updateMonthlyExcessIncome: (month: string, amount: number) => void;
   machinePersons: MachinePerson[];
   fetchMachinePersons: () => Promise<void>;
   importMachinePersonsToStaff: () => Promise<void>;
@@ -351,6 +356,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
     }
     return initialApitSlabs;
+  });
+  const [monthlyExcessIncome, setMonthlyExcessIncome] = useState<Record<string, number>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("medicflow_monthly_excess_income");
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return {};
   });
   const [payrollCycleStartDay, setPayrollCycleStartDay] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -534,6 +548,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             branchId: (e.branchId as string) || null,
             allowanceIds: [],
             leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
+            attendanceBonusRate: Number(e.attendanceBonusRate) || 0,
+            punctualBonusRate: Number(e.punctualBonusRate) || 0,
+            incomeBonusPercentage: Number(e.incomeBonusPercentage) || 0,
           }));
           setEmployees(dbEmployees);
         }
@@ -613,6 +630,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             branchId: (e.branchId as string) || null,
             allowanceIds: [],
             leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
+            attendanceBonusRate: Number(e.attendanceBonusRate) || 0,
+            punctualBonusRate: Number(e.punctualBonusRate) || 0,
+            incomeBonusPercentage: Number(e.incomeBonusPercentage) || 0,
           }));
           setEmployees(dbEmployees);
         }
@@ -869,6 +889,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
   };
+  const updateMonthlyExcessIncome = (month: string, amount: number) => {
+    setMonthlyExcessIncome(p => {
+      const next = { ...p, [month]: amount };
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_monthly_excess_income", JSON.stringify(next)); } catch {} }
+      return next;
+    });
+  };
+
   const updatePayrollCycleStartDay = (day: number) => {
     setPayrollCycleStartDay(day);
     if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_payroll_cycle_start", String(day)); } catch {} }
@@ -1013,6 +1041,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           branchId: null,
           allowanceIds: [],
           leaveBalances: { annual: 14, sick: 7, casual: 3 },
+          attendanceBonusRate: 0,
+          punctualBonusRate: 0,
+          incomeBonusPercentage: 0,
         });
       } else {
         await updateEmployee(existing.id, {
@@ -1045,7 +1076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentUser, loginUser, logoutUser,
       employees, attendanceLogs, allowances, employeeAllowances, shifts, leaveRequests,
       payrollHistory, branches, auditLogs, publicHolidays, apitSlabs, biometricSettings,
-      epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
+      epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments, monthlyExcessIncome,
       addEmployee, updateEmployee, deleteEmployee,
       addAttendanceLog, updateAttendanceLog, deleteAttendanceLog,
       addAllowance, updateAllowance, deleteAllowance,
@@ -1054,7 +1085,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addLeaveRequest, updateLeaveRequest, approveLeave, rejectLeave,
       finalizePayroll, addBranch, updateBranch, deleteBranch,
       addHoliday, deleteHoliday, toggleHolidayDoubleOT,
-      updateBiometricSettings, updateEpfSettings, updatePayrollCycleStartDay, updateApitSlabs,
+      updateBiometricSettings, updateEpfSettings, updatePayrollCycleStartDay, updateApitSlabs, updateMonthlyExcessIncome,
       triggerSync, simulateHikvisionScan,
       isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
       updateCompanyProfile, updatePayslipAdjustment,
