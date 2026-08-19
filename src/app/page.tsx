@@ -577,14 +577,46 @@ export default function Home() {
     return { totalStaff: activeEmployees.length, present, late: todayLogs.filter(l=>l.status==="Late").length, onLeave: todayLogs.filter(l=>l.status==="On-Leave").length, absent: todayLogs.filter(l=>l.status==="Absent").length, presentPercent: activeEmployees.length>0 ? Math.round((present/activeEmployees.length)*100):0, todayLogs };
   }, [activeEmployees, attendanceLogs, hasMounted]);
 
-  const filteredLogs = useMemo(() => attendanceLogs
+  const combinedLogs = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const logs = [...attendanceLogs];
+
+    // Ensure all active employees are listed in the roster for today's date
+    activeEmployees.forEach(emp => {
+      const hasTodayLog = logs.some(l => l.date === todayStr && (l.employeeId === emp.id || (l.employee && String(l.employee.biometricId) === String(emp.biometricId))));
+      if (!hasTodayLog) {
+        logs.push({
+          id: `ROSTER-${emp.id}-${todayStr}`,
+          employeeId: emp.id,
+          date: todayStr,
+          checkIn: "--:--:--",
+          checkOut: null,
+          status: "Absent",
+          overtimeHours: 0,
+          noPayHours: 0,
+          authMethod: "Not Scanned Yet",
+          deviceId: "DS-K1T320MFWX",
+          employee: {
+            id: emp.id,
+            firstName: emp.firstName,
+            lastName: emp.lastName,
+            biometricId: emp.biometricId,
+          },
+        });
+      }
+    });
+
+    return logs;
+  }, [attendanceLogs, activeEmployees]);
+
+  const filteredLogs = useMemo(() => combinedLogs
     .filter(l => {
       if (l.date < dateRange.startDate || l.date > dateRange.endDate) return false;
       const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId || (l.employee && e.biometricId === String(l.employee.biometricId)));
       const empName = emp ? `${emp.firstName} ${emp.lastName}` : (l.employee ? `${l.employee.firstName} ${l.employee.lastName}` : `Staff #${l.employeeId}`);
       return empName.toLowerCase().includes(attendanceSearch.toLowerCase()) &&
         (attendanceStatusFilter === "All" || l.status === attendanceStatusFilter);
-    }).sort((a,b) => b.date.localeCompare(a.date)), [attendanceLogs, employees, attendanceSearch, attendanceStatusFilter, dateRange]);
+    }).sort((a,b) => b.date.localeCompare(a.date)), [combinedLogs, employees, attendanceSearch, attendanceStatusFilter, dateRange]);
 
   const statusCounts = useMemo(() => {
     const c: Record<string,number> = {All:0,"On-Time":0,Late:0,"Half-Day":0,"On-Leave":0,Absent:0};
