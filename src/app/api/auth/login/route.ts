@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
             OR: [
               { biometricId: bioId },
               { id: bioId },
-              { firstName: { equals: bioId, mode: "insensitive" } },
+              { firstName: bioId },
             ],
           },
         });
@@ -63,18 +63,21 @@ export async function POST(req: NextRequest) {
 
     // 3. Admin User Credentials Login
     try {
-      const admin = await db.adminUser.findFirst({
-        where: {
-          username: username || "admin",
-          password: password || "admin123",
-        },
-      });
-
-      if (admin) {
-        return NextResponse.json({
-          success: true,
-          user: { id: admin.id, username: admin.username, name: admin.name, role: admin.role },
+      const adminDb = db as any;
+      if (adminDb.adminUser) {
+        const admin = await adminDb.adminUser.findFirst({
+          where: {
+            username: username || "admin",
+            password: password || "admin123",
+          },
         });
+
+        if (admin) {
+          return NextResponse.json({
+            success: true,
+            user: { id: admin.id, username: admin.username, name: admin.name, role: admin.role },
+          });
+        }
       }
     } catch {}
 
