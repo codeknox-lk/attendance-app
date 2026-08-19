@@ -324,16 +324,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const pushAudit = (entry: Omit<AuditLog, "id"|"timestamp">) => setAuditLogs(prev => [{ ...entry, id: `AUD-${Date.now()}`, timestamp: nowStr() }, ...prev]);
 
   const [adminPin, setAdminPin] = useState<string>("1234");
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>({
-    clinicName: "MedicFlow Healthcare Ltd",
-    address: "No. 42, Duplication Road, Colombo 07",
-    epfRegNo: "EPF/A/98765",
-    etfRegNo: "ETF/B/43210",
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_company_profile");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {
+      clinicName: "MedicFlow Healthcare Ltd",
+      address: "No. 42, Duplication Road, Colombo 07",
+      epfRegNo: "EPF/A/98765",
+      etfRegNo: "ETF/B/43210",
+    };
   });
   const [manualAdjustments, setManualAdjustments] = useState<Record<string, PayslipAdjustment>>({});
 
   const updateCompanyProfile = (profile: Partial<CompanyProfile>) => {
-    setCompanyProfile(prev => ({ ...prev, ...profile }));
+    setCompanyProfile(prev => {
+      const updated = { ...prev, ...profile };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("medicflow_company_profile", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
     pushAudit({ action: "UPDATE", entity: "CompanyProfile", entityId: "COMPANY", details: "Updated clinic profile" });
   };
 

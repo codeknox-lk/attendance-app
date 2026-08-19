@@ -1991,6 +1991,7 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => {
+                            updateCompanyProfile(companyProfile);
                             setSettingsSaveMsg("Clinic profile saved successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
