@@ -2491,7 +2491,7 @@ export default function Home() {
                 <div><label className={labelCls}>Last Name</label><input required className={inputCls(isDark)} value={newEmp.lastName} onChange={e=>setNewEmp(p=>({...p,lastName:e.target.value}))}/></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelCls}>Role</label><select className={inputCls(isDark)} value={newEmp.role} onChange={e=>setNewEmp(p=>({...p,role:e.target.value as Employee["role"]}))}>{["Doctor","Nurse","Receptionist","Admin","Assistant"].map(r=><option key={r}>{r}</option>)}</select></div>
+                <div><label className={labelCls}>Role</label><input required className={inputCls(isDark)} value={newEmp.role} onChange={e=>setNewEmp(p=>({...p,role:e.target.value as Employee["role"]}))} placeholder="e.g. Developer" /></div>
                 <div><label className={labelCls}>Pay Type</label><select className={inputCls(isDark)} value={newEmp.payType} onChange={e=>setNewEmp(p=>({...p,payType:e.target.value as Employee["payType"]}))}>{["Fixed Monthly","Session-based","Hourly"].map(r=><option key={r}>{r}</option>)}</select></div>
               </div>
               {newEmp.payType==="Fixed Monthly"&&<div className="grid grid-cols-2 gap-4"><div><label className={labelCls}>Basic Salary (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.basicSalary} onChange={e=>setNewEmp(p=>({...p,basicSalary:parseFloat(e.target.value)||0}))}/></div><div><label className={labelCls}>Hourly Rate (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.hourlyRate} onChange={e=>setNewEmp(p=>({...p,hourlyRate:parseFloat(e.target.value)||0}))}/></div></div>}

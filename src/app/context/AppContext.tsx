@@ -8,7 +8,7 @@ export interface Employee {
   id: string;
   firstName: string;
   lastName: string;
-  role: "Doctor" | "Nurse" | "Receptionist" | "Admin" | "Assistant";
+  role: string;
   payType: "Fixed Monthly" | "Session-based" | "Hourly";
   basicSalary: number;
   hourlyRate: number;
