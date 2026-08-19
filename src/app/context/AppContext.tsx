@@ -239,6 +239,7 @@ export interface AppContextProps {
   machinePersons: MachinePerson[];
   fetchMachinePersons: () => Promise<void>;
   importMachinePersonsToStaff: () => Promise<void>;
+  isFetchingPersons: boolean;
   triggerSync: () => Promise<void>;
 }
 
@@ -797,26 +798,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     { employeeNo: "2", name: "ruwantha", userType: "normal", numOfFace: 1, numOfFingerprint: 1, numOfCard: 0 },
   ]);
 
+  const [isFetchingPersons, setIsFetchingPersons] = useState<boolean>(false);
+
   const fetchMachinePersons = async () => {
+    setIsFetchingPersons(true);
     try {
       const res = await fetch(`/api/biometric/hikvision/persons?ip=${biometricSettings.ip}&port=${biometricSettings.port}`);
       const data = await res.json();
       if (data.success && data.persons) {
         setMachinePersons(data.persons);
+        pushAudit({ action: "UPDATE", entity: "BiometricHardware", entityId: "FETCH", details: `Fetched ${data.persons.length} enrolled users from Hikvision terminal` });
       }
     } catch (e) {
       console.error("Failed to fetch machine persons:", e);
+    } finally {
+      setIsFetchingPersons(false);
     }
   };
 
   const importMachinePersonsToStaff = async () => {
     for (const p of machinePersons) {
-      const exists = employees.some(e => e.biometricId === String(p.employeeNo));
-      if (!exists) {
-        const nameParts = (p.name || `Staff #${p.employeeNo}`).split(" ");
-        const fName = nameParts[0] || `Staff #${p.employeeNo}`;
-        const lName = nameParts.slice(1).join(" ") || "";
+      const existing = employees.find(e => e.biometricId === String(p.employeeNo));
+      const nameParts = (p.name || `Staff #${p.employeeNo}`).split(" ");
+      const fName = nameParts[0] || `Staff #${p.employeeNo}`;
+      const lName = nameParts.slice(1).join(" ") || "";
 
+      if (!existing) {
         await addEmployee({
           firstName: fName,
           lastName: lName,
@@ -833,6 +840,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           branchId: null,
           allowanceIds: [],
           leaveBalances: { annual: 14, sick: 7, casual: 3 },
+        });
+      } else {
+        await updateEmployee(existing.id, {
+          firstName: existing.firstName || fName,
+          lastName: existing.lastName || lName,
         });
       }
     }
@@ -856,7 +868,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerSync, simulateHikvisionScan,
       isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
       updateCompanyProfile, updatePayslipAdjustment,
-      machinePersons, fetchMachinePersons, importMachinePersonsToStaff,
+      machinePersons, fetchMachinePersons, importMachinePersonsToStaff, isFetchingPersons,
     }}>
       {children}
     </AppContext.Provider>

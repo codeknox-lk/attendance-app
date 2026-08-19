@@ -470,7 +470,7 @@ export default function Home() {
     triggerSync, simulateHikvisionScan,
     isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
     updateCompanyProfile, updatePayslipAdjustment,
-    machinePersons, fetchMachinePersons, importMachinePersonsToStaff,
+    machinePersons, fetchMachinePersons, importMachinePersonsToStaff, isFetchingPersons,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
@@ -1929,11 +1929,16 @@ export default function Home() {
                         </div>
                         <button
                           type="button"
-                          onClick={fetchMachinePersons}
+                          disabled={isFetchingPersons}
+                          onClick={async () => {
+                            await fetchMachinePersons();
+                            setSettingsSaveMsg("Fetched enrolled users from Hikvision terminal!");
+                            setTimeout(() => setSettingsSaveMsg(""), 3000);
+                          }}
                           className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
                         >
-                          <Icons.Refresh className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Fetch Machine Persons</span>
+                          <Icons.Refresh className={`w-3.5 h-3.5 text-indigo-400 ${isFetchingPersons ? "animate-spin" : ""}`} />
+                          <span>{isFetchingPersons ? "Fetching from Terminal..." : "Fetch Machine Persons"}</span>
                         </button>
                       </div>
 
