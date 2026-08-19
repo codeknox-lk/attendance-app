@@ -348,18 +348,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedUser = localStorage.getItem("medicflow_user_session");
+        if (savedUser) return JSON.parse(savedUser);
+      } catch {}
+    }
+    return null;
+  });
 
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem("medicflow_user_session");
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
-        setIsAdminAuthenticated(true);
-      }
-    } catch {}
-  }, []);
+    if (currentUser) {
+      setIsAdminAuthenticated(true);
+    }
+  }, [currentUser]);
 
   const loginUser = async (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string }) => {
     try {
@@ -395,7 +400,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pushAudit({ action: "UPDATE", entity: "Auth", entityId: "LOGOUT", details: "User signed out" });
   };
 
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const verifyAdminPin = (pin: string) => {
     if (pin === adminPin || pin === "1234" || pin === "0000") {
       setIsAdminAuthenticated(true);
@@ -446,7 +450,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: (l.status as AttendanceLog["status"]) || "On-Time",
             overtimeHours: Number(l.overtimeHours) || 0,
             noPayHours: Number(l.noPayHours) || 0,
-            employee: l.employee as any,
+            employee: l.employee as AttendanceLog["employee"],
           }));
           setAttendanceLogs(dbLogs);
         }
@@ -769,7 +773,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           status: (l.status as AttendanceLog["status"]) || "On-Time",
           overtimeHours: Number(l.overtimeHours) || 0,
           noPayHours: Number(l.noPayHours) || 0,
-          employee: l.employee as any,
+          employee: l.employee as AttendanceLog["employee"],
         }));
         setAttendanceLogs(dbLogs);
         pushAudit({ action: "UPDATE", entity: "BiometricSync", entityId: "SYNC", details: `Synced ${dbLogs.length} database attendance records` });
