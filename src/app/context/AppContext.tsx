@@ -348,7 +348,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedUser = localStorage.getItem("medicflow_user_session");
+        if (savedUser) return true;
+      } catch {}
+    }
+    return false;
+  });
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     if (typeof window !== "undefined") {
@@ -359,12 +367,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return null;
   });
-
-  useEffect(() => {
-    if (currentUser) {
-      setIsAdminAuthenticated(true);
-    }
-  }, [currentUser]);
 
   const loginUser = async (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string }) => {
     try {
