@@ -1203,7 +1203,18 @@ export default function Home() {
               {/* Toolbar */}
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <input value={attendanceSearch} onChange={e=>setAttendanceSearch(e.target.value)} placeholder="Search staff…" className={`${inputCls(isDark)} w-48`}/>
+                  <select
+                    value={attendanceSearch}
+                    onChange={e => setAttendanceSearch(e.target.value)}
+                    className={`${inputCls(isDark)} w-56 font-semibold`}
+                  >
+                    <option value="">All Staff Members</option>
+                    {activeEmployees.map(emp => (
+                      <option key={emp.id} value={`${emp.firstName} ${emp.lastName}`}>
+                        {emp.firstName} {emp.lastName} ({emp.role} #{emp.biometricId})
+                      </option>
+                    ))}
+                  </select>
                   {monthSelector(selectedMonth, setSelectedMonth)}
                 </div>
                 <button onClick={downloadAttendanceCSV} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
