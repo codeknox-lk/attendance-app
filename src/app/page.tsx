@@ -561,10 +561,12 @@ export default function Home() {
   const [bioForm, setBioForm] = useState<BiometricSettings>(biometricSettings);
   const [cycleStartDayForm, setCycleStartDayForm] = useState<number>(payrollCycleStartDay);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => { setProfileForm(companyProfile); }, [companyProfile]);
   useEffect(() => { setEpfForm(epfSettings); }, [epfSettings]);
   useEffect(() => { setBioForm(biometricSettings); }, [biometricSettings]);
   useEffect(() => { setCycleStartDayForm(payrollCycleStartDay); }, [payrollCycleStartDay]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Computed ──
   const activeEmployees = useMemo(() => employees.filter(e => e.active), [employees]);

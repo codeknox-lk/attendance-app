@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Admin User Credentials Login
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const adminDb = db as any;
       if (adminDb.adminUser) {
         const admin = await adminDb.adminUser.findFirst({
