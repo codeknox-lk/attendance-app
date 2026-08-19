@@ -229,12 +229,6 @@ interface AppContextProps {
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
-// ─── Deterministic Random ─────────────────────────────────────────────────────
-const getDeterministicRandom = (str: string): number => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0; }
-  return (Math.abs(hash) % 1000) / 1000;
-};
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
