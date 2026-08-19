@@ -261,8 +261,8 @@ export async function POST(req: NextRequest) {
     const actionType = isCheckOut ? "checkOut" : "checkIn";
 
     // Calculate Status based on assigned shifts and arrival time
-    const arrivalHour = eventDateObj.getHours();
-    const arrivalMin = eventDateObj.getMinutes();
+    const arrivalHour = slDateObj.getHours();
+    const arrivalMin = slDateObj.getMinutes();
     const arrivalTimeMinutes = arrivalHour * 60 + arrivalMin;
     
     let shiftStartMinutes = 8 * 60 + 30; // Default 08:30 AM
@@ -271,7 +271,7 @@ export async function POST(req: NextRequest) {
     try {
       // Find the specific shift for this employee on today's weekday
       if (employee && Array.isArray(employee.shiftIds) && employee.shiftIds.length > 0) {
-        const currentDayOfWeek = eventDateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const currentDayOfWeek = slDateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
         const allShifts = await db.shift.findMany({
           where: { id: { in: employee.shiftIds as string[] } }
         });
