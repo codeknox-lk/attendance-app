@@ -70,48 +70,66 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { employeeId, date, checkIn, checkOut, status, overtimeHours, noPayHours } = body;
+    const { employeeId, date, checkIn, checkOut, status, overtimeHours, noPayHours, authMethod } = body;
 
-    const newLog = {
-      id: `LOG-${Date.now()}`,
-      employeeId: employeeId || "EMP-00002",
-      date: date || new Date().toISOString().split("T")[0],
-      checkIn: checkIn || "08:58:15",
-      checkOut: checkOut || null,
-      status: status || "On-Time",
-      overtimeHours: overtimeHours || 0,
-      noPayHours: noPayHours || 0,
-      authMethod: "Fingerprint",
-      employee: {
-        id: employeeId || "EMP-00002",
-        firstName: "ruwantha",
-        lastName: "Alwis",
-        biometricId: "2",
-      },
-    };
+    const inputEmpId = String(employeeId || "1");
+    const logDate = date || new Date().toISOString().split("T")[0];
 
-    if (globalThis.globalAttendanceLogs) {
-      globalThis.globalAttendanceLogs.unshift(newLog);
+    // Dynamic Employee Lookup to guarantee valid Foreign Key
+    let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } }).catch(() => null);
+    if (!dbEmp) {
+      dbEmp = await db.employee.findFirst({ where: { biometricId: inputEmpId } });
     }
-
-    try {
-      await db.attendanceLog.create({
+    if (!dbEmp) {
+      // Auto create employee if missing
+      dbEmp = await db.employee.create({
         data: {
-          employeeId: newLog.employeeId,
-          date: newLog.date,
-          checkIn: newLog.checkIn,
-          checkOut: newLog.checkOut,
-          status: newLog.status,
-          overtimeHours: newLog.overtimeHours,
-          noPayHours: newLog.noPayHours,
-          authMethod: "Fingerprint",
+          firstName: "Staff",
+          lastName: `#${inputEmpId}`,
+          biometricId: inputEmpId,
+          role: "Nurse",
+          payType: "Fixed Monthly",
+          basicSalary: 60000,
         },
       });
-    } catch {
-      // Fallback
     }
 
-    return NextResponse.json({ success: true, log: newLog });
+    // Check if log exists for today to update checkOut instead of creating duplicate
+    const existing = await db.attendanceLog.findFirst({
+      where: { employeeId: dbEmp.id, date: logDate },
+    });
+
+    let savedLog = null;
+    if (existing) {
+      savedLog = await db.attendanceLog.update({
+        where: { id: existing.id },
+        data: {
+          ...(checkIn && { checkIn }),
+          ...(checkOut && { checkOut }),
+          ...(status && { status }),
+          ...(overtimeHours !== undefined && { overtimeHours: Number(overtimeHours) }),
+          ...(noPayHours !== undefined && { noPayHours: Number(noPayHours) }),
+          ...(authMethod && { authMethod }),
+        },
+        include: { employee: true },
+      });
+    } else {
+      savedLog = await db.attendanceLog.create({
+        data: {
+          employeeId: dbEmp.id,
+          date: logDate,
+          checkIn: checkIn || "08:30:00",
+          checkOut: checkOut || null,
+          status: status || "On-Time",
+          overtimeHours: Number(overtimeHours) || 0,
+          noPayHours: Number(noPayHours) || 0,
+          authMethod: authMethod || "Fingerprint",
+        },
+        include: { employee: true },
+      });
+    }
+
+    return NextResponse.json({ success: true, log: savedLog });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error creating log";
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
