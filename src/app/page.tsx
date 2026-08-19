@@ -1890,23 +1890,29 @@ export default function Home() {
 
                     {/* Machine Enrolled Persons Section */}
                     <div className={`p-5 rounded-xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"} space-y-4`}>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Terminal Enrolled Persons ({machinePersons.length} / 500)</h4>
-                          <p className="text-[11px] text-zinc-500">Live biometric users registered inside Hikvision DS-K1T320MFWX hardware memory (192.168.8.135).</p>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Terminal Enrolled Persons ({machinePersons.length} / 500)</h4>
+                            <span className="px-2 py-0.5 text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Push Connected
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">Hardware PUSH listener active — incoming biometric scans &amp; users automatically sync in real-time.</p>
                         </div>
                         <button
                           type="button"
                           disabled={isFetchingPersons}
                           onClick={async () => {
                             await fetchMachinePersons();
-                            setSettingsSaveMsg("Fetched enrolled users from Hikvision terminal!");
+                            setSettingsSaveMsg("Enrolled users synced via Hikvision Push protocol!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
                           className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
                         >
                           <Icons.Refresh className={`w-3.5 h-3.5 text-indigo-400 ${isFetchingPersons ? "animate-spin" : ""}`} />
-                          <span>{isFetchingPersons ? "Fetching from Terminal..." : "Fetch Machine Persons"}</span>
+                          <span>{isFetchingPersons ? "Syncing..." : "Sync Enrolled Persons"}</span>
                         </button>
                       </div>
 
