@@ -142,25 +142,25 @@ function ClinicActivityChart({ isDark }: { isDark: boolean }) {
 
   return (
     <div className="space-y-3 pt-2">
-      <div className="grid grid-cols-7 gap-2 items-end h-36 pt-4 px-2 border-b border-slate-800/60">
+      <div className={`grid grid-cols-7 gap-2 items-end h-36 pt-4 px-2 border-b ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
         {days.map((d, idx) => {
           const heightPct = Math.max(12, (d.hours / 10) * 100);
           return (
             <div key={idx} className="flex flex-col items-center gap-2 group">
-              <span className="text-[9px] font-mono text-slate-400 group-hover:text-indigo-400 transition font-bold">{d.hours > 0 ? `${d.hours}h` : "Off"}</span>
-              <div className="w-full max-w-[28px] bg-slate-800/50 rounded-t-lg overflow-hidden h-28 flex items-end p-0.5 border border-slate-700/40">
+              <span className={`text-[9px] font-mono group-hover:text-indigo-400 transition font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.hours > 0 ? `${d.hours}h` : "Off"}</span>
+              <div className={`w-full max-w-[28px] rounded-t-lg overflow-hidden h-28 flex items-end p-0.5 border ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
                 <div
                   className={`w-full rounded-t transition-all duration-500 ${
                     d.hours > 8
                       ? "bg-gradient-to-t from-emerald-600 to-indigo-500 glow-indigo"
                       : d.hours > 0
                       ? "bg-gradient-to-t from-indigo-600 to-emerald-400"
-                      : "bg-slate-800/30"
+                      : isDark ? "bg-slate-800/30" : "bg-slate-200"
                   }`}
                   style={{ height: `${heightPct}%` }}
                 />
               </div>
-              <span className="text-[10px] font-extrabold text-slate-400">{d.day}</span>
+              <span className={`text-[10px] font-extrabold ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.day}</span>
             </div>
           );
         })}
