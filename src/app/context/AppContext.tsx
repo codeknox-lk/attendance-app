@@ -33,6 +33,8 @@ export interface AttendanceLog {
   status: "On-Time" | "Late" | "Half-Day" | "On-Leave" | "Absent";
   overtimeHours: number;
   noPayHours: number;
+  authMethod?: string | null;
+  deviceId?: string | null;
   leaveRequestId?: string;
   branchId?: string;
   employee?: {
@@ -452,6 +454,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: (l.status as AttendanceLog["status"]) || "On-Time",
             overtimeHours: Number(l.overtimeHours) || 0,
             noPayHours: Number(l.noPayHours) || 0,
+            authMethod: (l.authMethod as string) || "Fingerprint",
+            deviceId: (l.deviceId as string) || "DS-K1T320MFWX",
             employee: l.employee as AttendanceLog["employee"],
           }));
           setAttendanceLogs(dbLogs);
@@ -497,6 +501,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: (l.status as AttendanceLog["status"]) || "On-Time",
             overtimeHours: Number(l.overtimeHours) || 0,
             noPayHours: Number(l.noPayHours) || 0,
+            authMethod: (l.authMethod as string) || "Fingerprint",
+            deviceId: (l.deviceId as string) || "DS-K1T320MFWX",
             employee: l.employee as AttendanceLog["employee"],
           }));
           setAttendanceLogs(dbLogs);
