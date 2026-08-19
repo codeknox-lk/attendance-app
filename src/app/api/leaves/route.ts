@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const leaves = await db.leaveRequest.findMany({
       include: { employee: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { appliedAt: "desc" },
     });
     return NextResponse.json({ success: true, leaves });
   } catch (error: unknown) {

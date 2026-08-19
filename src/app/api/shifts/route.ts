@@ -3,9 +3,7 @@ import { db } from "@/lib/db";
 
 export async function GET() {
   try {
-    const shifts = await db.shift.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const shifts = await db.shift.findMany();
     return NextResponse.json({ success: true, shifts });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error fetching shifts";
@@ -23,7 +21,8 @@ export async function POST(req: NextRequest) {
         name,
         startTime: startTime || "08:30",
         endTime: endTime || "17:00",
-        graceMins: Number(graceMins) || 15,
+        gracePeriod: Number(graceMins) || 15,
+        overtimeStart: endTime || "17:00",
       },
     });
 
