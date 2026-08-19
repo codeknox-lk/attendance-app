@@ -1888,141 +1888,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Machine Enrolled Persons Section */}
-                    <div className={`p-5 rounded-xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"} space-y-4`}>
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Terminal Enrolled Persons ({machinePersons.length} / 500)</h4>
-                            <span className="px-2 py-0.5 text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                              Push Connected
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">Hardware PUSH listener active — incoming biometric scans &amp; users automatically sync in real-time.</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              openEditEmp({
-                                id: "",
-                                firstName: "",
-                                lastName: "",
-                                role: "Nurse",
-                                payType: "Fixed Monthly",
-                                basicSalary: 60000,
-                                hourlyRate: 350,
-                                sessionRate: 0,
-                                commissionRate: 0,
-                                biometricId: String(machinePersons.length + 1),
-                                epfEligible: true,
-                                taxable: false,
-                                active: true,
-                                shiftId: null,
-                                branchId: null,
-                                allowanceIds: [],
-                                leaveBalances: { annual: 14, sick: 7, casual: 3 },
-                              });
-                            }}
-                            className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 hover:bg-indigo-500 text-white shadow transition flex items-center gap-1.5"
-                          >
-                            <span>+ Link New Terminal ID</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isFetchingPersons}
-                            onClick={async () => {
-                              await fetchMachinePersons();
-                              setSettingsSaveMsg("Enrolled users synced via Hikvision Push protocol!");
-                              setTimeout(() => setSettingsSaveMsg(""), 3000);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
-                          >
-                            <Icons.Refresh className={`w-3.5 h-3.5 text-indigo-400 ${isFetchingPersons ? "animate-spin" : ""}`} />
-                            <span>{isFetchingPersons ? "Syncing..." : "Sync Enrolled Persons"}</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className={`p-3 rounded-lg text-xs border ${isDark ? "bg-indigo-950/20 border-indigo-800/40 text-indigo-300" : "bg-indigo-50 border-indigo-200 text-indigo-800"}`}>
-                        <div className="font-bold flex items-center gap-1.5 mb-1">
-                          <Icons.Shield className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Connecting Local Router IP (192.168.8.135) to Cloud App</span>
-                        </div>
-                        <p className="text-[11px] leading-relaxed">
-                          Because your Hikvision terminal is on a local private Wi-Fi network (<code>192.168.8.135</code>), cloud servers cannot open inbound HTTP calls to local router IPs directly.
-                          <br />
-                          <strong>To register new staff added on Hikvision browser:</strong>
-                        </p>
-                        <ul className="list-disc list-inside text-[11px] mt-1 space-y-0.5 font-medium">
-                          <li><strong>Option 1 (Automatic)</strong>: Have the new employee scan their face/finger on the terminal once — our server will auto-register them in real-time!</li>
-                          <li><strong>Option 2 (Manual)</strong>: Click <strong>+ Link New Terminal ID</strong> above and enter their Biometric ID (e.g. <code>3</code>, <code>4</code>).</li>
-                        </ul>
-                      </div>
-
-                      <div className="overflow-x-auto border rounded-lg border-zinc-800/40">
-                        <table className="w-full text-xs text-left">
-                          <thead className={`text-[10px] font-extrabold uppercase tracking-wider border-b ${isDark ? "bg-zinc-950/60 border-zinc-800 text-zinc-400" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
-                            <tr>
-                              <th className="px-4 py-2.5">User ID</th>
-                              <th className="px-4 py-2.5">Name</th>
-                              <th className="px-4 py-2.5">Type</th>
-                              <th className="px-4 py-2.5">Biometrics Enrolled</th>
-                              <th className="px-4 py-2.5 text-right">App Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className={`divide-y ${isDark ? "divide-zinc-800/40" : "divide-slate-200"}`}>
-                            {machinePersons.map(p => {
-                              const matchedEmp = employees.find(e => e.biometricId === p.employeeNo);
-                              return (
-                                <tr key={p.employeeNo} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-slate-50"}>
-                                  <td className="px-4 py-3 font-mono font-bold text-indigo-400">#{p.employeeNo}</td>
-                                  <td className="px-4 py-3 font-semibold">{p.name}</td>
-                                  <td className="px-4 py-3 text-zinc-400 uppercase text-[10px] font-bold">{p.userType}</td>
-                                  <td className="px-4 py-3">
-                                    <div className="flex gap-2 text-[10px]">
-                                      {p.numOfFace ? <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Face</span> : null}
-                                      {p.numOfFingerprint ? <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold">Fingerprint</span> : null}
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-right">
-                                    {matchedEmp ? (
-                                      <div className="flex items-center justify-end gap-1.5">
-                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
-                                          Linked ({matchedEmp.firstName})
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => openEditEmp(matchedEmp)}
-                                          className={`px-2 py-0.5 text-[10px] font-bold rounded border transition flex items-center gap-1 ${
-                                            isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
-                                          }`}
-                                        >
-                                          <Icons.Edit className="w-3 h-3" />
-                                          <span>Edit Name</span>
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true, shiftId: null, branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 } });
-                                        }}
-                                        className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20"
-                                      >
-                                        Import to Staff
-                                      </button>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
                     {/* Hardware Test & Simulation Box */}
                     <div className={`p-5 rounded-xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"} space-y-4`}>
                       <div className="flex items-center justify-between">
@@ -2327,6 +2192,141 @@ export default function Home() {
                           </div>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Machine Enrolled Persons Section */}
+                    <div className={`p-5 rounded-xl border mt-6 ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"} space-y-4 max-w-3xl`}>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Terminal Enrolled Persons ({machinePersons.length} / 500)</h4>
+                            <span className="px-2 py-0.5 text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Push Connected
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">Hardware PUSH listener active — incoming biometric scans &amp; users automatically sync in real-time.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openEditEmp({
+                                id: "",
+                                firstName: "",
+                                lastName: "",
+                                role: "Nurse",
+                                payType: "Fixed Monthly",
+                                basicSalary: 60000,
+                                hourlyRate: 350,
+                                sessionRate: 0,
+                                commissionRate: 0,
+                                biometricId: String(machinePersons.length + 1),
+                                epfEligible: true,
+                                taxable: false,
+                                active: true,
+                                shiftId: null,
+                                branchId: null,
+                                allowanceIds: [],
+                                leaveBalances: { annual: 14, sick: 7, casual: 3 },
+                              });
+                            }}
+                            className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 hover:bg-indigo-500 text-white shadow transition flex items-center gap-1.5"
+                          >
+                            <span>+ Link New Terminal ID</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isFetchingPersons}
+                            onClick={async () => {
+                              await fetchMachinePersons();
+                              setSettingsSaveMsg("Enrolled users synced via Hikvision Push protocol!");
+                              setTimeout(() => setSettingsSaveMsg(""), 3000);
+                            }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
+                          >
+                            <Icons.Refresh className={`w-3.5 h-3.5 text-indigo-400 ${isFetchingPersons ? "animate-spin" : ""}`} />
+                            <span>{isFetchingPersons ? "Syncing..." : "Sync Enrolled Persons"}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={`p-3 rounded-lg text-xs border ${isDark ? "bg-indigo-950/20 border-indigo-800/40 text-indigo-300" : "bg-indigo-50 border-indigo-200 text-indigo-800"}`}>
+                        <div className="font-bold flex items-center gap-1.5 mb-1">
+                          <Icons.Shield className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Connecting Local Router IP (192.168.8.135) to Cloud App</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed">
+                          Because your Hikvision terminal is on a local private Wi-Fi network (<code>192.168.8.135</code>), cloud servers cannot open inbound HTTP calls to local router IPs directly.
+                          <br />
+                          <strong>To register new staff added on Hikvision browser:</strong>
+                        </p>
+                        <ul className="list-disc list-inside text-[11px] mt-1 space-y-0.5 font-medium">
+                          <li><strong>Option 1 (Automatic)</strong>: Have the new employee scan their face/finger on the terminal once — our server will auto-register them in real-time!</li>
+                          <li><strong>Option 2 (Manual)</strong>: Click <strong>+ Link New Terminal ID</strong> above and enter their Biometric ID (e.g. <code>3</code>, <code>4</code>).</li>
+                        </ul>
+                      </div>
+
+                      <div className="overflow-x-auto border rounded-lg border-zinc-800/40">
+                        <table className="w-full text-xs text-left">
+                          <thead className={`text-[10px] font-extrabold uppercase tracking-wider border-b ${isDark ? "bg-zinc-950/60 border-zinc-800 text-zinc-400" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                            <tr>
+                              <th className="px-4 py-2.5">User ID</th>
+                              <th className="px-4 py-2.5">Name</th>
+                              <th className="px-4 py-2.5">Type</th>
+                              <th className="px-4 py-2.5">Biometrics Enrolled</th>
+                              <th className="px-4 py-2.5 text-right">App Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className={`divide-y ${isDark ? "divide-zinc-800/40" : "divide-slate-200"}`}>
+                            {machinePersons.map(p => {
+                              const matchedEmp = employees.find(e => e.biometricId === p.employeeNo);
+                              return (
+                                <tr key={p.employeeNo} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-slate-50"}>
+                                  <td className="px-4 py-3 font-mono font-bold text-indigo-400">#{p.employeeNo}</td>
+                                  <td className="px-4 py-3 font-semibold">{p.name}</td>
+                                  <td className="px-4 py-3 text-zinc-400 uppercase text-[10px] font-bold">{p.userType}</td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex gap-2 text-[10px]">
+                                      {p.numOfFace ? <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Face</span> : null}
+                                      {p.numOfFingerprint ? <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold">Fingerprint</span> : null}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    {matchedEmp ? (
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                                          Linked ({matchedEmp.firstName})
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => openEditEmp(matchedEmp)}
+                                          className={`px-2 py-0.5 text-[10px] font-bold rounded border transition flex items-center gap-1 ${
+                                            isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                                          }`}
+                                        >
+                                          <Icons.Edit className="w-3 h-3" />
+                                          <span>Edit Name</span>
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true, shiftId: null, branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 } });
+                                        }}
+                                        className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20"
+                                      >
+                                        Import to Staff
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}
