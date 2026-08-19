@@ -518,7 +518,7 @@ export default function Home() {
   const [newEmp, setNewEmp] = useState<Omit<Employee,"id"|"active">>({
     firstName:"", lastName:"", role:"Nurse", payType:"Fixed Monthly",
     basicSalary:50000, hourlyRate:300, sessionRate:0, commissionRate:0,
-    biometricId:"", epfEligible:true, taxable:false, shiftId:null, branchId:null,
+    biometricId:"", epfEligible:true, taxable:false, shiftIds:[], branchId:null,
     allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3},
   });
 
@@ -643,7 +643,7 @@ export default function Home() {
 
       if (emp.payType==="Fixed Monthly") {
         basicEarnings = emp.basicSalary;
-        const shift = shifts.find(s => s.id===emp.shiftId);
+        const shift = shifts.find(s => emp.shiftIds?.includes(s.id));
         const otRate = emp.hourlyRate || (emp.basicSalary / (epfSettings.workingDaysPerMonth * 9));
         otPay = totalOtHours * otRate * (shift?.otMultiplier ?? 1.5);
         epfBase += basicEarnings;
@@ -680,9 +680,9 @@ export default function Home() {
 
   // ── Handlers ──
 
-  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, epfEligible:emp.epfEligible, taxable:emp.taxable, shiftId:emp.shiftId, branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances }); setShowAddEmpModal(true); };
+  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, epfEligible:emp.epfEligible, taxable:emp.taxable, shiftIds:emp.shiftIds || [], branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances }); setShowAddEmpModal(true); };
 
-  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftId:null,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}}); };
+  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}}); };
 
   const openDrawer = (log: AttendanceLog) => { setPunchEdit({checkIn:log.checkIn,checkOut:log.checkOut||"",status:log.status,overtimeHours:log.overtimeHours,noPayHours:log.noPayHours}); setDrawerLogId(log.id); };
 
@@ -2168,7 +2168,7 @@ export default function Home() {
                               biometricId: nextBioId,
                               epfEligible: true,
                               taxable: false,
-                              shiftId: null,
+                              shiftIds: [],
                               branchId: null,
                               allowanceIds: [],
                               leaveBalances: { annual: 14, sick: 7, casual: 3 },
@@ -2180,7 +2180,7 @@ export default function Home() {
                           <Icons.Refresh className="w-3.5 h-3.5 text-indigo-400" />
                           <span>Import Staff from Terminal</span>
                         </button>
-                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftId:null,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
+                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
                       </div>
                     </div>
                     <div className="space-y-2 max-w-3xl">
@@ -2242,7 +2242,7 @@ export default function Home() {
                                 epfEligible: true,
                                 taxable: false,
                                 active: true,
-                                shiftId: null,
+                                shiftIds: [],
                                 branchId: null,
                                 allowanceIds: [],
                                 leaveBalances: { annual: 14, sick: 7, casual: 3 },
@@ -2318,7 +2318,7 @@ export default function Home() {
                                       <button
                                         type="button"
                                         onClick={() => {
-                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true, shiftId: null, branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 } });
+                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true, shiftIds: [], branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 } });
                                         }}
                                         className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20"
                                       >
@@ -2355,7 +2355,7 @@ export default function Home() {
                     <div className="space-y-2">
                       {shifts.map(s=>{
                         const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-                        const empCount = activeEmployees.filter(e=>e.shiftId===s.id).length;
+                        const empCount = activeEmployees.filter(e=>e.shiftIds?.includes(s.id)).length;
                         return (
                           <div key={s.id} className={`flex items-center justify-between p-4 rounded-lg border ${isDark?"bg-zinc-950/30 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
                             <div>
@@ -2498,9 +2498,9 @@ export default function Home() {
               {newEmp.payType==="Session-based"&&<div><label className={labelCls}>Session Rate (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.sessionRate} onChange={e=>setNewEmp(p=>({...p,sessionRate:parseFloat(e.target.value)||0}))}/></div>}
               {newEmp.payType==="Hourly"&&<div><label className={labelCls}>Hourly Rate (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.hourlyRate} onChange={e=>setNewEmp(p=>({...p,hourlyRate:parseFloat(e.target.value)||0}))}/></div>}
               <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelCls}>Biometric ID</label><input required className={inputCls(isDark)} value={newEmp.biometricId} onChange={e=>setNewEmp(p=>({...p,biometricId:e.target.value}))}/></div>
-                <div><label className={labelCls}>Shift</label><select className={inputCls(isDark)} value={newEmp.shiftId||""} onChange={e=>setNewEmp(p=>({...p,shiftId:e.target.value||null}))}><option value="">No shift</option>{shifts.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                <div className="col-span-2"><label className={labelCls}>Biometric ID</label><input required className={inputCls(isDark)} value={newEmp.biometricId} onChange={e=>setNewEmp(p=>({...p,biometricId:e.target.value}))}/></div>
               </div>
+              <div><label className={labelCls}>Assign Shifts</label><div className="flex flex-wrap gap-2 mt-1">{shifts.map(s=>{const has=newEmp.shiftIds?.includes(s.id);return(<label key={s.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,shiftIds:has?p.shiftIds.filter((id: string)=>id!==s.id):[...(p.shiftIds||[]),s.id]}))}/>{s.name}</label>);})}</div></div>
 
               <div><label className={labelCls}>Assign Allowances</label><div className="flex flex-wrap gap-2 mt-1">{allowances.map(al=>{const has=newEmp.allowanceIds.includes(al.id);return(<label key={al.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,allowanceIds:has?p.allowanceIds.filter(id=>id!==al.id):[...p.allowanceIds,al.id]}))}/>{al.name}</label>);})}</div></div>
               <div className="flex gap-5">

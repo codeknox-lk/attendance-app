@@ -18,7 +18,7 @@ export interface Employee {
   epfEligible: boolean;
   taxable: boolean;
   active: boolean;
-  shiftId: string | null;
+  shiftIds: string[];
   branchId: string | null;
   allowanceIds: string[];
   leaveBalances: { annual: number; sick: number; casual: number };
@@ -530,7 +530,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             epfEligible: Boolean(e.epfEligible),
             taxable: Boolean(e.taxable),
             active: Boolean(e.active),
-            shiftId: (e.shiftId as string) || null,
+            shiftIds: Array.isArray(e.shiftIds) ? (e.shiftIds as string[]) : [],
             branchId: (e.branchId as string) || null,
             allowanceIds: [],
             leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
@@ -609,7 +609,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             epfEligible: Boolean(e.epfEligible),
             taxable: Boolean(e.taxable),
             active: Boolean(e.active),
-            shiftId: (e.shiftId as string) || null,
+            shiftIds: Array.isArray(e.shiftIds) ? (e.shiftIds as string[]) : [],
             branchId: (e.branchId as string) || null,
             allowanceIds: [],
             leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
@@ -775,7 +775,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_shifts", JSON.stringify(list)); } catch {} }
       return list;
     });
-    setEmployees(p => p.map(e => e.shiftId === id ? { ...e, shiftId: null } : e));
+    setEmployees(p => p.map(e => e.shiftIds.includes(id) ? { ...e, shiftIds: e.shiftIds.filter(s => s !== id) } : e));
     try {
       await fetch(`/api/shifts?id=${id}`, {
         method: "DELETE",
@@ -1009,7 +1009,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           biometricId: String(p.employeeNo),
           epfEligible: true,
           taxable: false,
-          shiftId: null,
+          shiftIds: [],
           branchId: null,
           allowanceIds: [],
           leaveBalances: { annual: 14, sick: 7, casual: 3 },

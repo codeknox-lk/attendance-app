@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       biometricId,
       epfEligible,
       taxable,
+      shiftIds,
     } = body;
 
     const existing = await db.employee.findFirst({
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
           commissionRate: Number(commissionRate) || 0,
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
+          shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
         },
       });
     } else {
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
           biometricId: String(biometricId),
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
+          shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
         },
       });
     }
@@ -93,6 +96,7 @@ export async function PUT(req: NextRequest) {
       epfEligible,
       taxable,
       active,
+      shiftIds,
     } = body;
 
     if (!id && !biometricId) {
@@ -127,6 +131,7 @@ export async function PUT(req: NextRequest) {
           ...(epfEligible !== undefined && { epfEligible: Boolean(epfEligible) }),
           ...(taxable !== undefined && { taxable: Boolean(taxable) }),
           ...(active !== undefined && { active: Boolean(active) }),
+          ...(shiftIds !== undefined && Array.isArray(shiftIds) && { shiftIds }),
         },
       });
     } else {
@@ -144,6 +149,7 @@ export async function PUT(req: NextRequest) {
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
           active: active ?? true,
+          shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
         },
       });
     }

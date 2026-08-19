@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, startTime, endTime, graceMins } = body;
+    const { name, startTime, endTime, graceMins, workDays } = body;
 
     const shift = await db.shift.create({
       data: {
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
         endTime: endTime || "17:00",
         gracePeriod: Number(graceMins) || 15,
         overtimeStart: endTime || "17:00",
+        workDays: Array.isArray(workDays) ? workDays : [1, 2, 3, 4, 5],
       },
     });
 
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, name, startTime, endTime, gracePeriod, overtimeStart, color } = body;
+    const { id, name, startTime, endTime, gracePeriod, overtimeStart, color, workDays } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Shift ID required" }, { status: 400 });
@@ -53,6 +54,7 @@ export async function PUT(req: NextRequest) {
           ...(gracePeriod !== undefined && { gracePeriod: Number(gracePeriod) }),
           ...(overtimeStart !== undefined && { overtimeStart }),
           ...(color !== undefined && { color }),
+          ...(workDays !== undefined && Array.isArray(workDays) && { workDays }),
         },
       });
     } catch {

@@ -35,8 +35,7 @@ model Employee {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  shiftId         String?
-  shift           Shift?           @relation(fields: [shiftId], references: [id])
+  shiftIds        String[]         @default([])
 
   attendanceLogs  AttendanceLog[]
   leaveRequests   LeaveRequest[]
@@ -80,7 +79,7 @@ model Shift {
   gracePeriod   Int        @default(15) // Minutes
   overtimeStart String     // Format: HH:mm
   color         String     @default("indigo")
-  employees     Employee[]
+  workDays      Int[]      @default([1, 2, 3, 4, 5])
 }
 
 model Allowance {

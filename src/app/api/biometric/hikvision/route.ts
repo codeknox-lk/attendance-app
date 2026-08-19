@@ -260,17 +260,40 @@ export async function POST(req: NextRequest) {
     const isCheckOut = Boolean(existingLog && existingLog.checkIn);
     const actionType = isCheckOut ? "checkOut" : "checkIn";
 
-    // Calculate Status based on arrival time (Standard shift 08:30 AM with 15-min grace)
+    // Calculate Status based on assigned shifts and arrival time
     const arrivalHour = eventDateObj.getHours();
     const arrivalMin = eventDateObj.getMinutes();
     const arrivalTimeMinutes = arrivalHour * 60 + arrivalMin;
-    const shiftStartMinutes = 8 * 60 + 30; // 08:30 AM
-    const gracePeriodMinutes = 15;
+    
+    let shiftStartMinutes = 8 * 60 + 30; // Default 08:30 AM
+    let gracePeriodMinutes = 15;
+
+    try {
+      // Find the specific shift for this employee on today's weekday
+      if (employee && Array.isArray(employee.shiftIds) && employee.shiftIds.length > 0) {
+        const currentDayOfWeek = eventDateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const allShifts = await db.shift.findMany({
+          where: { id: { in: employee.shiftIds as string[] } }
+        });
+        
+        // Find the active shift for today based on workDays
+        const todayShift = allShifts.find(s => Array.isArray(s.workDays) && s.workDays.includes(currentDayOfWeek));
+        
+        if (todayShift) {
+          const [h, m] = todayShift.startTime.split(':').map(Number);
+          shiftStartMinutes = h * 60 + m;
+          gracePeriodMinutes = todayShift.gracePeriod || 15;
+        }
+      }
+    } catch (err) {
+      console.error("[HIKVISION] Error calculating dynamic shift:", err);
+    }
 
     let computedStatus: "On-Time" | "Late" | "Half-Day" | "On-Leave" | "Absent" = "On-Time";
     if (arrivalTimeMinutes > shiftStartMinutes + gracePeriodMinutes) {
       computedStatus = "Late";
     }
+
 
     if (isCheckOut && existingLog) {
       // SECOND SCAN TODAY -> Record Check-Out
