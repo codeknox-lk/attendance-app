@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, Shift, PublicHoliday, BiometricSettings
+  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, Shift, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings
 } from "./context/AppContext";
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
@@ -554,6 +554,17 @@ export default function Home() {
   // ── Admin PIN Security & Company Settings state ──
   const [newPinInput, setNewPinInput] = useState("");
   const [pinChangeMsg, setPinChangeMsg] = useState("");
+
+  // ── Settings Local Form States ──
+  const [profileForm, setProfileForm] = useState<CompanyProfile>(companyProfile);
+  const [epfForm, setEpfForm] = useState<EpfSettings>(epfSettings);
+  const [bioForm, setBioForm] = useState<BiometricSettings>(biometricSettings);
+  const [cycleStartDayForm, setCycleStartDayForm] = useState<number>(payrollCycleStartDay);
+
+  useEffect(() => { setProfileForm(companyProfile); }, [companyProfile]);
+  useEffect(() => { setEpfForm(epfSettings); }, [epfSettings]);
+  useEffect(() => { setBioForm(biometricSettings); }, [biometricSettings]);
+  useEffect(() => { setCycleStartDayForm(payrollCycleStartDay); }, [payrollCycleStartDay]);
 
   // ── Computed ──
   const activeEmployees = useMemo(() => employees.filter(e => e.active), [employees]);
@@ -1859,13 +1870,13 @@ export default function Home() {
                       <div className="grid grid-cols-2 gap-4 pt-2">
                         <div>
                           <label className={labelCls}>Device Model &amp; Mode</label>
-                          <select className={inputCls(isDark)} value={biometricSettings.deviceType} onChange={e => updateBiometricSettings({ deviceType: e.target.value as BiometricSettings["deviceType"] })}>
+                          <select className={inputCls(isDark)} value={bioForm.deviceType} onChange={e => setBioForm(p => ({ ...p, deviceType: e.target.value as BiometricSettings["deviceType"] }))}>
                             {["Hikvision DS-K1T320EFWX (ISUP 5.0 Cloud)", "ZKTeco TCP", "Cloud ADMS", "Hikvision Web"].map(d => <option key={d}>{d}</option>)}
                           </select>
                         </div>
                         <div>
                           <label className={labelCls}>Sync Protocol</label>
-                          <select className={inputCls(isDark)} value={biometricSettings.pollInterval} onChange={e => updateBiometricSettings({ pollInterval: e.target.value as BiometricSettings["pollInterval"] })}>
+                          <select className={inputCls(isDark)} value={bioForm.pollInterval} onChange={e => setBioForm(p => ({ ...p, pollInterval: e.target.value as BiometricSettings["pollInterval"] }))}>
                             {["Real-time Push (ISUP)", "Every 15 mins", "Hourly", "Daily", "Manual"].map(d => <option key={d}>{d}</option>)}
                           </select>
                         </div>
@@ -1878,6 +1889,7 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => {
+                            updateBiometricSettings(bioForm);
                             setSettingsSaveMsg("Biometric settings updated successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
@@ -1952,8 +1964,8 @@ export default function Home() {
                         <label className={labelCls}>Clinic / Company Name</label>
                         <input
                           className={inputCls(isDark)}
-                          value={companyProfile.clinicName}
-                          onChange={e => updateCompanyProfile({ clinicName: e.target.value })}
+                          value={profileForm.clinicName}
+                          onChange={e => setProfileForm(p => ({ ...p, clinicName: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -1961,8 +1973,8 @@ export default function Home() {
                         <textarea
                           rows={2}
                           className={inputCls(isDark)}
-                          value={companyProfile.address}
-                          onChange={e => updateCompanyProfile({ address: e.target.value })}
+                          value={profileForm.address}
+                          onChange={e => setProfileForm(p => ({ ...p, address: e.target.value }))}
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -1970,16 +1982,16 @@ export default function Home() {
                           <label className={labelCls}>EPF Registration No.</label>
                           <input
                             className={inputCls(isDark)}
-                            value={companyProfile.epfRegNo}
-                            onChange={e => updateCompanyProfile({ epfRegNo: e.target.value })}
+                            value={profileForm.epfRegNo}
+                            onChange={e => setProfileForm(p => ({ ...p, epfRegNo: e.target.value }))}
                           />
                         </div>
                         <div>
                           <label className={labelCls}>ETF Registration No.</label>
                           <input
                             className={inputCls(isDark)}
-                            value={companyProfile.etfRegNo}
-                            onChange={e => updateCompanyProfile({ etfRegNo: e.target.value })}
+                            value={profileForm.etfRegNo}
+                            onChange={e => setProfileForm(p => ({ ...p, etfRegNo: e.target.value }))}
                           />
                         </div>
                       </div>
@@ -1991,7 +2003,7 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => {
-                            updateCompanyProfile(companyProfile);
+                            updateCompanyProfile(profileForm);
                             setSettingsSaveMsg("Clinic profile saved successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
@@ -2071,14 +2083,14 @@ export default function Home() {
                   <div className="space-y-5 max-w-md">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Statutory Rates</h3>
                     <div className="grid grid-cols-3 gap-4">
-                      {[["Employee EPF (%)","employeeRate"],["Employer EPF (%)","employerRate"],["ETF (%)","etfRate"]].map(([label,key])=>(
-                        <div key={key}><label className={labelCls}>{label}</label><input type="number" className={inputCls(isDark)} value={(epfSettings as unknown as Record<string,number>)[key]} onChange={e=>updateEpfSettings({[key]:parseFloat(e.target.value)||0})}/></div>
-                      ))}
+                      <div><label className={labelCls}>Employee EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employeeRate} onChange={e=>setEpfForm(p=>({...p, employeeRate: parseFloat(e.target.value)||0}))}/></div>
+                      <div><label className={labelCls}>Employer EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employerRate} onChange={e=>setEpfForm(p=>({...p, employerRate: parseFloat(e.target.value)||0}))}/></div>
+                      <div><label className={labelCls}>ETF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.etfRate} onChange={e=>setEpfForm(p=>({...p, etfRate: parseFloat(e.target.value)||0}))}/></div>
                     </div>
-                    <div><label className={labelCls}>Working Days / Month</label><input type="number" className={`${inputCls(isDark)} max-w-[120px]`} value={epfSettings.workingDaysPerMonth} onChange={e=>updateEpfSettings({workingDaysPerMonth:parseInt(e.target.value)||26})}/><p className="text-[10px] text-zinc-500 mt-1">Used to calculate daily no-pay rate.</p></div>
+                    <div><label className={labelCls}>Working Days / Month</label><input type="number" className={`${inputCls(isDark)} max-w-[120px]`} value={epfForm.workingDaysPerMonth} onChange={e=>setEpfForm(p=>({...p, workingDaysPerMonth: parseInt(e.target.value)||26}))}/><p className="text-[10px] text-zinc-500 mt-1">Used to calculate daily no-pay rate.</p></div>
                     <div className="pt-4 border-t border-zinc-800">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">Salary Period Cycle</h4>
-                      <select className={inputCls(isDark)} value={payrollCycleStartDay} onChange={e=>updatePayrollCycleStartDay(parseInt(e.target.value)||1)}>
+                      <select className={inputCls(isDark)} value={cycleStartDayForm} onChange={e=>setCycleStartDayForm(parseInt(e.target.value)||1)}>
                         {Array.from({length:31},(_,i)=>i+1).map(day=>{const s=daySuffix(day);const pd=day-1;const ps=daySuffix(pd);return(<option key={day} value={day}>{day}{s} of month {day===1?"(Standard calendar month)":`(${day}${s} to ${pd}${ps} of next month)`}</option>);})}
                       </select>
                     </div>
@@ -2090,7 +2102,9 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => {
-                          setSettingsSaveMsg("✓ Statutory EPF/ETF settings updated successfully!");
+                          updateEpfSettings(epfForm);
+                          updatePayrollCycleStartDay(cycleStartDayForm);
+                          setSettingsSaveMsg("EPF/ETF settings updated successfully!");
                           setTimeout(() => setSettingsSaveMsg(""), 3000);
                         }}
                         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition"
