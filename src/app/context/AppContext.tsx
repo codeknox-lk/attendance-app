@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -850,6 +850,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const allMachinePersons = useMemo(() => {
+    const list: MachinePerson[] = [...machinePersons];
+    employees.forEach(emp => {
+      if (emp.biometricId && !list.some(p => String(p.employeeNo) === String(emp.biometricId))) {
+        list.push({
+          employeeNo: String(emp.biometricId),
+          name: `${emp.firstName} ${emp.lastName}`,
+          userType: "normal",
+          numOfFace: 1,
+          numOfFingerprint: 1,
+          numOfCard: 0,
+        });
+      }
+    });
+    return list.sort((a,b) => Number(a.employeeNo) - Number(b.employeeNo));
+  }, [machinePersons, employees]);
+
   return (
     <AppContext.Provider value={{
       currentUser, loginUser, logoutUser,
@@ -868,7 +885,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerSync, simulateHikvisionScan,
       isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
       updateCompanyProfile, updatePayslipAdjustment,
-      machinePersons, fetchMachinePersons, importMachinePersonsToStaff, isFetchingPersons,
+      machinePersons: allMachinePersons, fetchMachinePersons, importMachinePersonsToStaff, isFetchingPersons,
     }}>
       {children}
     </AppContext.Provider>
