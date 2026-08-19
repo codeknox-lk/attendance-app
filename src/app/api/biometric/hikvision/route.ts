@@ -141,16 +141,19 @@ export async function POST(req: NextRequest) {
       ? "Card"
       : "Face";
 
-    // Extract or default Event Timestamp
-    const eventTimeStr = body.AccessControllerEvent?.time || body.time || body.timestamp || new Date().toISOString();
-    const eventDateObj = new Date(eventTimeStr);
-    const dateStr = !isNaN(eventDateObj.getTime())
-      ? eventDateObj.toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
+    // Extract or default Event Timestamp in Sri Lanka Time (Asia/Colombo UTC+5:30)
+    const rawTimeInput = body.AccessControllerEvent?.time || body.time || body.timestamp;
+    let eventDateObj = new Date();
+    if (rawTimeInput) {
+      const parsed = new Date(rawTimeInput);
+      if (!isNaN(parsed.getTime())) eventDateObj = parsed;
+    }
 
-    const timeStr = !isNaN(eventDateObj.getTime())
-      ? eventDateObj.toTimeString().split(" ")[0]
-      : new Date().toTimeString().split(" ")[0];
+    const slLocaleStr = eventDateObj.toLocaleString("en-US", { timeZone: "Asia/Colombo" });
+    const slDateObj = new Date(slLocaleStr);
+    const dateStr = `${slDateObj.getFullYear()}-${String(slDateObj.getMonth() + 1).padStart(2, "0")}-${String(slDateObj.getDate()).padStart(2, "0")}`;
+    const timeStr = `${String(slDateObj.getHours()).padStart(2, "0")}:${String(slDateObj.getMinutes()).padStart(2, "0")}:${String(slDateObj.getSeconds()).padStart(2, "0")}`;
+
 
     // Find Employee in Database
     let employee = null;
