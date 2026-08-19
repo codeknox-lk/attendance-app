@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, Shift, Branch, PublicHoliday, BiometricSettings
+  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, Shift, PublicHoliday, BiometricSettings
 } from "./context/AppContext";
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ function SalaryTrendChart({ history, isDark }: { history: PayrollPeriodSummary[]
 export default function Home() {
   const {
     employees, attendanceLogs, allowances, employeeAllowances, shifts, leaveRequests,
-    payrollHistory, branches, auditLogs, publicHolidays, apitSlabs,
+    payrollHistory, auditLogs, publicHolidays, apitSlabs,
     biometricSettings, epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
     addEmployee, updateEmployee, deleteEmployee,
     updateAttendanceLog,
@@ -347,7 +347,6 @@ export default function Home() {
     addShift, updateShift, deleteShift,
     addLeaveRequest, approveLeave, rejectLeave,
     finalizePayroll,
-    addBranch, updateBranch, deleteBranch,
     addHoliday, deleteHoliday, toggleHolidayDoubleOT,
     updateBiometricSettings, updateEpfSettings, updatePayrollCycleStartDay,
     triggerSync, simulateHikvisionScan,
@@ -2040,7 +2039,7 @@ export default function Home() {
                 <div><label className={labelCls}>Biometric ID</label><input required className={inputCls(isDark)} value={newEmp.biometricId} onChange={e=>setNewEmp(p=>({...p,biometricId:e.target.value}))}/></div>
                 <div><label className={labelCls}>Shift</label><select className={inputCls(isDark)} value={newEmp.shiftId||""} onChange={e=>setNewEmp(p=>({...p,shiftId:e.target.value||null}))}><option value="">No shift</option>{shifts.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
               </div>
-              <div><label className={labelCls}>Branch</label><select className={inputCls(isDark)} value={newEmp.branchId||""} onChange={e=>setNewEmp(p=>({...p,branchId:e.target.value||null}))}><option value="">No branch</option>{branches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+
               <div><label className={labelCls}>Assign Allowances</label><div className="flex flex-wrap gap-2 mt-1">{allowances.map(al=>{const has=newEmp.allowanceIds.includes(al.id);return(<label key={al.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,allowanceIds:has?p.allowanceIds.filter(id=>id!==al.id):[...p.allowanceIds,al.id]}))}/>{al.name}</label>);})}</div></div>
               <div className="flex gap-5">
                 <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newEmp.epfEligible} onChange={e=>setNewEmp(p=>({...p,epfEligible:e.target.checked}))} className="rounded"/>EPF / ETF Eligible</label>
