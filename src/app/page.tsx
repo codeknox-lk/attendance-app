@@ -972,29 +972,6 @@ export default function Home() {
           {/* ═══════════════ DASHBOARD ═══════════════ */}
           {activeTab === "dashboard" && (
             <div className="space-y-6">
-              {/* Device Status & Realtime Sync Banner */}
-              <div className={`p-4 rounded-xl border flex items-center justify-between text-xs transition-smooth ${
-                isDark
-                  ? "bg-gradient-to-r from-slate-900 via-slate-900/90 to-indigo-950/40 border-slate-800/80 text-slate-300"
-                  : "bg-gradient-to-r from-white via-slate-50 to-indigo-50/50 border-slate-200 text-slate-700 shadow-sm"
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                    <Icons.Camera className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>Clinic Main Gate Biometric Hardware</span>
-                      <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20">Online</span>
-                    </div>
-                    <p className={`text-[11px] ${isDark ? "text-slate-400" : "text-slate-600"} mt-0.5`}>Device Serial: <code className={`${isDark ? "text-indigo-400" : "text-indigo-600"} font-mono`}>DS-K1T320EFWX-SN987654</code> · Mode: Face Recognition + Fingerprint</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"} font-bold uppercase tracking-wider block`}>Last Live Event</span>
-                  <span className={`font-mono text-xs ${isDark ? "text-indigo-400" : "text-indigo-600"} font-semibold`}>{biometricSettings.lastSyncTime ?? "Just now"}</span>
-                </div>
-              </div>
 
               {/* Stat cards with gradient borders & modern counters */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
