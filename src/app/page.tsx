@@ -1988,9 +1988,21 @@ export default function Home() {
                                   </td>
                                   <td className="px-4 py-3 text-right">
                                     {matchedEmp ? (
-                                      <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
-                                        Linked ({matchedEmp.firstName})
-                                      </span>
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                                          Linked ({matchedEmp.firstName})
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => openEditEmp(matchedEmp)}
+                                          className={`px-2 py-0.5 text-[10px] font-bold rounded border transition flex items-center gap-1 ${
+                                            isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                                          }`}
+                                        >
+                                          <Icons.Edit className="w-3 h-3" />
+                                          <span>Edit Name</span>
+                                        </button>
+                                      </div>
                                     ) : (
                                       <button
                                         type="button"
