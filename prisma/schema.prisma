@@ -1,86 +1,128 @@
-datasource db {
-  provider = "sqlite"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+}
+
 model Employee {
-  id              String          @id @default(uuid())
+  id              String           @id @default(cuid())
   firstName       String
   lastName        String
-  role            String          // Doctor, Nurse, Receptionist, Admin, Assistant
-  payType         String          // Fixed Monthly, Session-based, Hourly
-  basicSalary     Float           @default(0)
-  hourlyRate      Float           @default(0)
-  sessionRate     Float           @default(0)
-  commissionRate  Float           @default(0)
-  biometricId     String          @unique // Matched with Hikvision employeeNo
-  epfEligible     Boolean         @default(true)
-  taxable         Boolean         @default(false)
-  active          Boolean         @default(true)
-  shiftId         String?
+  email           String?
+  phone           String?
+  role            String           @default("Nurse")
+  payType         String           @default("Fixed Monthly")
+  basicSalary     Float            @default(50000)
+  hourlyRate      Float            @default(300)
+  sessionRate     Float            @default(0)
+  commissionRate  Float            @default(0)
+  biometricId     String           @unique
+  epfEligible     Boolean          @default(true)
+  taxable         Boolean          @default(false)
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
   branchId        String?
-  annualLeave     Int             @default(14)
-  sickLeave       Int             @default(7)
-  casualLeave     Int             @default(3)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  branch          Branch?          @relation(fields: [branchId], references: [id])
+
+  shiftId         String?
+  shift           Shift?           @relation(fields: [shiftId], references: [id])
 
   attendanceLogs  AttendanceLog[]
   leaveRequests   LeaveRequest[]
+  allowances      EmployeeAllowance[]
 }
 
 model AttendanceLog {
-  id             String    @id @default(uuid())
-  employeeId     String
-  date           String    // YYYY-MM-DD
-  checkIn        String    // HH:mm:ss
-  checkOut       String?   // HH:mm:ss
-  status         String    // On-Time, Late, Half-Day, On-Leave, Absent
-  overtimeHours  Float     @default(0)
-  noPayHours     Float     @default(0)
-  authMethod     String?   // Face, Fingerprint, Card, Manual
-  deviceId       String?   // Hikvision Terminal Serial No
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date          String   // Format: YYYY-MM-DD
+  checkIn       String   // Format: HH:mm:ss
+  checkOut      String?  // Format: HH:mm:ss
+  status        String   @default("On-Time") // On-Time, Late, Half-Day, On-Leave, Absent
+  overtimeHours Float    @default(0)
+  noPayHours    Float    @default(0)
+  authMethod    String   @default("Face") // Face, Fingerprint, Card, Manual
+  deviceId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model LeaveRequest {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   employeeId  String
-  type        String   // Annual, Sick, Casual
-  startDate   String   // YYYY-MM-DD
-  endDate     String   // YYYY-MM-DD
-  reason      String
-  status      String   @default("Pending") // Pending, Approved, Rejected
-  createdAt   DateTime @default(now())
-
   employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type        String   // Annual, Sick, Casual, Unpaid
+  startDate   String   // Format: YYYY-MM-DD
+  endDate     String   // Format: YYYY-MM-DD
+  reason      String?
+  status      String   @default("Pending") // Pending, Approved, Rejected
+  appliedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Shift {
-  id        String   @id @default(uuid())
+  id            String     @id @default(cuid())
+  name          String
+  startTime     String     // Format: HH:mm
+  endTime       String     // Format: HH:mm
+  gracePeriod   Int        @default(15) // Minutes
+  overtimeStart String     // Format: HH:mm
+  color         String     @default("indigo")
+  employees     Employee[]
+}
+
+model Branch {
+  id        String     @id @default(cuid())
   name      String
-  startTime String   // e.g. "08:00"
-  endTime   String   // e.g. "17:00"
-  graceMins Int      @default(15)
-  createdAt DateTime @default(now())
+  code      String     @unique
+  address   String?
+  employees Employee[]
+}
+
+model Allowance {
+  id          String              @id @default(cuid())
+  name        String
+  description String?
+  amount      Float
+  type        String              @default("Monthly") // Monthly, Daily, Per-Session
+  isTaxable   Boolean             @default(false)
+  employees   EmployeeAllowance[]
+}
+
+model EmployeeAllowance {
+  id             String    @id @default(cuid())
+  employeeId     String
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  allowanceId    String
+  allowance      Allowance @relation(fields: [allowanceId], references: [id], onDelete: Cascade)
+  overrideAmount Float?
+  assignedAt     DateTime  @default(now())
 }
 
 model BiometricDevice {
-  id           String   @id @default(uuid())
+  id           String   @id @default(cuid())
   name         String
-  model        String   @default("DS-K1T320EFWX")
+  model        String   @default("DS-K1T320MFWX")
   serialNumber String   @unique
+  location     String   @default("Clinic Main Gate")
+  status       String   @default("Connected") // Connected, Disconnected, Syncing
+  protocol     String   @default("HTTP Event Push")
   ipAddress    String?
-  protocol     String   @default("ISUP 5.0")
-  location     String   @default("Main Entrance")
-  status       String   @default("Connected")
   lastSyncTime DateTime @default(now())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  details   String?
+  timestamp DateTime @default(now())
 }
