@@ -28,7 +28,6 @@ const SETTINGS_TABS = [
   { id: "allowances", label: "Allowances" },
   { id: "staff", label: "Staff" },
   { id: "shifts", label: "Shifts" },
-  { id: "branches", label: "Branches" },
   { id: "apit", label: "APIT Tax" },
   { id: "holidays", label: "Holidays" },
 ] as const;
@@ -1926,49 +1925,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* BRANCHES */}
-                {settingsTab==="branches" && (
-                  <div className="space-y-4 max-w-2xl">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Branch Locations</h3>
-                      <button
-                        onClick={() => {
-                          setEditingBranchId(null);
-                          setNewBranch({ name:"", location:"", biometricIp:"", biometricPort:4370, status:"Disconnected" });
-                          setShowAddBranchModal(true);
-                        }}
-                        className="px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow"
-                      >
-                        + Add Branch
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {branches.map(b=>(
-                        <div key={b.id} className={`flex items-center justify-between p-4 rounded-lg border ${isDark?"bg-zinc-950/30 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                          <div>
-                            <p className="font-bold text-xs">{b.name}</p>
-                            <p className="text-[10px] text-zinc-500">{b.location}</p>
-                            <p className="text-[10px] font-mono text-zinc-500">{b.biometricIp}:{b.biometricPort}</p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor(b.status,isDark)}`}>{b.status}</span>
-                            <button
-                              onClick={() => {
-                                setEditingBranchId(b.id);
-                                setNewBranch({ name: b.name, location: b.location, biometricIp: b.biometricIp, biometricPort: b.biometricPort, status: b.status });
-                                setShowAddBranchModal(true);
-                              }}
-                              className="text-indigo-400 hover:underline text-[10px] font-bold"
-                            >
-                              Edit
-                            </button>
-                            <button onClick={()=>deleteBranch(b.id)} className="text-rose-500 hover:underline text-[10px] font-bold">Delete</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* APIT */}
                 {settingsTab==="apit" && (

@@ -6,6 +6,16 @@ datasource db {
   provider = "postgresql"
 }
 
+model AdminUser {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String   @default("Clinic Administrator")
+  role      String   @default("Admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Employee {
   id              String           @id @default(cuid())
   firstName       String
@@ -24,9 +34,6 @@ model Employee {
   active          Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-
-  branchId        String?
-  branch          Branch?          @relation(fields: [branchId], references: [id])
 
   shiftId         String?
   shift           Shift?           @relation(fields: [shiftId], references: [id])
@@ -74,14 +81,6 @@ model Shift {
   overtimeStart String     // Format: HH:mm
   color         String     @default("indigo")
   employees     Employee[]
-}
-
-model Branch {
-  id        String     @id @default(cuid())
-  name      String
-  code      String     @unique
-  address   String?
-  employees Employee[]
 }
 
 model Allowance {

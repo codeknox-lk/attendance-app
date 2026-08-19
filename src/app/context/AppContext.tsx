@@ -237,50 +237,13 @@ const initialShifts: Shift[] = [
   { id: "SHF-002", name: "Extended Evening Shift", startTime: "12:00", endTime: "21:00", workDays: [1,2,3,4,5,6], otThresholdHours: 9, otMultiplier: 1.5 },
 ];
 
-const initialBranches: Branch[] = [
-  { id: "BRN-001", name: "Main Branch – Colombo 7", location: "No. 42, Duplication Road, Colombo 07", biometricIp: "192.168.8.201", biometricPort: 4370, status: "Connected" },
-  { id: "BRN-002", name: "Kandy Branch", location: "No. 15, Peradeniya Road, Kandy", biometricIp: "192.168.1.105", biometricPort: 4370, status: "Disconnected" },
-];
+const initialBranches: Branch[] = [];
+const initialEmployees: Employee[] = [];
+const initialAllowances: Allowance[] = [];
+const initialEmployeeAllowances: EmployeeAllowance[] = [];
+const initialLeaveRequests: LeaveRequest[] = [];
+const initialPayrollHistory: PayrollPeriod[] = [];
 
-const initialEmployees: Employee[] = [
-  { id: "EMP-001", firstName: "Ruwan", lastName: "Alwis", role: "Doctor", payType: "Session-based", basicSalary: 150000, hourlyRate: 0, sessionRate: 3500, commissionRate: 15, biometricId: "2", epfEligible: false, taxable: true, active: true, shiftId: "SHF-001", branchId: "BRN-001", allowanceIds: ["ALL-001"], leaveBalances: { annual: 14, sick: 7, casual: 3 } },
-  { id: "EMP-002", firstName: "Nimali", lastName: "Perera", role: "Nurse", payType: "Fixed Monthly", basicSalary: 75000, hourlyRate: 500, sessionRate: 0, commissionRate: 0, biometricId: "102", epfEligible: true, taxable: false, active: true, shiftId: "SHF-001", branchId: "BRN-001", allowanceIds: ["ALL-001","ALL-002"], leaveBalances: { annual: 12, sick: 7, casual: 3 } },
-  { id: "EMP-003", firstName: "Tharindu", lastName: "Silva", role: "Assistant", payType: "Fixed Monthly", basicSalary: 55000, hourlyRate: 350, sessionRate: 0, commissionRate: 0, biometricId: "103", epfEligible: true, taxable: false, active: true, shiftId: "SHF-001", branchId: "BRN-001", allowanceIds: ["ALL-002"], leaveBalances: { annual: 14, sick: 7, casual: 3 } },
-  { id: "EMP-004", firstName: "Priyantha", lastName: "Fernando", role: "Receptionist", payType: "Fixed Monthly", basicSalary: 45000, hourlyRate: 250, sessionRate: 0, commissionRate: 0, biometricId: "104", epfEligible: true, taxable: false, active: true, shiftId: "SHF-001", branchId: "BRN-001", allowanceIds: ["ALL-001","ALL-003"], leaveBalances: { annual: 10, sick: 7, casual: 3 } },
-  { id: "EMP-005", firstName: "Dilini", lastName: "Senanayake", role: "Doctor", payType: "Session-based", basicSalary: 180000, hourlyRate: 0, sessionRate: 4000, commissionRate: 20, biometricId: "105", epfEligible: false, taxable: true, active: true, shiftId: "SHF-002", branchId: "BRN-001", allowanceIds: ["ALL-001"], leaveBalances: { annual: 14, sick: 7, casual: 3 } },
-];
-
-const initialAllowances: Allowance[] = [
-  { id: "ALL-001", name: "Traveling Allowance", amount: 15000, epfApplicable: false, taxDeductible: true, type: "Fixed" },
-  { id: "ALL-002", name: "Attendance Incentive", amount: 8000, epfApplicable: true, taxDeductible: true, type: "Fixed" },
-  { id: "ALL-003", name: "Medical Allowance", amount: 5000, epfApplicable: false, taxDeductible: false, type: "Fixed" },
-];
-
-const initialEmployeeAllowances: EmployeeAllowance[] = [
-  { id: "EA-001", employeeId: "EMP-001", allowanceId: "ALL-001", overrideAmount: null },
-  { id: "EA-002", employeeId: "EMP-002", allowanceId: "ALL-001", overrideAmount: null },
-  { id: "EA-003", employeeId: "EMP-002", allowanceId: "ALL-002", overrideAmount: null },
-  { id: "EA-004", employeeId: "EMP-003", allowanceId: "ALL-002", overrideAmount: null },
-  { id: "EA-005", employeeId: "EMP-004", allowanceId: "ALL-001", overrideAmount: null },
-  { id: "EA-006", employeeId: "EMP-004", allowanceId: "ALL-003", overrideAmount: null },
-  { id: "EA-007", employeeId: "EMP-005", allowanceId: "ALL-001", overrideAmount: null },
-];
-
-const initialLeaveRequests: LeaveRequest[] = [
-  { id: "LVR-001", employeeId: "EMP-003", type: "Annual", startDate: "2026-07-14", endDate: "2026-07-15", status: "Pending", note: "Family trip to Kandy", appliedAt: "2026-07-10 09:15:00" },
-  { id: "LVR-002", employeeId: "EMP-004", type: "Sick", startDate: "2026-07-08", endDate: "2026-07-08", status: "Approved", note: "Doctor visit", appliedAt: "2026-07-07 17:30:00" },
-  { id: "LVR-003", employeeId: "EMP-002", type: "Casual", startDate: "2026-07-21", endDate: "2026-07-21", status: "Pending", note: "Personal matters", appliedAt: "2026-07-10 11:00:00" },
-];
-
-const initialPayrollHistory: PayrollPeriod[] = [
-  { id: "PAY-001", month: "2026-06", label: "June 2026", status: "Finalized", finalizedAt: "2026-07-01 10:45:00", grossSalaryPool: 295000, netRemittances: 268540, totalEpf: 22500, totalEtf: 5625, totalApit: 0, employeeCount: 5 },
-  { id: "PAY-002", month: "2026-05", label: "May 2026", status: "Finalized", finalizedAt: "2026-06-01 09:30:00", grossSalaryPool: 288000, netRemittances: 261800, totalEpf: 21600, totalEtf: 5400, totalApit: 0, employeeCount: 5 },
-  { id: "PAY-003", month: "2026-04", label: "April 2026", status: "Finalized", finalizedAt: "2026-05-02 11:10:00", grossSalaryPool: 281000, netRemittances: 255100, totalEpf: 21000, totalEtf: 5250, totalApit: 0, employeeCount: 5 },
-  { id: "PAY-004", month: "2026-03", label: "March 2026", status: "Finalized", finalizedAt: "2026-04-01 08:55:00", grossSalaryPool: 275000, netRemittances: 249500, totalEpf: 20500, totalEtf: 5125, totalApit: 0, employeeCount: 5 },
-  { id: "PAY-005", month: "2026-02", label: "February 2026", status: "Finalized", finalizedAt: "2026-03-01 09:20:00", grossSalaryPool: 268000, netRemittances: 242800, totalEpf: 19800, totalEtf: 4950, totalApit: 0, employeeCount: 5 },
-  { id: "PAY-006", month: "2025-12", label: "December 2025", status: "Finalized", finalizedAt: "2026-01-01 10:15:00", grossSalaryPool: 260000, netRemittances: 235500, totalEpf: 19200, totalEtf: 4800, totalApit: 0, employeeCount: 5 },
-  { id: "PAY-007", month: "2025-11", label: "November 2025", status: "Finalized", finalizedAt: "2025-12-01 09:40:00", grossSalaryPool: 255000, netRemittances: 230900, totalEpf: 18800, totalEtf: 4700, totalApit: 0, employeeCount: 5 },
-];
 
 const initialPublicHolidays: PublicHoliday[] = [
   { id: "HOL-001", date: "2026-01-01", name: "New Year's Day", isDoubleOT: true },
