@@ -409,9 +409,7 @@ export default function Home() {
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
   const [newShift, setNewShift] = useState<Omit<Shift,"id">>({ name:"", startTime:"08:00", endTime:"17:00", workDays:[1,2,3,4,5], otThresholdHours:9, otMultiplier:1.5 });
 
-  const [showAddBranchModal, setShowAddBranchModal] = useState(false);
-  const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
-  const [newBranch, setNewBranch] = useState<Omit<Branch,"id">>({ name:"", location:"", biometricIp:"", biometricPort:4370, status:"Disconnected" });
+
 
   const [showAddHolidayModal, setShowAddHolidayModal] = useState(false);
   const [newHoliday, setNewHoliday] = useState<Omit<PublicHoliday,"id">>({ date:"", name:"", isDoubleOT:false });
@@ -2135,40 +2133,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══════════════ MODAL: ADD/EDIT BRANCH ═══════════════ */}
-      {showAddBranchModal && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-          <div className={`w-full max-w-md rounded-xl shadow-2xl border ${isDark?"bg-zinc-900 border-zinc-800":"bg-white border-zinc-200"}`}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{editingBranchId ? "Edit Branch" : "Add Branch"}</h3>
-              <button onClick={()=>setShowAddBranchModal(false)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
-            </div>
-            <div className="p-6 space-y-4 text-xs">
-              <div><label className={labelCls}>Branch Name</label><input className={inputCls(isDark)} value={newBranch.name} onChange={e=>setNewBranch(p=>({...p,name:e.target.value}))}/></div>
-              <div><label className={labelCls}>Location</label><input className={inputCls(isDark)} value={newBranch.location} onChange={e=>setNewBranch(p=>({...p,location:e.target.value}))}/></div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2"><label className={labelCls}>Biometric IP</label><input className={inputCls(isDark)} value={newBranch.biometricIp} onChange={e=>setNewBranch(p=>({...p,biometricIp:e.target.value}))}/></div>
-                <div><label className={labelCls}>Port</label><input type="number" className={inputCls(isDark)} value={newBranch.biometricPort} onChange={e=>setNewBranch(p=>({...p,biometricPort:parseInt(e.target.value)||4370}))}/></div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <button onClick={()=>setShowAddBranchModal(false)} className={`px-4 py-2 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400":"border-zinc-200 text-zinc-600"}`}>Cancel</button>
-                <button onClick={()=>{
-                  if (newBranch.name.trim()) {
-                    if (editingBranchId) {
-                      updateBranch(editingBranchId, newBranch);
-                    } else {
-                      addBranch(newBranch);
-                    }
-                    setShowAddBranchModal(false);
-                  }
-                }} className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow">
-                  {editingBranchId ? "Save Changes" : "Add Branch"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* ═══════════════ MODAL: ADD HOLIDAY ═══════════════ */}
       {showAddHolidayModal && (

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 declare global {
-  // eslint-disable-next-line no-var
-  var globalAttendanceLogs: any[] | undefined;
+  var globalAttendanceLogs: Record<string, unknown>[] | undefined;
 }
 
 if (!globalThis.globalAttendanceLogs) {
@@ -48,7 +47,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 
-    let dbLogs: any[] = [];
+    let dbLogs: Record<string, unknown>[] = [];
     try {
       dbLogs = await db.attendanceLog.findMany({
         where: date ? { date } : {},
@@ -62,7 +61,7 @@ export async function GET(req: NextRequest) {
     const memoryLogs = globalThis.globalAttendanceLogs || [];
     const mergedMap = new Map();
 
-    [...memoryLogs, ...dbLogs].forEach(log => {
+    [...memoryLogs, ...dbLogs].forEach((log: any) => {
       const key = `${log.employeeId || log.employee?.id}-${log.date}`;
       if (!mergedMap.has(key)) {
         mergedMap.set(key, log);
