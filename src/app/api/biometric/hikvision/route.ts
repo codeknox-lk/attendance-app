@@ -44,6 +44,7 @@ interface HikvisionEventBody {
   serialNo?: string;
   time?: string;
   timestamp?: string;
+  name?: string;
 }
 
 export async function GET() {
@@ -177,12 +178,19 @@ export async function POST(req: NextRequest) {
       });
 
       if (!employee) {
-        // Auto-register missing biometric ID to guarantee foreign key integrity
+        // Extract name from rawText or body payload if sent by Hikvision
+        const nameMatch = rawText.match(/<name>(.*?)<\/name>/i) || rawText.match(/name["=:\s]+["']?([a-zA-Z0-9_\s]+)/i);
+        const rawName = nameMatch ? nameMatch[1].trim() : ((body.AccessControllerEvent as unknown as Record<string, string>)?.name || body.name || "");
+        const nameParts = rawName ? rawName.split(" ") : [];
+        const fName = nameParts[0] || (biometricId === "2" ? "ruwantha" : (biometricId === "1" ? "LAKMINA" : `Staff`));
+        const lName = nameParts.slice(1).join(" ") || (biometricId === "2" ? "Alwis" : (biometricId === "1" ? "EKANAYAKE" : `#${biometricId}`));
+
+        // Auto-register missing biometric ID to guarantee database foreign key integrity
         employee = await db.employee.create({
           data: {
             biometricId: String(biometricId),
-            firstName: biometricId === "2" ? "ruwantha" : (biometricId === "1" ? "LAKMINA" : "Staff"),
-            lastName: biometricId === "2" ? "Alwis" : (biometricId === "1" ? "EKANAYAKE" : `#${biometricId}`),
+            firstName: fName,
+            lastName: lName,
             role: "Nurse",
             payType: "Fixed Monthly",
             basicSalary: 60000,
