@@ -108,7 +108,21 @@ export async function POST(req: NextRequest) {
         // Fallback
       }
 
+      const acceptHeader = req.headers.get("accept") || "";
+      if (acceptHeader.includes("xml")) {
+        return new NextResponse(
+          `<?xml version="1.0" encoding="UTF-8"?><ResponseStatus version="1.0"><requestURL>/ISUP/Register</requestURL><statusCode>1</statusCode><statusString>OK</statusString><subStatusCode>ok</subStatusCode></ResponseStatus>`,
+          { headers: { "Content-Type": "application/xml" } }
+        );
+      }
+
       return NextResponse.json({
+        ResponseStatus: {
+          requestURL: "/ISUP/Register",
+          statusCode: 1,
+          statusString: "OK",
+          subStatusCode: "ok",
+        },
         statusCode: 1,
         statusString: "OK",
         data: { status: "online" },
