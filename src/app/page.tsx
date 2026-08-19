@@ -129,55 +129,87 @@ const Icons = {
 
 type PayrollPeriodSummary = { id: string; label: string; grossSalaryPool: number; netRemittances: number; };
 
-function ClinicActivityChart({ isDark }: { isDark: boolean }) {
-  const days = [
-    { day: "Mon", present: 2, hours: 8.5, status: "Normal Shift" },
-    { day: "Tue", present: 2, hours: 9.0, status: "Normal Shift" },
-    { day: "Wed", present: 2, hours: 8.5, status: "100% On-Time" },
-    { day: "Thu", present: 2, hours: 8.0, status: "Normal Shift" },
-    { day: "Fri", present: 2, hours: 8.5, status: "Normal Shift" },
-    { day: "Sat", present: 1, hours: 5.0, status: "Half Day" },
-    { day: "Sun", present: 0, hours: 0, status: "Clinic Off" },
-  ];
+function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: boolean }) {
+  const daysData = useMemo(() => {
+    const today = new Date();
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+      const dayLogs = logs.filter(l => l.date === dateStr);
+      const presentCount = dayLogs.filter(l => ["On-Time", "Late", "Half-Day"].includes(l.status)).length;
+      
+      // Calculate worked hours for the day
+      let hours = 0;
+      dayLogs.forEach(l => {
+        if (l.checkIn && l.checkOut) {
+          const [h1, m1] = l.checkIn.split(":").map(Number);
+          const [h2, m2] = l.checkOut.split(":").map(Number);
+          const diffMin = (h2 * 60 + m2) - (h1 * 60 + m1);
+          if (diffMin > 0) hours += Math.round((diffMin / 60) * 10) / 10;
+        } else if (l.checkIn) {
+          hours += 1;
+        }
+      });
+
+      result.push({ date: dateStr, day: dayName, present: presentCount, hours: Math.min(12, hours) });
+    }
+    return result;
+  }, [logs]);
+
+  const totalWeeklyHours = daysData.reduce((acc, d) => acc + d.hours, 0);
 
   return (
-    <div className="space-y-3 pt-2">
-      <div className={`grid grid-cols-7 gap-2 items-end h-36 pt-4 px-2 border-b ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
-        {days.map((d, idx) => {
-          const heightPct = Math.max(12, (d.hours / 10) * 100);
+    <div className="space-y-4 pt-1">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">7-Day Clinic Attendance &amp; Shift Activity</h3>
+          <p className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-slate-500"}`}>Live worked hours calculated from biometric scans</p>
+        </div>
+        <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-lg">
+          {totalWeeklyHours.toFixed(1)} hrs Logged
+        </span>
+      </div>
+
+      <div className={`grid grid-cols-7 gap-3 items-end h-36 pt-2 pb-6 px-3 border-b ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
+        {daysData.map((d, idx) => {
+          const heightPct = d.hours > 0 ? Math.max(18, (d.hours / 10) * 100) : 6;
           return (
-            <div key={idx} className="flex flex-col items-center gap-2 group">
-              <span className={`text-[9px] font-mono group-hover:text-indigo-400 transition font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.hours > 0 ? `${d.hours}h` : "Off"}</span>
-              <div className={`w-full max-w-[28px] rounded-t-lg overflow-hidden h-28 flex items-end p-0.5 border ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
+            <div key={idx} className="flex flex-col items-center gap-1.5 group">
+              <span className={`text-[10px] font-mono font-bold ${d.hours > 0 ? "text-indigo-400" : "text-slate-400"}`}>
+                {d.hours > 0 ? `${d.hours}h` : "0h"}
+              </span>
+              <div className={`w-full max-w-[32px] rounded-t-xl overflow-hidden h-24 flex items-end p-0.5 border ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
                 <div
-                  className={`w-full rounded-t transition-all duration-500 ${
-                    d.hours > 8
-                      ? "bg-gradient-to-t from-emerald-600 to-indigo-500 glow-indigo"
-                      : d.hours > 0
-                      ? "bg-gradient-to-t from-indigo-600 to-emerald-400"
-                      : isDark ? "bg-slate-800/30" : "bg-slate-200"
+                  className={`w-full rounded-t-lg transition-all duration-500 ${
+                    d.hours > 0
+                      ? "bg-gradient-to-t from-indigo-600 via-purple-600 to-emerald-400 shadow-md glow-indigo"
+                      : isDark ? "bg-slate-800/20" : "bg-slate-200/50"
                   }`}
                   style={{ height: `${heightPct}%` }}
                 />
               </div>
-              <span className={`text-[10px] font-extrabold ${isDark ? "text-slate-400" : "text-slate-600"}`}>{d.day}</span>
+              <span className={`text-[11px] font-extrabold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{d.day}</span>
             </div>
           );
         })}
       </div>
-      <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 pt-1">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/>Live Weekly Operation: 47.5 Clinic Hours Logged</span>
-        <span className="font-mono text-indigo-400">Target Shift: 08:30 AM → 05:00 PM</span>
+
+      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/>Real-time Neon Postgres Database Activity</span>
+        <span className="font-mono text-indigo-400">Shift Target: 08:30 AM → 05:00 PM</span>
       </div>
     </div>
   );
 }
 
-function SalaryTrendChart({ history, isDark }: { history: PayrollPeriodSummary[]; isDark: boolean }) {
+function SalaryTrendChart({ history, logs, isDark }: { history: PayrollPeriodSummary[]; logs: AttendanceLog[]; isDark: boolean }) {
   const [hovered, setHovered] = useState<{ i: number; type: "gross" | "net" } | null>(null);
 
   const data = [...history].reverse().slice(-6);
-  if (data.length < 2) return <ClinicActivityChart isDark={isDark} />;
+  if (data.length < 2) return <ClinicActivityChart logs={logs} isDark={isDark} />;
 
   const W = 600; const H = 180; const padL = 62; const padB = 32; const padT = 16; const padR = 20;
   const chartW = W - padL - padR; const chartH = H - padB - padT;
@@ -1000,17 +1032,19 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-4">
                 {/* ── Premium Area Chart with hover tooltips ── */}
                 <div className={`${cardCls(isDark)} col-span-2`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">6-Month Salary Trend</h3>
-                      <p className={`text-[10px] mt-0.5 ${isDark?"text-zinc-600":"text-zinc-400"}`}>Gross vs Net · hover dots for details</p>
+                  {payrollHistory.length >= 2 && (
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">6-Month Salary Trend</h3>
+                        <p className={`text-[10px] mt-0.5 ${isDark ? "text-zinc-600" : "text-zinc-400"}`}>Gross vs Net · hover dots for details</p>
+                      </div>
+                      <div className="flex items-center gap-4 text-[10px]">
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block opacity-80"/>Gross</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block opacity-80"/>Net</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-[10px]">
-                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block opacity-80"/>Gross</span>
-                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block opacity-80"/>Net</span>
-                    </div>
-                  </div>
-                  <SalaryTrendChart history={payrollHistory} isDark={isDark} />
+                  )}
+                  <SalaryTrendChart history={payrollHistory} logs={attendanceLogs} isDark={isDark} />
                 </div>
 
                 {/* ── Stacked Attendance Breakdown Chart ── */}
