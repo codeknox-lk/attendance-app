@@ -738,34 +738,47 @@ export default function Home() {
   // ─── LOGIN PORTAL (UNAUTHENTICATED) ───────────────────────────────────────────
   if (!currentUser) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 sm:p-6 ${isDark ? "bg-[#080c14] text-slate-100" : "bg-slate-100 text-slate-900"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative transition-all ${isDark ? "bg-[#080c14] text-slate-100" : "bg-slate-50 text-slate-900"}`}>
+        {/* Theme Toggle Button Top Right */}
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={() => setIsDark(!isDark)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-2 transition ${
+              isDark ? "bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800" : "bg-white border-slate-200 text-slate-700 shadow-sm hover:bg-slate-100"
+            }`}
+          >
+            {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-indigo-500" />}
+            <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+          </button>
+        </div>
+
         <div className="w-full max-w-md space-y-6">
           {/* Brand Logo Header */}
           <div className="text-center space-y-2">
             <div className="mx-auto h-14 w-14 bg-gradient-to-tr from-indigo-600 via-purple-600 to-emerald-400 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl glow-indigo">
               MF
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-indigo-200 to-emerald-400 bg-clip-text text-transparent">
+            <h1 className={`text-2xl font-extrabold tracking-tight bg-gradient-to-r ${isDark ? "from-white via-indigo-200 to-emerald-400" : "from-slate-900 via-indigo-900 to-purple-700"} bg-clip-text text-transparent`}>
               MedicFlow Dental OS
             </h1>
-            <p className="text-xs text-slate-400">Cloud Biometric Attendance &amp; Payroll Management</p>
+            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>Cloud Biometric Attendance &amp; Payroll Management</p>
           </div>
 
           {/* Login Card */}
           <div className={`p-6 sm:p-8 rounded-2xl border shadow-2xl backdrop-blur-xl ${isDark ? "bg-slate-900/90 border-slate-800/80" : "bg-white border-slate-200"}`}>
             {/* Tabs: Admin vs Staff */}
-            <div className="flex p-1 bg-slate-950/40 rounded-xl border border-slate-800/50 mb-6">
+            <div className={`flex p-1 rounded-xl border mb-6 ${isDark ? "bg-slate-950/40 border-slate-800/50" : "bg-slate-100 border-slate-200"}`}>
               <button
                 type="button"
                 onClick={() => { setLoginType("admin"); setLoginError(""); }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "admin" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : "text-slate-400 hover:text-slate-200"}`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "admin" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-slate-900"}`}
               >
                 Clinic Admin
               </button>
               <button
                 type="button"
                 onClick={() => { setLoginType("staff"); setLoginError(""); }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "staff" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : "text-slate-400 hover:text-slate-200"}`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "staff" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-slate-900"}`}
               >
                 Staff Portal
               </button>
@@ -826,7 +839,7 @@ export default function Home() {
                       placeholder="e.g. 2 or 1"
                       required
                     />
-                    <p className="text-[10px] text-slate-500 mt-1">Enter your assigned biometric ID (e.g. 2 for Ruwantha Alwis or 1 for Lakmina Ekanayake)</p>
+                    <p className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-600"} mt-1`}>Enter your assigned biometric ID (e.g. 2 for Ruwantha Alwis or 1 for Lakmina Ekanayake)</p>
                   </div>
                 </>
               )}
@@ -847,13 +860,17 @@ export default function Home() {
             </form>
 
             {/* Quick Demo Access */}
-            <div className="mt-6 pt-5 border-t border-slate-800/60 text-center space-y-2">
-              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Quick Demo Sign-In</span>
+            <div className={`mt-6 pt-5 border-t text-center space-y-2 ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
+              <span className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? "text-slate-500" : "text-slate-600"}`}>Quick Demo Sign-In</span>
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => loginUser({ loginType: "admin", username: "admin", password: "admin123" })}
-                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-indigo-300 rounded border border-slate-700 text-[10px] font-bold transition flex items-center justify-center gap-1.5"
+                  className={`py-1.5 px-2 rounded border text-[10px] font-bold transition flex items-center justify-center gap-1.5 ${
+                    isDark
+                      ? "bg-slate-800/60 hover:bg-slate-800 border-slate-700 text-indigo-300"
+                      : "bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700"
+                  }`}
                 >
                   <Icons.Shield className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Admin Sign-In</span>
@@ -861,7 +878,11 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => loginUser({ loginType: "staff", biometricId: "2" })}
-                  className="py-1.5 px-2 bg-slate-800/60 hover:bg-slate-800 text-emerald-300 rounded border border-slate-700 text-[10px] font-bold transition flex items-center justify-center gap-1.5"
+                  className={`py-1.5 px-2 rounded border text-[10px] font-bold transition flex items-center justify-center gap-1.5 ${
+                    isDark
+                      ? "bg-slate-800/60 hover:bg-slate-800 border-slate-700 text-emerald-300"
+                      : "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700"
+                  }`}
                 >
                   <Icons.User className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Staff Sign-In (#2)</span>
