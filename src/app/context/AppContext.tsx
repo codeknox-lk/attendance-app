@@ -164,6 +164,12 @@ export interface PayslipAdjustment {
   note: string;
 }
 
+export interface SalarySettings {
+  globalWorkedDayBonus: number;
+  globalPunctualBonus: number;
+  globalIncomeBonusPct: number;
+}
+
 export interface CompanyProfile {
   clinicName: string;
   address: string;
@@ -239,6 +245,8 @@ export interface AppContextProps {
   updatePayslipAdjustment: (key: string, adj: PayslipAdjustment) => void;
   updatePayrollCycleStartDay: (day: number) => void;
   updateApitSlabs: (slabs: ApitSlab[]) => void;
+  salarySettings: SalarySettings;
+  updateSalarySettings: (settings: Partial<SalarySettings>) => void;
   monthlyExcessIncome: Record<string, number>;
   updateMonthlyExcessIncome: (month: string, amount: number) => void;
   machinePersons: MachinePerson[];
@@ -365,6 +373,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
     }
     return {};
+  });
+  const [salarySettings, setSalarySettings] = useState<SalarySettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("medicflow_salary_settings");
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return {
+      globalWorkedDayBonus: 0,
+      globalPunctualBonus: 0,
+      globalIncomeBonusPct: 0,
+    };
   });
   const [payrollCycleStartDay, setPayrollCycleStartDay] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -892,7 +913,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateMonthlyExcessIncome = (month: string, amount: number) => {
     setMonthlyExcessIncome(p => {
       const next = { ...p, [month]: amount };
-      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_monthly_excess_income", JSON.stringify(next)); } catch {} }
+      if (typeof window !== "undefined") localStorage.setItem("medicflow_monthly_excess_income", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const updateSalarySettings = (s: Partial<SalarySettings>) => {
+    setSalarySettings(p => {
+      const next = { ...p, ...s };
+      if (typeof window !== "undefined") localStorage.setItem("medicflow_salary_settings", JSON.stringify(next));
       return next;
     });
   };
@@ -1089,6 +1118,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerSync, simulateHikvisionScan,
       isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
       updateCompanyProfile, updatePayslipAdjustment,
+      salarySettings, updateSalarySettings,
       machinePersons: allMachinePersons, fetchMachinePersons, importMachinePersonsToStaff, isFetchingPersons,
     }}>
       {children}

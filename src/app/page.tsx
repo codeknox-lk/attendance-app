@@ -24,11 +24,9 @@ const SETTINGS_TABS = [
   { id: "biometric", label: "Biometric" },
   { id: "company", label: "Clinic Profile" },
   { id: "security", label: "Security & PIN" },
-  { id: "epf", label: "EPF / ETF" },
-  { id: "allowances", label: "Allowances" },
+  { id: "epf", label: "Salary Settings" },
   { id: "staff", label: "Staff" },
   { id: "shifts", label: "Shifts" },
-  { id: "apit", label: "APIT Tax" },
   { id: "holidays", label: "Holidays" },
 ] as const;
 
@@ -472,6 +470,7 @@ export default function Home() {
     updateCompanyProfile, updatePayslipAdjustment,
     machinePersons, fetchMachinePersons, isFetchingPersons,
     monthlyExcessIncome, updateMonthlyExcessIncome,
+    salarySettings, updateSalarySettings,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
@@ -665,9 +664,13 @@ export default function Home() {
       const manualDeduction = adj.deductionAmount || 0;
 
       // Dynamic Bonuses
-      const workedDaysBonus = sessionCount * (emp.attendanceBonusRate || 0);
-      const punctualDaysBonus = punctualCount * (emp.punctualBonusRate || 0);
-      const exceedIncomeBonus = (monthlyExcessIncome[selectedMonth] || 0) * ((emp.incomeBonusPercentage || 0) / 100);
+      const attBonusRate = emp.attendanceBonusRate || salarySettings.globalWorkedDayBonus || 0;
+      const puncBonusRate = emp.punctualBonusRate || salarySettings.globalPunctualBonus || 0;
+      const incBonusPct = emp.incomeBonusPercentage || salarySettings.globalIncomeBonusPct || 0;
+
+      const workedDaysBonus = sessionCount * attBonusRate;
+      const punctualDaysBonus = punctualCount * puncBonusRate;
+      const exceedIncomeBonus = (monthlyExcessIncome[selectedMonth] || 0) * (incBonusPct / 100);
 
       const employeeEpf = emp.epfEligible ? epfBase * (epfSettings.employeeRate/100) : 0;
       const employerEpf = emp.epfEligible ? epfBase * (epfSettings.employerRate/100) : 0;
@@ -683,10 +686,11 @@ export default function Home() {
         basicEarnings, otPay, sessionPay, totalAllowances:totalAllowancesVal, 
         noPayDeduction, manualBonus, manualDeduction, payslipNote: adj.note, 
         employeeEpf, employerEpf, employerEtf, grossEarnings, apitMonthly, netSalary,
-        workedDaysBonus, punctualDaysBonus, exceedIncomeBonus
+        workedDaysBonus, punctualDaysBonus, exceedIncomeBonus,
+        attBonusRate, puncBonusRate, incBonusPct
       };
     });
-  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, shifts, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome]);
+  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, shifts, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings]);
 
   const payrollTotals = useMemo(() => payrollCalcs.reduce((t,c) => ({ gross:t.gross+c.grossEarnings, net:t.net+c.netSalary, epfEmp:t.epfEmp+c.employeeEpf, epfEmr:t.epfEmr+c.employerEpf, etf:t.etf+c.employerEtf, apit:t.apit+c.apitMonthly }), {gross:0,net:0,epfEmp:0,epfEmr:0,etf:0,apit:0}), [payrollCalcs]);
 
@@ -1461,18 +1465,6 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Monthly Excess Income Input */}
-              <div className={cardCls(isDark)}>
-                <label className="text-xs font-bold mr-3">Clinic Excess Income (above target) for this month (LKR):</label>
-                <input 
-                  type="number" 
-                  className={inputCls(isDark) + " w-48 inline-block"} 
-                  value={monthlyExcessIncome[selectedMonth] || ""} 
-                  onChange={e => updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value) || 0)} 
-                  placeholder="e.g. 320000" 
-                />
-                <span className="text-[10px] ml-3 text-zinc-500">Used to calculate 1% Exceed Income Bonus for eligible staff.</span>
-              </div>
 
               {/* Toolbar */}
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -2107,68 +2099,108 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* EPF / ETF */}
+                {/* SALARY SETTINGS */}
                 {settingsTab==="epf" && (
-                  <div className="space-y-5 max-w-md">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Statutory Rates</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div><label className={labelCls}>Employee EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employeeRate} onChange={e=>setEpfForm(p=>({...p, employeeRate: parseFloat(e.target.value)||0}))}/></div>
-                      <div><label className={labelCls}>Employer EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employerRate} onChange={e=>setEpfForm(p=>({...p, employerRate: parseFloat(e.target.value)||0}))}/></div>
-                      <div><label className={labelCls}>ETF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.etfRate} onChange={e=>setEpfForm(p=>({...p, etfRate: parseFloat(e.target.value)||0}))}/></div>
-                    </div>
-                    <div><label className={labelCls}>Working Days / Month</label><input type="number" className={`${inputCls(isDark)} max-w-[120px]`} value={epfForm.workingDaysPerMonth} onChange={e=>setEpfForm(p=>({...p, workingDaysPerMonth: parseInt(e.target.value)||26}))}/><p className="text-[10px] text-zinc-500 mt-1">Used to calculate daily no-pay rate.</p></div>
-                    <div className="pt-4 border-t border-zinc-800">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">Salary Period Cycle</h4>
-                      <select className={inputCls(isDark)} value={cycleStartDayForm} onChange={e=>setCycleStartDayForm(parseInt(e.target.value)||1)}>
-                        {Array.from({length:31},(_,i)=>i+1).map(day=>{const s=daySuffix(day);const pd=day-1;const ps=daySuffix(pd);return(<option key={day} value={day}>{day}{s} of month {day===1?"(Standard calendar month)":`(${day}${s} to ${pd}${ps} of next month)`}</option>);})}
-                      </select>
-                    </div>
-
-                    <div className="pt-2 flex items-center justify-between">
-                      {settingsSaveMsg && settingsTab === "epf" ? (
-                        <span className="text-xs font-bold text-emerald-400">{settingsSaveMsg}</span>
-                      ) : <span />}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateEpfSettings(epfForm);
-                          updatePayrollCycleStartDay(cycleStartDayForm);
-                          setSettingsSaveMsg("EPF/ETF settings updated successfully!");
-                          setTimeout(() => setSettingsSaveMsg(""), 3000);
-                        }}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition"
-                      >
-                        Save EPF / ETF Settings
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ALLOWANCES */}
-                {settingsTab==="allowances" && (
-                  <div className="space-y-4 max-w-2xl">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Global Allowance Categories</h3>
-                    <div className="space-y-2">
-                      {allowances.map(al=>(
-                        <div key={al.id} className={`flex items-center justify-between p-3 rounded-lg border ${isDark?"bg-zinc-950/40 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                          <div><p className="font-semibold text-xs">{al.name}</p><p className="text-[10px] text-zinc-500">LKR {al.amount.toLocaleString()} · {al.type}{al.epfApplicable?" · EPF Subject":""}</p></div>
-                          <button onClick={()=>deleteAllowance(al.id)} className="text-rose-500 hover:underline text-[10px] font-bold">Delete</button>
+                  <div className="space-y-10 max-w-2xl pb-10">
+                    
+                    {/* GLOBAL BONUS RATES */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Global Dynamic Bonuses</h3>
+                      <p className="text-[10px] text-zinc-500">These rates apply to all employees by default unless overridden in their specific staff profile.</p>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className={labelCls}>Worked Day Bonus (LKR)</label>
+                          <input type="number" className={inputCls(isDark)} value={salarySettings.globalWorkedDayBonus} onChange={e=>updateSalarySettings({globalWorkedDayBonus: parseFloat(e.target.value)||0})}/>
                         </div>
-                      ))}
-                    </div>
-                    <div className={`p-4 rounded-lg border ${isDark?"border-zinc-800":"border-zinc-200"}`}>
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Add Allowance</h4>
-                      <div className="grid grid-cols-4 gap-3">
-                        <div className="col-span-2"><label className={labelCls}>Name</label><input className={inputCls(isDark)} value={newAllowance.name} onChange={e=>setNewAllowance(p=>({...p,name:e.target.value}))}/></div>
-                        <div><label className={labelCls}>Amount (LKR)</label><input type="number" className={inputCls(isDark)} value={newAllowance.amount} onChange={e=>setNewAllowance(p=>({...p,amount:parseFloat(e.target.value)||0}))}/></div>
-                        <div><label className={labelCls}>Type</label><select className={inputCls(isDark)} value={newAllowance.type} onChange={e=>setNewAllowance(p=>({...p,type:e.target.value as "Fixed"|"Variable"}))}><option>Fixed</option><option>Variable</option></select></div>
+                        <div>
+                          <label className={labelCls}>Punctual Bonus (LKR)</label>
+                          <input type="number" className={inputCls(isDark)} value={salarySettings.globalPunctualBonus} onChange={e=>updateSalarySettings({globalPunctualBonus: parseFloat(e.target.value)||0})}/>
+                        </div>
+                        <div>
+                          <label className={labelCls}>Income Bonus (%)</label>
+                          <input type="number" className={inputCls(isDark)} value={salarySettings.globalIncomeBonusPct} onChange={e=>updateSalarySettings({globalIncomeBonusPct: parseFloat(e.target.value)||0})}/>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-5 mt-3">
-                        <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.epfApplicable} onChange={e=>setNewAllowance(p=>({...p,epfApplicable:e.target.checked}))} className="rounded"/>EPF Applicable</label>
-                        <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.taxDeductible} onChange={e=>setNewAllowance(p=>({...p,taxDeductible:e.target.checked}))} className="rounded"/>Tax Deductible</label>
-                        <button onClick={()=>{if(newAllowance.name.trim()){addAllowance(newAllowance);setNewAllowance({name:"",amount:10000,epfApplicable:false,taxDeductible:true,type:"Fixed"});}}} className={`ml-auto px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>Add Allowance</button>
+                      
+                      <div className="pt-2">
+                        <label className={labelCls}>Clinic Excess Income Target (LKR) — Current Month: {selectedMonth}</label>
+                        <input type="number" className={`${inputCls(isDark)} max-w-xs`} value={monthlyExcessIncome[selectedMonth] || ""} placeholder="e.g. 320000" onChange={e=>updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value)||0)}/>
+                        <p className="text-[10px] text-zinc-500 mt-1">Global target for the current selected month. Used to calculate Exceed Income bonuses.</p>
                       </div>
                     </div>
+
+                    {/* EPF / ETF */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Statutory Rates (EPF/ETF)</h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div><label className={labelCls}>Employee EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employeeRate} onChange={e=>setEpfForm(p=>({...p, employeeRate: parseFloat(e.target.value)||0}))}/></div>
+                        <div><label className={labelCls}>Employer EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employerRate} onChange={e=>setEpfForm(p=>({...p, employerRate: parseFloat(e.target.value)||0}))}/></div>
+                        <div><label className={labelCls}>ETF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.etfRate} onChange={e=>setEpfForm(p=>({...p, etfRate: parseFloat(e.target.value)||0}))}/></div>
+                      </div>
+                      <div><label className={labelCls}>Working Days / Month</label><input type="number" className={`${inputCls(isDark)} max-w-[120px]`} value={epfForm.workingDaysPerMonth} onChange={e=>setEpfForm(p=>({...p, workingDaysPerMonth: parseInt(e.target.value)||26}))}/><p className="text-[10px] text-zinc-500 mt-1">Used to calculate daily no-pay rate.</p></div>
+                      
+                      <div className="pt-2 border-t border-zinc-800">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Salary Period Cycle</h4>
+                        <select className={inputCls(isDark)} value={cycleStartDayForm} onChange={e=>setCycleStartDayForm(parseInt(e.target.value)||1)}>
+                          {Array.from({length:31},(_,i)=>i+1).map(day=>{const s=daySuffix(day);const pd=day-1;const ps=daySuffix(pd);return(<option key={day} value={day}>{day}{s} of month {day===1?"(Standard calendar month)":`(${day}${s} to ${pd}${ps} of next month)`}</option>);})}
+                        </select>
+                      </div>
+
+                      <div className="pt-2 flex items-center justify-between">
+                        {settingsSaveMsg && settingsTab === "epf" ? <span className="text-xs font-bold text-emerald-400">{settingsSaveMsg}</span> : <span />}
+                        <button type="button" onClick={() => { updateEpfSettings(epfForm); updatePayrollCycleStartDay(cycleStartDayForm); setSettingsSaveMsg("Salary Settings updated successfully!"); setTimeout(() => setSettingsSaveMsg(""), 3000); }} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition">Save Salary Settings</button>
+                      </div>
+                    </div>
+
+                    {/* ALLOWANCES */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Global Allowance Categories</h3>
+                      <div className="space-y-2">
+                        {allowances.map(al=>(
+                          <div key={al.id} className={`flex items-center justify-between p-3 rounded-lg border ${isDark?"bg-zinc-950/40 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
+                            <div><p className="font-semibold text-xs">{al.name}</p><p className="text-[10px] text-zinc-500">LKR {al.amount.toLocaleString()} · {al.type}{al.epfApplicable?" · EPF Subject":""}</p></div>
+                            <button onClick={()=>deleteAllowance(al.id)} className="text-rose-500 hover:underline text-[10px] font-bold">Delete</button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className={`p-4 rounded-lg border ${isDark?"border-zinc-800":"border-zinc-200"}`}>
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Add Allowance</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                          <div className="col-span-2"><label className={labelCls}>Name</label><input className={inputCls(isDark)} value={newAllowance.name} onChange={e=>setNewAllowance(p=>({...p,name:e.target.value}))}/></div>
+                          <div><label className={labelCls}>Amount (LKR)</label><input type="number" className={inputCls(isDark)} value={newAllowance.amount} onChange={e=>setNewAllowance(p=>({...p,amount:parseFloat(e.target.value)||0}))}/></div>
+                          <div><label className={labelCls}>Type</label><select className={inputCls(isDark)} value={newAllowance.type} onChange={e=>setNewAllowance(p=>({...p,type:e.target.value as "Fixed"|"Variable"}))}><option>Fixed</option><option>Variable</option></select></div>
+                        </div>
+                        <div className="flex items-center gap-5 mt-3">
+                          <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.epfApplicable} onChange={e=>setNewAllowance(p=>({...p,epfApplicable:e.target.checked}))} className="rounded"/>EPF Applicable</label>
+                          <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.taxDeductible} onChange={e=>setNewAllowance(p=>({...p,taxDeductible:e.target.checked}))} className="rounded"/>Tax Deductible</label>
+                          <button onClick={()=>{if(newAllowance.name.trim()){addAllowance(newAllowance);setNewAllowance({name:"",amount:10000,epfApplicable:false,taxDeductible:true,type:"Fixed"});}}} className={`ml-auto px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>Add Allowance</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* APIT */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">APIT / PAYE Tax Slabs (Annual Income)</h3>
+                      <div className={`rounded-lg border overflow-hidden ${isDark?"border-zinc-800":"border-zinc-200"}`}>
+                        <table className="w-full text-xs">
+                          <thead className={`border-b ${isDark?"bg-zinc-900 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
+                            <tr>{["From (LKR)","To (LKR)","Rate (%)"].map(h=><th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400">{h}</th>)}</tr>
+                          </thead>
+                          <tbody className={`divide-y ${isDark?"divide-zinc-800":"divide-zinc-100"}`}>
+                            {apitSlabs.map((slab,idx)=>(
+                              <tr key={idx}>
+                                <td className="px-4 py-3 font-mono">LKR {slab.minIncome.toLocaleString()}</td>
+                                <td className="px-4 py-3 font-mono">{slab.maxIncome?`LKR ${slab.maxIncome.toLocaleString()}`:"No limit"}</td>
+                                <td className="px-4 py-3 font-bold text-amber-500">{slab.rate}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-[10px] text-zinc-500">These slabs follow the Sri Lanka Inland Revenue Act. APIT is computed monthly as 1/12 of the projected annual tax on each employee&apos;s annualised net salary.</p>
+                    </div>
+
                   </div>
                 )}
 
@@ -2418,30 +2450,6 @@ export default function Home() {
                 )}
 
 
-
-                {/* APIT */}
-                {settingsTab==="apit" && (
-                  <div className="space-y-4 max-w-lg">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">APIT / PAYE Tax Slabs (Annual Income)</h3>
-                    <div className={`rounded-lg border overflow-hidden ${isDark?"border-zinc-800":"border-zinc-200"}`}>
-                      <table className="w-full text-xs">
-                        <thead className={`border-b ${isDark?"bg-zinc-900 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                          <tr>{["From (LKR)","To (LKR)","Rate (%)"].map(h=><th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400">{h}</th>)}</tr>
-                        </thead>
-                        <tbody className={`divide-y ${isDark?"divide-zinc-800":"divide-zinc-100"}`}>
-                          {apitSlabs.map((slab,idx)=>(
-                            <tr key={idx}>
-                              <td className="px-4 py-3 font-mono">LKR {slab.minIncome.toLocaleString()}</td>
-                              <td className="px-4 py-3 font-mono">{slab.maxIncome?`LKR ${slab.maxIncome.toLocaleString()}`:"No limit"}</td>
-                              <td className="px-4 py-3 font-bold text-amber-500">{slab.rate}%</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="text-[10px] text-zinc-500">These slabs follow the Sri Lanka Inland Revenue Act. APIT is computed monthly as 1/12 of the projected annual tax on each employee&apos;s annualised net salary.</p>
-                  </div>
-                )}
 
                 {/* HOLIDAYS */}
                 {settingsTab==="holidays" && (
@@ -2697,12 +2705,12 @@ export default function Home() {
                   ))}
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
-                    <span className="text-zinc-500 flex items-center gap-1">Worked Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.sessionCount} × {emp.attendanceBonusRate})</span></span>
+                    <span className="text-zinc-500 flex items-center gap-1">Worked Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.sessionCount} × {calc.attBonusRate})</span></span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.workedDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
-                    <span className="text-zinc-500 flex items-center gap-1">Punctual Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.punctualCount} × {emp.punctualBonusRate})</span></span>
+                    <span className="text-zinc-500 flex items-center gap-1">Punctual Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.punctualCount} × {calc.puncBonusRate})</span></span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.punctualDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
@@ -2712,7 +2720,7 @@ export default function Home() {
                   </div>
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
-                    <span className="text-zinc-500 flex items-center gap-1">Exceed Income Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({emp.incomeBonusPercentage}% of target)</span></span>
+                    <span className="text-zinc-500 flex items-center gap-1">Exceed Income Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.incBonusPct}% of target)</span></span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.exceedIncomeBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
