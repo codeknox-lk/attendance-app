@@ -307,23 +307,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [payrollHistory, setPayrollHistory] = useState<PayrollPeriod[]>(initialPayrollHistory);
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
-  const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>(initialPublicHolidays);
-  const [apitSlabs, setApitSlabs] = useState<ApitSlab[]>(initialApitSlabs);
-  const [payrollCycleStartDay, setPayrollCycleStartDay] = useState<number>(1);
-  const [biometricSettings, setBiometricSettings] = useState<BiometricSettings>({
-    ip: "192.168.8.201",
-    port: 4370,
-    deviceType: "Hikvision DS-K1T320EFWX (ISUP 5.0 Cloud)",
-    pollInterval: "Real-time Push (ISUP)",
-    status: "Connected",
-    lastSyncTime: "2026-08-02 08:30:00",
-    cloudWebhookUrl: "/api/biometric/hikvision",
+  const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_public_holidays");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return initialPublicHolidays;
   });
-  const [epfSettings, setEpfSettings] = useState<EpfSettings>({ employeeRate: 8, employerRate: 12, etfRate: 3, workingDaysPerMonth: 26 });
+  const [apitSlabs, setApitSlabs] = useState<ApitSlab[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_apit_slabs");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return initialApitSlabs;
+  });
+  const [payrollCycleStartDay, setPayrollCycleStartDay] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_payroll_cycle_start");
+        if (saved) return parseInt(saved) || 1;
+      } catch {}
+    }
+    return 1;
+  });
+  const [biometricSettings, setBiometricSettings] = useState<BiometricSettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_biometric_settings");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {
+      ip: "192.168.8.135",
+      port: 4370,
+      deviceType: "Hikvision DS-K1T320EFWX (ISUP 5.0 Cloud)",
+      pollInterval: "Real-time Push (ISUP)",
+      status: "Connected",
+      lastSyncTime: "2026-08-02 08:30:00",
+      cloudWebhookUrl: "/api/biometric/hikvision",
+    };
+  });
+  const [epfSettings, setEpfSettings] = useState<EpfSettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_epf_settings");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return { employeeRate: 8, employerRate: 12, etfRate: 3, workingDaysPerMonth: 26 };
+  });
   const nowStr = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")} ${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}:${String(n.getSeconds()).padStart(2,"0")}`; };
   const pushAudit = (entry: Omit<AuditLog, "id"|"timestamp">) => setAuditLogs(prev => [{ ...entry, id: `AUD-${Date.now()}`, timestamp: nowStr() }, ...prev]);
 
-  const [adminPin, setAdminPin] = useState<string>("1234");
+  const [adminPin, setAdminPin] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_admin_pin");
+        if (saved) return saved;
+      } catch {}
+    }
+    return "1234";
+  });
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -360,7 +408,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateAdminPin = (newPin: string) => {
     if (newPin && newPin.trim().length === 4) {
-      setAdminPin(newPin.trim());
+      const pin = newPin.trim();
+      setAdminPin(pin);
+      if (typeof window !== "undefined") {
+        try { localStorage.setItem("medicflow_admin_pin", pin); } catch {}
+      }
       pushAudit({ action: "UPDATE", entity: "AdminSecurity", entityId: "PIN", details: "Changed Admin PIN" });
       return true;
     }
@@ -742,14 +794,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBranch = (id: string, f: Partial<Branch>) => setBranches(p => p.map(b => b.id===id ? {...b,...f} : b));
   const deleteBranch = (id: string) => setBranches(p => p.filter(b => b.id!==id));
 
-  const addHoliday = (h: Omit<PublicHoliday,"id">) => setPublicHolidays(p => [...p,{...h,id:`HOL-${Date.now()}`}].sort((a,b)=>a.date.localeCompare(b.date)));
-  const deleteHoliday = (id: string) => setPublicHolidays(p => p.filter(h => h.id!==id));
-  const toggleHolidayDoubleOT = (id: string) => setPublicHolidays(p => p.map(h => h.id===id ? {...h,isDoubleOT:!h.isDoubleOT} : h));
+  const addHoliday = (h: Omit<PublicHoliday,"id">) => {
+    setPublicHolidays(p => {
+      const list = [...p, { ...h, id: `HOL-${Date.now()}` }].sort((a,b)=>a.date.localeCompare(b.date));
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_public_holidays", JSON.stringify(list)); } catch {} }
+      return list;
+    });
+  };
+  const deleteHoliday = (id: string) => {
+    setPublicHolidays(p => {
+      const list = p.filter(h => h.id !== id);
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_public_holidays", JSON.stringify(list)); } catch {} }
+      return list;
+    });
+  };
+  const toggleHolidayDoubleOT = (id: string) => {
+    setPublicHolidays(p => {
+      const list = p.map(h => h.id === id ? { ...h, isDoubleOT: !h.isDoubleOT } : h);
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_public_holidays", JSON.stringify(list)); } catch {} }
+      return list;
+    });
+  };
 
-  const updateBiometricSettings = (s: Partial<BiometricSettings>) => setBiometricSettings(p => ({...p,...s}));
-  const updateEpfSettings = (s: Partial<EpfSettings>) => setEpfSettings(p => ({...p,...s}));
-  const updatePayrollCycleStartDay = (day: number) => setPayrollCycleStartDay(day);
-  const updateApitSlabs = (slabs: ApitSlab[]) => setApitSlabs(slabs);
+  const updateBiometricSettings = (s: Partial<BiometricSettings>) => {
+    setBiometricSettings(p => {
+      const updated = { ...p, ...s };
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_biometric_settings", JSON.stringify(updated)); } catch {} }
+      return updated;
+    });
+  };
+  const updateEpfSettings = (s: Partial<EpfSettings>) => {
+    setEpfSettings(p => {
+      const updated = { ...p, ...s };
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_epf_settings", JSON.stringify(updated)); } catch {} }
+      return updated;
+    });
+  };
+  const updatePayrollCycleStartDay = (day: number) => {
+    setPayrollCycleStartDay(day);
+    if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_payroll_cycle_start", String(day)); } catch {} }
+  };
+  const updateApitSlabs = (slabs: ApitSlab[]) => {
+    setApitSlabs(slabs);
+    if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_apit_slabs", JSON.stringify(slabs)); } catch {} }
+  };
 
   const simulateHikvisionScan = async (biometricId: string = "101", authMethod: string = "Face") => {
     setBiometricSettings(p => ({ ...p, status: "Syncing" }));
