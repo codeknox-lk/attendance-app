@@ -2258,10 +2258,28 @@ export default function Home() {
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Staff Directory</h3>
                       <div className="flex gap-2">
                         <button
-                          onClick={async () => {
-                            await importMachinePersonsToStaff();
-                            setSettingsSaveMsg("Imported enrolled staff from fingerprint machine!");
-                            setTimeout(() => setSettingsSaveMsg(""), 3000);
+                          onClick={() => {
+                            const maxBioId = Math.max(...employees.map(e => parseInt(e.biometricId) || 0), 0);
+                            const nextBioId = String(maxBioId >= 1 ? maxBioId + 1 : 3);
+                            setEditingEmpId(null);
+                            setNewEmp({
+                              firstName: "",
+                              lastName: "",
+                              role: "Nurse",
+                              payType: "Fixed Monthly",
+                              basicSalary: 60000,
+                              hourlyRate: 350,
+                              sessionRate: 0,
+                              commissionRate: 0,
+                              biometricId: nextBioId,
+                              epfEligible: true,
+                              taxable: false,
+                              shiftId: null,
+                              branchId: null,
+                              allowanceIds: [],
+                              leaveBalances: { annual: 14, sick: 7, casual: 3 },
+                            });
+                            setShowAddEmpModal(true);
                           }}
                           className={`px-3 py-1.5 text-xs font-bold rounded border shadow transition flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200"}`}
                         >
