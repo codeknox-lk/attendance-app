@@ -458,9 +458,10 @@ export default function Home() {
   const filteredLogs = useMemo(() => attendanceLogs
     .filter(l => {
       if (l.date < dateRange.startDate || l.date > dateRange.endDate) return false;
-      const emp = employees.find(e => e.id===l.employeeId); if (!emp) return false;
-      return `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(attendanceSearch.toLowerCase()) &&
-        (attendanceStatusFilter==="All" || l.status===attendanceStatusFilter);
+      const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId || (l.employee && e.biometricId === String(l.employee.biometricId)));
+      const empName = emp ? `${emp.firstName} ${emp.lastName}` : (l.employee ? `${l.employee.firstName} ${l.employee.lastName}` : `Staff #${l.employeeId}`);
+      return empName.toLowerCase().includes(attendanceSearch.toLowerCase()) &&
+        (attendanceStatusFilter === "All" || l.status === attendanceStatusFilter);
     }).sort((a,b) => b.date.localeCompare(a.date)), [attendanceLogs, employees, attendanceSearch, attendanceStatusFilter, dateRange]);
 
   const statusCounts = useMemo(() => {
@@ -927,11 +928,12 @@ export default function Home() {
                     </thead>
                     <tbody className={`divide-y ${isDark?"divide-zinc-800/70":"divide-zinc-100"}`}>
                       {filteredLogs.map(log => {
-                        const emp = employees.find(e=>e.id===log.employeeId);
+                        const emp = employees.find(e => e.id === log.employeeId || e.biometricId === log.employeeId || (log.employee && e.biometricId === String(log.employee.biometricId)));
+                        const empName = emp ? `${emp.firstName} ${emp.lastName}` : (log.employee ? `${log.employee.firstName} ${log.employee.lastName}` : `Staff #${log.employeeId}`);
                         return (
                           <tr key={log.id} className={`hover:${isDark?"bg-zinc-900/50":"bg-zinc-50/80"} transition`}>
                             <td className="px-4 py-3 font-mono text-zinc-400">{log.date}</td>
-                            <td className="px-4 py-3 font-semibold">{emp?`${emp.firstName} ${emp.lastName}`:"Unknown"}</td>
+                            <td className="px-4 py-3 font-semibold">{empName}</td>
                             <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold border ws-nowrap ${statusColor(log.status,isDark)}`}>{log.status}</span></td>
                             <td className="px-4 py-3 font-mono">{log.checkIn}</td>
                             <td className="px-4 py-3 font-mono">{log.checkOut||"–"}</td>

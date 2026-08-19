@@ -35,6 +35,12 @@ export interface AttendanceLog {
   noPayHours: number;
   leaveRequestId?: string;
   branchId?: string;
+  employee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    biometricId: string;
+  };
 }
 
 export interface Allowance {
@@ -483,6 +489,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: (l.status as AttendanceLog["status"]) || "On-Time",
             overtimeHours: Number(l.overtimeHours) || 0,
             noPayHours: Number(l.noPayHours) || 0,
+            employee: l.employee as AttendanceLog["employee"],
           }));
           setAttendanceLogs(dbLogs);
         }
