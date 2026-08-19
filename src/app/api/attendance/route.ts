@@ -8,40 +8,7 @@ declare global {
 }
 
 if (!globalThis.globalAttendanceLogs) {
-  globalThis.globalAttendanceLogs = [
-    {
-      id: "LOG-20260819-02",
-      employeeId: "EMP-00002",
-      date: "2026-08-19",
-      checkIn: "08:58:15",
-      checkOut: null,
-      status: "On-Time",
-      authMethod: "Fingerprint",
-      deviceId: "DS-K1T320MFWX",
-      employee: {
-        id: "EMP-00002",
-        firstName: "ruwantha",
-        lastName: "Alwis",
-        biometricId: "2",
-      },
-    },
-    {
-      id: "LOG-20260818-01",
-      employeeId: "EMP-00001",
-      date: "2026-08-18",
-      checkIn: "23:41:23",
-      checkOut: "23:44:55",
-      status: "Late",
-      authMethod: "Fingerprint",
-      deviceId: "DS-K1T320MFWX",
-      employee: {
-        id: "EMP-00001",
-        firstName: "Lakmina",
-        lastName: "Ekanayake",
-        biometricId: "1",
-      },
-    },
-  ];
+  globalThis.globalAttendanceLogs = [];
 }
 
 export async function GET(req: NextRequest) {
@@ -60,23 +27,35 @@ export async function GET(req: NextRequest) {
       // Fallback to in-memory store
     }
 
-    // Merge in-memory logs with DB logs
     const memoryLogs = globalThis.globalAttendanceLogs || [];
-    const mergedMap = new Map();
+    const consolidatedMap = new Map<string, any>();
 
-    [...memoryLogs, ...dbLogs].forEach(log => {
-      const key = `${log.employeeId || log.employee?.id}-${log.date}`;
-      if (!mergedMap.has(key)) {
-        mergedMap.set(key, log);
+    [...dbLogs, ...memoryLogs].forEach(log => {
+      const empId = log.employeeId || log.employee?.id;
+      if (!empId) return;
+      const key = `${empId}-${log.date}`;
+
+      if (!consolidatedMap.has(key)) {
+        consolidatedMap.set(key, { ...log });
       } else {
-        const existing = mergedMap.get(key);
-        if (log.checkOut && !existing.checkOut) {
-          mergedMap.set(key, { ...existing, checkOut: log.checkOut });
+        const existing = consolidatedMap.get(key);
+        const times = [log.checkIn, log.checkOut, existing.checkIn, existing.checkOut]
+          .filter(t => t && t !== "--:--:--" && t !== "–")
+          .sort();
+
+        if (times.length > 0) {
+          existing.checkIn = times[0];
+          existing.checkOut = times.length > 1 && times[times.length - 1] !== times[0] ? times[times.length - 1] : existing.checkOut;
         }
+
+        if (log.employee && !existing.employee) {
+          existing.employee = log.employee;
+        }
+        consolidatedMap.set(key, existing);
       }
     });
 
-    const logs = Array.from(mergedMap.values());
+    const logs = Array.from(consolidatedMap.values()).sort((a, b) => b.date.localeCompare(a.date));
 
     return NextResponse.json({ success: true, logs });
   } catch (error: unknown) {
