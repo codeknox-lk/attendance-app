@@ -408,15 +408,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             allowanceIds: [],
             leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
           }));
-          setEmployees(prev => {
-            const merged = [...dbEmployees];
-            prev.forEach(p => {
-              if (!merged.some(m => m.biometricId === p.biometricId)) {
-                merged.push(p);
-              }
-            });
-            return merged;
-          });
+          setEmployees(dbEmployees);
         }
 
         const attRes = await fetch("/api/attendance");
