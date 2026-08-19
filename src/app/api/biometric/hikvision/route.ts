@@ -191,8 +191,8 @@ export async function POST(req: NextRequest) {
       // Database bypass fallback
     }
 
-    // Check existing attendance log for today (match by database ID or biometric ID)
-    let existingLog = null;
+    // Check existing attendance log for today in DB or Memory
+    let existingLog: any = null;
     try {
       existingLog = await db.attendanceLog.findFirst({
         where: {
@@ -207,7 +207,16 @@ export async function POST(req: NextRequest) {
       // Database bypass fallback
     }
 
-    let actionType = existingLog ? "checkOut" : "checkIn";
+    if (!existingLog && globalThis.globalAttendanceLogs) {
+      existingLog = globalThis.globalAttendanceLogs.find(
+        (l: any) =>
+          l.date === dateStr &&
+          (l.employeeId === employeeId || l.employee?.biometricId === biometricId)
+      ) || null;
+    }
+
+    const isCheckOut = Boolean(existingLog && existingLog.checkIn);
+    const actionType = isCheckOut ? "checkOut" : "checkIn";
 
     // Calculate Status based on arrival time (Standard shift 08:30 AM with 15-min grace)
     const arrivalHour = eventDateObj.getHours();
@@ -221,38 +230,54 @@ export async function POST(req: NextRequest) {
       computedStatus = "Late";
     }
 
-    const logEntry = {
-      id: `LOG-${Date.now()}`,
-      employeeId: employeeId,
-      date: dateStr,
-      checkIn: actionType === "checkIn" ? timeStr : (existingLog?.checkIn || timeStr),
-      checkOut: actionType === "checkOut" ? timeStr : null,
-      status: computedStatus,
-      authMethod: authMethod,
-      deviceId: serialNo,
-      employee: {
-        id: employeeId,
-        firstName: employee ? employee.firstName : (biometricId === "2" ? "ruwantha" : "Lakmina"),
-        lastName: employee ? employee.lastName : (biometricId === "2" ? "Alwis" : "Ekanayake"),
-        biometricId: biometricId,
-      },
-    };
-
-    if (globalThis.globalAttendanceLogs) {
-      const existingIdx = globalThis.globalAttendanceLogs.findIndex(l => l.employeeId === employeeId && l.date === dateStr);
-      if (existingIdx >= 0) {
-        if (actionType === "checkOut") {
-          globalThis.globalAttendanceLogs[existingIdx].checkOut = timeStr;
-          globalThis.globalAttendanceLogs[existingIdx].authMethod = authMethod;
+    if (isCheckOut && existingLog) {
+      // SECOND SCAN TODAY -> Record Check-Out
+      if (globalThis.globalAttendanceLogs) {
+        const idx = globalThis.globalAttendanceLogs.findIndex(
+          (l: any) =>
+            l.date === dateStr &&
+            (l.employeeId === employeeId || l.employee?.biometricId === biometricId)
+        );
+        if (idx >= 0) {
+          globalThis.globalAttendanceLogs[idx].checkOut = timeStr;
+          globalThis.globalAttendanceLogs[idx].authMethod = authMethod;
         }
-      } else {
+      }
+
+      try {
+        await db.attendanceLog.update({
+          where: { id: existingLog.id },
+          data: {
+            checkOut: timeStr,
+            authMethod: authMethod,
+          },
+        });
+      } catch {
+        // Fallback
+      }
+    } else {
+      // FIRST SCAN TODAY -> Record Check-In
+      const logEntry = {
+        id: `LOG-${Date.now()}`,
+        employeeId: employeeId,
+        date: dateStr,
+        checkIn: timeStr,
+        checkOut: null,
+        status: computedStatus,
+        authMethod: authMethod,
+        deviceId: serialNo,
+        employee: {
+          id: employeeId,
+          firstName: employee ? employee.firstName : (biometricId === "2" ? "ruwantha" : "Lakmina"),
+          lastName: employee ? employee.lastName : (biometricId === "2" ? "Alwis" : "Ekanayake"),
+          biometricId: biometricId,
+        },
+      };
+
+      if (globalThis.globalAttendanceLogs) {
         globalThis.globalAttendanceLogs.unshift(logEntry);
       }
-    }
 
-    if (!existingLog || !existingLog.checkIn) {
-      // FIRST SCAN TODAY -> Record Check-In
-      actionType = "checkIn";
       try {
         await db.attendanceLog.create({
           data: {
@@ -262,20 +287,6 @@ export async function POST(req: NextRequest) {
             status: computedStatus,
             authMethod: authMethod,
             deviceId: serialNo,
-          },
-        });
-      } catch {
-        // Fallback
-      }
-    } else {
-      // SECOND SCAN TODAY -> Record Check-Out
-      actionType = "checkOut";
-      try {
-        await db.attendanceLog.update({
-          where: { id: existingLog.id },
-          data: {
-            checkOut: timeStr,
-            authMethod: authMethod,
           },
         });
       } catch {
