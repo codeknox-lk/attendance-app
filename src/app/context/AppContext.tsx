@@ -191,6 +191,7 @@ interface AppContextProps {
   deleteEmployee: (id: string) => void;
   addAttendanceLog: (log: Omit<AttendanceLog, "id">) => void;
   updateAttendanceLog: (id: string, log: Partial<AttendanceLog>) => void;
+  deleteAttendanceLog: (id: string) => void;
   addAllowance: (allowance: Omit<Allowance, "id">) => void;
   updateAllowance: (id: string, allowance: Partial<Allowance>) => void;
   deleteAllowance: (id: string) => void;
@@ -500,6 +501,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   };
 
+  const deleteAttendanceLog = async (id: string) => {
+    setAttendanceLogs(p => p.filter(l => l.id !== id));
+    pushAudit({ action: "DELETE", entity: "AttendanceLog", entityId: id, details: "Deleted attendance log" });
+    try {
+      await fetch(`/api/attendance?id=${id}`, {
+        method: "DELETE",
+      });
+    } catch {}
+  };
+
   const addAllowance = async (a: Omit<Allowance,"id">) => {
     const na: Allowance = { ...a, id: `ALL-${String(Date.now()).slice(-4)}` };
     setAllowances(p => [...p, na]);
@@ -768,7 +779,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       payrollHistory, branches, auditLogs, publicHolidays, apitSlabs, biometricSettings,
       epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
       addEmployee, updateEmployee, deleteEmployee,
-      addAttendanceLog, updateAttendanceLog,
+      addAttendanceLog, updateAttendanceLog, deleteAttendanceLog,
       addAllowance, updateAllowance, deleteAllowance,
       assignAllowanceToEmployee, removeAllowanceFromEmployee,
       addShift, updateShift, deleteShift,

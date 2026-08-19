@@ -20,40 +20,7 @@ declare global {
 }
 
 if (!globalThis.globalAttendanceLogs) {
-  globalThis.globalAttendanceLogs = [
-    {
-      id: "LOG-20260819-02",
-      employeeId: "EMP-00002",
-      date: "2026-08-19",
-      checkIn: "08:58:15",
-      checkOut: null,
-      status: "On-Time",
-      authMethod: "Fingerprint",
-      deviceId: "DS-K1T320MFWX",
-      employee: {
-        id: "EMP-00002",
-        firstName: "ruwantha",
-        lastName: "Alwis",
-        biometricId: "2",
-      },
-    },
-    {
-      id: "LOG-20260818-01",
-      employeeId: "EMP-00001",
-      date: "2026-08-18",
-      checkIn: "23:41:23",
-      checkOut: "23:44:55",
-      status: "Late",
-      authMethod: "Fingerprint",
-      deviceId: "DS-K1T320MFWX",
-      employee: {
-        id: "EMP-00001",
-        firstName: "Lakmina",
-        lastName: "Ekanayake",
-        biometricId: "1",
-      },
-    },
-  ];
+  globalThis.globalAttendanceLogs = [];
 }
 
 export async function GET(req: NextRequest) {
@@ -186,6 +153,34 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: true, log: log || body });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error updating log";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Log ID is required" }, { status: 400 });
+    }
+
+    try {
+      await db.attendanceLog.delete({
+        where: { id },
+      });
+    } catch {
+      // Fallback
+    }
+
+    if (globalThis.globalAttendanceLogs) {
+      globalThis.globalAttendanceLogs = globalThis.globalAttendanceLogs.filter(l => l.id !== id);
+    }
+
+    return NextResponse.json({ success: true, message: "Attendance log deleted" });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error deleting log";
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }

@@ -342,7 +342,7 @@ export default function Home() {
     payrollHistory, auditLogs, publicHolidays, apitSlabs,
     biometricSettings, epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
     addEmployee, updateEmployee, deleteEmployee,
-    updateAttendanceLog,
+    updateAttendanceLog, deleteAttendanceLog,
     addAllowance, deleteAllowance,
     addShift, updateShift, deleteShift,
     addLeaveRequest, approveLeave, rejectLeave,
@@ -936,7 +936,10 @@ export default function Home() {
                             <td className="px-4 py-3 text-center">{log.overtimeHours}</td>
                             <td className="px-4 py-3 text-center">{log.noPayHours}</td>
                             <td className="px-4 py-3 text-right">
-                              <button onClick={()=>openDrawer(log)} className={`px-2 py-1 rounded text-[10px] font-bold border transition ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 shadow-sm hover:bg-zinc-50"}`}>Adjust</button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button onClick={()=>openDrawer(log)} className={`px-2 py-1 rounded text-[10px] font-bold border transition ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 shadow-sm hover:bg-zinc-50"}`}>Adjust</button>
+                                <button onClick={()=>deleteAttendanceLog(log.id)} className="px-2 py-1 rounded text-[10px] font-bold border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition">Delete</button>
+                              </div>
                             </td>
                           </tr>
                         );
