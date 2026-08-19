@@ -42,15 +42,19 @@ export async function GET(req: NextRequest) {
     const memoryLogs = globalThis.globalAttendanceLogs || [];
     const mergedMap = new Map();
 
-    [...memoryLogs, ...dbLogs].forEach((log: LogRecord) => {
-      const key = `${log.employeeId || log.employee?.id}-${log.date}`;
+    // 1. Load permanent Neon DB logs first
+    dbLogs.forEach((log: Record<string, unknown>) => {
+      const empId = (log.employeeId as string) || (log.employee as { id?: string })?.id;
+      const key = `${empId}-${log.date}`;
+      mergedMap.set(key, log);
+    });
+
+    // 2. Merge in-memory logs if DB row doesn't exist yet
+    memoryLogs.forEach((log: LogRecord) => {
+      const empId = (log.employeeId as string) || (log.employee as { id?: string })?.id;
+      const key = `${empId}-${log.date}`;
       if (!mergedMap.has(key)) {
         mergedMap.set(key, log);
-      } else {
-        const existing = mergedMap.get(key);
-        if (log.checkOut && !existing.checkOut) {
-          mergedMap.set(key, { ...existing, checkOut: log.checkOut });
-        }
       }
     });
 

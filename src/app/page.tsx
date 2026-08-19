@@ -620,9 +620,9 @@ export default function Home() {
 
   const statusCounts = useMemo(() => {
     const c: Record<string,number> = {All:0,"On-Time":0,Late:0,"Half-Day":0,"On-Leave":0,Absent:0};
-    attendanceLogs.forEach(l => { if (l.date>=dateRange.startDate && l.date<=dateRange.endDate) { c.All++; if(c[l.status]!==undefined) c[l.status]++; } });
+    combinedLogs.forEach(l => { if (l.date>=dateRange.startDate && l.date<=dateRange.endDate) { c.All++; if(c[l.status]!==undefined) c[l.status]++; } });
     return c;
-  }, [attendanceLogs, dateRange]);
+  }, [combinedLogs, dateRange]);
 
   // APIT calculation
   const calcApit = useCallback((annualIncome: number): number => {
