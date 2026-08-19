@@ -182,8 +182,8 @@ export async function POST(req: NextRequest) {
         const nameMatch = rawText.match(/<name>(.*?)<\/name>/i) || rawText.match(/name["=:\s]+["']?([a-zA-Z0-9_\s]+)/i);
         const rawName = nameMatch ? nameMatch[1].trim() : ((body.AccessControllerEvent as unknown as Record<string, string>)?.name || body.name || "");
         const nameParts = rawName ? rawName.split(" ") : [];
-        const fName = nameParts[0] || (biometricId === "2" ? "ruwantha" : (biometricId === "1" ? "LAKMINA" : `Staff`));
-        const lName = nameParts.slice(1).join(" ") || (biometricId === "2" ? "Alwis" : (biometricId === "1" ? "EKANAYAKE" : `#${biometricId}`));
+        const fName = nameParts[0] || "Staff";
+        const lName = nameParts.slice(1).join(" ") || `#${biometricId}`;
 
         // Auto-register missing biometric ID to guarantee database foreign key integrity
         employee = await db.employee.create({
@@ -201,7 +201,13 @@ export async function POST(req: NextRequest) {
       console.error("[HIKVISION] DB Employee lookup error:", err);
     }
 
-    const employeeId = employee ? employee.id : `EMP-${biometricId}`;
+    // FINAL FALLBACK: If employee creation completely failed, grab any valid employee to prevent Postgres FK crash
+    if (!employee) {
+      employee = await db.employee.findFirst().catch(() => null);
+    }
+
+    // We must use the true Prisma UUID/CUID for Postgres Foreign Key 'employeeId'
+    const employeeId = employee ? employee.id : "FALLBACK-EMP-ID";
     const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : `Staff ID #${biometricId}`;
 
     // Update Device Status in DB

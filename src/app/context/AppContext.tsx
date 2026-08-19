@@ -293,13 +293,32 @@ const initialAuditLogs: AuditLog[] = [
   { id: "AUD-007", timestamp: "2026-06-01 09:30:00", action: "FINALIZE", entity: "PayrollPeriod", entityId: "PAY-002", details: "Finalized May 2026 payroll — Gross: LKR 288,000", actor: "Clinic Administrator", ipAddress: "192.168.1.10" },
 ];
 
-const initialLogs = (): AttendanceLog[] => [];
+const initialLogs = (): AttendanceLog[] => {
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem("medicflow_attendance");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+  }
+  return [];
+};
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>(initialLogs);
+  const [attendanceLogs, setAttendanceLogsRaw] = useState<AttendanceLog[]>(initialLogs);
+
+  const setAttendanceLogs = (value: React.SetStateAction<AttendanceLog[]>) => {
+    setAttendanceLogsRaw(prev => {
+      const next = typeof value === "function" ? value(prev) : value;
+      if (typeof window !== "undefined") {
+        // Keep only last 200 logs in local storage to prevent quota limits
+        localStorage.setItem("medicflow_attendance", JSON.stringify(next.slice(0, 200)));
+      }
+      return next;
+    });
+  };
   const [allowances, setAllowances] = useState<Allowance[]>(initialAllowances);
   const [employeeAllowances, setEmployeeAllowances] = useState<EmployeeAllowance[]>(initialEmployeeAllowances);
   const [shifts, setShifts] = useState<Shift[]>(() => {
