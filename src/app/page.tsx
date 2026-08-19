@@ -2325,7 +2325,16 @@ export default function Home() {
                   <div className="space-y-4 max-w-2xl">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Shift Templates</h3>
-                      <button onClick={()=>setShowAddShiftModal(true)} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ New Shift</button>
+                      <button
+                        onClick={() => {
+                          setEditingShiftId(null);
+                          setNewShift({ name: "", startTime: "08:00", endTime: "17:00", workDays: [1, 2, 3, 4, 5], otThresholdHours: 9, otMultiplier: 1.5 });
+                          setShowAddShiftModal(true);
+                        }}
+                        className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
+                      >
+                        + New Shift
+                      </button>
                     </div>
                     <div className="space-y-2">
                       {shifts.map(s=>{

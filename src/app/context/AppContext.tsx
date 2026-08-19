@@ -302,7 +302,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>(initialLogs);
   const [allowances, setAllowances] = useState<Allowance[]>(initialAllowances);
   const [employeeAllowances, setEmployeeAllowances] = useState<EmployeeAllowance[]>(initialEmployeeAllowances);
-  const [shifts, setShifts] = useState<Shift[]>(initialShifts);
+  const [shifts, setShifts] = useState<Shift[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_shifts");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return initialShifts;
+  });
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [payrollHistory, setPayrollHistory] = useState<PayrollPeriod[]>(initialPayrollHistory);
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
@@ -712,7 +720,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addShift = async (s: Omit<Shift,"id">) => {
     const ns: Shift = { ...s, id: `SHF-${String(Date.now()).slice(-4)}` };
-    setShifts(p => [...p, ns]);
+    setShifts(p => {
+      const list = [...p, ns];
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_shifts", JSON.stringify(list)); } catch {} }
+      return list;
+    });
     pushAudit({ action: "CREATE", entity: "Shift", entityId: ns.id, details: `Added shift: ${ns.name}` });
     try {
       await fetch("/api/shifts", {
@@ -724,7 +736,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateShift = async (id: string, f: Partial<Shift>) => {
-    setShifts(p => p.map(s => s.id === id ? { ...s, ...f } : s));
+    setShifts(p => {
+      const list = p.map(s => s.id === id ? { ...s, ...f } : s);
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_shifts", JSON.stringify(list)); } catch {} }
+      return list;
+    });
     try {
       await fetch("/api/shifts", {
         method: "PUT",
@@ -735,7 +751,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteShift = async (id: string) => {
-    setShifts(p => p.filter(s => s.id !== id));
+    setShifts(p => {
+      const list = p.filter(s => s.id !== id);
+      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_shifts", JSON.stringify(list)); } catch {} }
+      return list;
+    });
     setEmployees(p => p.map(e => e.shiftId === id ? { ...e, shiftId: null } : e));
     try {
       await fetch(`/api/shifts?id=${id}`, {
