@@ -13,7 +13,7 @@ interface LogRecord {
   date?: string;
   checkIn?: string;
   checkOut?: string | null;
-  authMethod?: string;
+  authMethod?: string | null;
   employee?: {
     id?: string;
     biometricId?: string;
