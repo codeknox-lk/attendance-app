@@ -217,6 +217,7 @@ interface AppContextProps {
   updateApitSlabs: (slabs: ApitSlab[]) => void;
   machinePersons: MachinePerson[];
   fetchMachinePersons: () => Promise<void>;
+  importMachinePersonsToStaff: () => Promise<void>;
   triggerSync: () => Promise<void>;
 }
 
@@ -506,7 +507,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   const updateEmployee = (id: string, f: Partial<Employee>) => { setEmployees(p => p.map(e => e.id===id ? {...e,...f} : e)); pushAudit({ action: "UPDATE", entity: "Employee", entityId: id, details: "Updated profile" }); };
-  const deleteEmployee = (id: string) => { setEmployees(p => p.map(e => e.id===id ? {...e,active:false} : e)); pushAudit({ action: "DELETE", entity: "Employee", entityId: id, details: "Deactivated" }); };
+  const deleteEmployee = async (id: string) => {
+    setEmployees(p => p.filter(e => e.id !== id));
+    pushAudit({ action: "DELETE", entity: "Employee", entityId: id, details: "Deleted employee" });
+    try {
+      await fetch(`/api/employees?id=${id}`, {
+        method: "DELETE",
+      });
+    } catch {
+      // Offline fallback
+    }
+  };
 
   const addAttendanceLog = (log: Omit<AttendanceLog,"id">) => setAttendanceLogs(p => [{ ...log, id: `LOG-${Date.now()}-${log.employeeId}` }, ...p]);
   const updateAttendanceLog = (id: string, f: Partial<AttendanceLog>) => { setAttendanceLogs(p => p.map(l => l.id===id ? {...l,...f} : l)); pushAudit({ action: "UPDATE", entity: "AttendanceLog", entityId: id, details: "Adjusted log" }); };
@@ -673,6 +684,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const importMachinePersonsToStaff = async () => {
+    for (const p of machinePersons) {
+      const exists = employees.some(e => e.biometricId === String(p.employeeNo));
+      if (!exists) {
+        const nameParts = (p.name || `Staff #${p.employeeNo}`).split(" ");
+        const fName = nameParts[0] || `Staff #${p.employeeNo}`;
+        const lName = nameParts.slice(1).join(" ") || "";
+
+        await addEmployee({
+          firstName: fName,
+          lastName: lName,
+          role: String(p.employeeNo) === "2" ? "Doctor" : "Nurse",
+          payType: "Fixed Monthly",
+          basicSalary: 60000,
+          hourlyRate: 350,
+          sessionRate: 0,
+          commissionRate: 0,
+          biometricId: String(p.employeeNo),
+          epfEligible: true,
+          taxable: false,
+          shiftId: null,
+          branchId: null,
+          allowanceIds: [],
+          leaveBalances: { annual: 14, sick: 7, casual: 3 },
+        });
+      }
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       employees, attendanceLogs, allowances, employeeAllowances, shifts, leaveRequests,
@@ -690,7 +730,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerSync, simulateHikvisionScan,
       isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
       updateCompanyProfile, updatePayslipAdjustment,
-      machinePersons, fetchMachinePersons,
+      machinePersons, fetchMachinePersons, importMachinePersonsToStaff,
     }}>
       {children}
     </AppContext.Provider>

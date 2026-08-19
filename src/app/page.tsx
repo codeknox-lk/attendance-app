@@ -354,7 +354,7 @@ export default function Home() {
     triggerSync, simulateHikvisionScan,
     isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
     updateCompanyProfile, updatePayslipAdjustment,
-    machinePersons, fetchMachinePersons,
+    machinePersons, fetchMachinePersons, importMachinePersonsToStaff,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
@@ -1841,7 +1841,19 @@ export default function Home() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Staff Directory</h3>
-                      <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftId:null,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            await importMachinePersonsToStaff();
+                            setSettingsSaveMsg("✓ Imported enrolled staff from fingerprint machine!");
+                            setTimeout(() => setSettingsSaveMsg(""), 3000);
+                          }}
+                          className={`px-3 py-1.5 text-xs font-bold rounded border shadow transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200"}`}
+                        >
+                          ↻ Import Staff from Terminal
+                        </button>
+                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftId:null,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3}});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
+                      </div>
                     </div>
                     <div className="space-y-2 max-w-3xl">
                       {activeEmployees.map(emp=>(

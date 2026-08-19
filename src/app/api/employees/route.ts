@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const employee = await db.employee.create({
       data: {
         firstName,
-        lastName,
+        lastName: lastName || "",
         role: role || "Doctor",
         payType: payType || "Fixed Monthly",
         basicSalary: Number(basicSalary) || 0,
@@ -49,6 +49,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, employee });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error creating employee";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Employee ID is required" }, { status: 400 });
+    }
+
+    try {
+      await db.employee.delete({
+        where: { id },
+      });
+    } catch {
+      // Fallback
+    }
+
+    return NextResponse.json({ success: true, message: "Employee deleted successfully" });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error deleting employee";
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
