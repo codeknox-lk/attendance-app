@@ -158,6 +158,16 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
     </svg>
   ),
+  Edit: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    </svg>
+  ),
+  Search: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  ),
 };
 
 // ─── Salary Trend Chart (needs own state for hover tooltips) ────────────────
@@ -1447,9 +1457,10 @@ export default function Home() {
                                 setManualDeductionInput(existing.deductionAmount);
                                 setPayslipNoteInput(existing.note);
                               }}
-                              className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition ${isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"}`}
+                              className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition flex items-center gap-1 ${isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"}`}
                             >
-                              ✏ Adjust
+                              <Icons.Edit className="w-3 h-3" />
+                              <span>Adjust</span>
                             </button>
                             <button onClick={()=>setSelectedPaySlip(c.employee.id)} className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition ${isDark?"bg-zinc-850 border-zinc-700 text-white hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 shadow-sm hover:bg-zinc-50"}`}>Pay Slip</button>
                           </td>
@@ -1639,8 +1650,9 @@ export default function Home() {
 
                             <div className="flex items-center gap-3 text-[10px]">
                               {log.actor && (
-                                <span className={`font-semibold ${isDark ? "text-zinc-400" : "text-zinc-600"}`}>
-                                  👤 {log.actor}
+                                <span className={`font-semibold flex items-center gap-1 ${isDark ? "text-zinc-400" : "text-zinc-600"}`}>
+                                  <Icons.User className="w-3 h-3 text-indigo-400" />
+                                  <span>{log.actor}</span>
                                 </span>
                               )}
                               {log.ipAddress && (
@@ -1648,8 +1660,9 @@ export default function Home() {
                                   IP: {log.ipAddress}
                                 </span>
                               )}
-                              <span className="font-mono text-zinc-400">
-                                🕒 {log.timestamp}
+                              <span className="font-mono text-zinc-400 flex items-center gap-1">
+                                <Icons.Clock className="w-3 h-3 text-emerald-400" />
+                                <span>{log.timestamp}</span>
                               </span>
                             </div>
                           </div>
@@ -1658,8 +1671,9 @@ export default function Home() {
                             <p className={`text-xs ${isDark ? "text-zinc-200" : "text-zinc-800"} font-medium`}>
                               {log.details}
                             </p>
-                            <span className="text-[10px] font-bold text-indigo-500 opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-                              Inspect 🔍
+                            <span className="text-[10px] font-bold text-indigo-500 opacity-0 group-hover:opacity-100 transition whitespace-nowrap flex items-center gap-1">
+                              <span>Inspect</span>
+                              <Icons.Search className="w-3 h-3 text-indigo-400" />
                             </span>
                           </div>
                         </div>
