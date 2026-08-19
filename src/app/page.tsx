@@ -1901,19 +1901,64 @@ export default function Home() {
                           </div>
                           <p className="text-[11px] text-zinc-500 mt-0.5">Hardware PUSH listener active — incoming biometric scans &amp; users automatically sync in real-time.</p>
                         </div>
-                        <button
-                          type="button"
-                          disabled={isFetchingPersons}
-                          onClick={async () => {
-                            await fetchMachinePersons();
-                            setSettingsSaveMsg("Enrolled users synced via Hikvision Push protocol!");
-                            setTimeout(() => setSettingsSaveMsg(""), 3000);
-                          }}
-                          className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
-                        >
-                          <Icons.Refresh className={`w-3.5 h-3.5 text-indigo-400 ${isFetchingPersons ? "animate-spin" : ""}`} />
-                          <span>{isFetchingPersons ? "Syncing..." : "Sync Enrolled Persons"}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openEditEmp({
+                                id: "",
+                                firstName: "",
+                                lastName: "",
+                                role: "Nurse",
+                                payType: "Fixed Monthly",
+                                basicSalary: 60000,
+                                hourlyRate: 350,
+                                sessionRate: 0,
+                                commissionRate: 0,
+                                biometricId: String(machinePersons.length + 1),
+                                epfEligible: true,
+                                taxable: false,
+                                active: true,
+                                shiftId: null,
+                                branchId: null,
+                                allowanceIds: [],
+                                leaveBalances: { annual: 14, sick: 7, casual: 3 },
+                              });
+                            }}
+                            className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 hover:bg-indigo-500 text-white shadow transition flex items-center gap-1.5"
+                          >
+                            <span>+ Link New Terminal ID</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isFetchingPersons}
+                            onClick={async () => {
+                              await fetchMachinePersons();
+                              setSettingsSaveMsg("Enrolled users synced via Hikvision Push protocol!");
+                              setTimeout(() => setSettingsSaveMsg(""), 3000);
+                            }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
+                          >
+                            <Icons.Refresh className={`w-3.5 h-3.5 text-indigo-400 ${isFetchingPersons ? "animate-spin" : ""}`} />
+                            <span>{isFetchingPersons ? "Syncing..." : "Sync Enrolled Persons"}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={`p-3 rounded-lg text-xs border ${isDark ? "bg-indigo-950/20 border-indigo-800/40 text-indigo-300" : "bg-indigo-50 border-indigo-200 text-indigo-800"}`}>
+                        <div className="font-bold flex items-center gap-1.5 mb-1">
+                          <Icons.Shield className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Connecting Local Router IP (192.168.8.135) to Cloud App</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed">
+                          Because your Hikvision terminal is on a local private Wi-Fi network (<code>192.168.8.135</code>), cloud servers cannot open inbound HTTP calls to local router IPs directly.
+                          <br />
+                          <strong>To register new staff added on Hikvision browser:</strong>
+                        </p>
+                        <ul className="list-disc list-inside text-[11px] mt-1 space-y-0.5 font-medium">
+                          <li><strong>Option 1 (Automatic)</strong>: Have the new employee scan their face/finger on the terminal once — our server will auto-register them in real-time!</li>
+                          <li><strong>Option 2 (Manual)</strong>: Click <strong>+ Link New Terminal ID</strong> above and enter their Biometric ID (e.g. <code>3</code>, <code>4</code>).</li>
+                        </ul>
                       </div>
 
                       <div className="overflow-x-auto border rounded-lg border-zinc-800/40">
