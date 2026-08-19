@@ -436,7 +436,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const attRes = await fetch("/api/attendance");
         const attData = await attRes.json();
-        if (attData.success && attData.logs && attData.logs.length > 0) {
+        if (attData.success && Array.isArray(attData.logs)) {
           const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
             id: String(l.id),
             employeeId: String(l.employeeId),
@@ -446,16 +446,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: (l.status as AttendanceLog["status"]) || "On-Time",
             overtimeHours: Number(l.overtimeHours) || 0,
             noPayHours: Number(l.noPayHours) || 0,
+            employee: l.employee as any,
           }));
-          setAttendanceLogs(prev => {
-            const merged = [...dbLogs];
-            prev.forEach(p => {
-              if (!merged.some(m => m.id === p.id)) {
-                merged.push(p);
-              }
-            });
-            return merged;
-          });
+          setAttendanceLogs(dbLogs);
         }
 
         const lvrRes = await fetch("/api/leaves");
@@ -776,6 +769,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           status: (l.status as AttendanceLog["status"]) || "On-Time",
           overtimeHours: Number(l.overtimeHours) || 0,
           noPayHours: Number(l.noPayHours) || 0,
+          employee: l.employee as any,
         }));
         setAttendanceLogs(dbLogs);
         pushAudit({ action: "UPDATE", entity: "BiometricSync", entityId: "SYNC", details: `Synced ${dbLogs.length} database attendance records` });
