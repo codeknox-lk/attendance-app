@@ -1122,10 +1122,14 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Icons.Clock className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-300">Live Biometric Terminal Feed</h3>
+                    <h3 className={`text-xs font-extrabold uppercase tracking-wider ${isDark ? "text-slate-300" : "text-slate-700"}`}>Live Biometric Terminal Feed</h3>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-800/40 px-2 py-0.5 rounded border border-slate-700/50">
-                    {dashboardMetrics.todayLogs.length} Scans Recorded Today
+                  <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md border transition ${
+                    isDark
+                      ? "bg-indigo-950/40 border-indigo-800/50 text-indigo-300"
+                      : "bg-indigo-50 border-indigo-200 text-indigo-700"
+                  }`}>
+                    {dashboardMetrics.todayLogs.length} {dashboardMetrics.todayLogs.length === 1 ? "Scan" : "Scans"} Recorded Today
                   </span>
                 </div>
                 <div className="space-y-2.5">
