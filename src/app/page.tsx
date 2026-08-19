@@ -470,7 +470,7 @@ export default function Home() {
     triggerSync, simulateHikvisionScan,
     isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
     updateCompanyProfile, updatePayslipAdjustment,
-    machinePersons, fetchMachinePersons, importMachinePersonsToStaff, isFetchingPersons,
+    machinePersons, fetchMachinePersons, isFetchingPersons,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
