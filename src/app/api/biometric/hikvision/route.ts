@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
       ? "Card"
       : "Face";
 
-    // Extract or default Event Timestamp in Sri Lanka Time (Asia/Colombo UTC+5:30)
+    // Extract Event Timestamp in Sri Lanka Time (Asia/Colombo UTC+5:30) robustly
     const rawTimeInput = body.AccessControllerEvent?.time || body.time || body.timestamp;
     let eventDateObj = new Date();
     if (rawTimeInput) {
@@ -164,11 +164,26 @@ export async function POST(req: NextRequest) {
       if (!isNaN(parsed.getTime())) eventDateObj = parsed;
     }
 
-    const slLocaleStr = eventDateObj.toLocaleString("en-US", { timeZone: "Asia/Colombo" });
-    const slDateObj = new Date(slLocaleStr);
-    const dateStr = `${slDateObj.getFullYear()}-${String(slDateObj.getMonth() + 1).padStart(2, "0")}-${String(slDateObj.getDate()).padStart(2, "0")}`;
-    const timeStr = `${String(slDateObj.getHours()).padStart(2, "0")}:${String(slDateObj.getMinutes()).padStart(2, "0")}:${String(slDateObj.getSeconds()).padStart(2, "0")}`;
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Colombo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    });
+    
+    const parts = formatter.formatToParts(eventDateObj);
+    const dateParts: Record<string, string> = {};
+    parts.forEach(p => { dateParts[p.type] = p.value; });
+    
+    const slYear = parseInt(dateParts.year);
+    const slMonth = parseInt(dateParts.month);
+    const slDay = parseInt(dateParts.day);
+    const slHour = parseInt(dateParts.hour) === 24 ? 0 : parseInt(dateParts.hour);
+    const slMinute = parseInt(dateParts.minute);
+    const slSecond = parseInt(dateParts.second);
 
+    const dateStr = `${slYear}-${String(slMonth).padStart(2, "0")}-${String(slDay).padStart(2, "0")}`;
+    const timeStr = `${String(slHour).padStart(2, "0")}:${String(slMinute).padStart(2, "0")}:${String(slSecond).padStart(2, "0")}`;
 
     // Find or Auto-Create Employee in Database (Ensures Foreign Key is 100% valid)
     let employee = null;
@@ -261,8 +276,8 @@ export async function POST(req: NextRequest) {
     const actionType = isCheckOut ? "checkOut" : "checkIn";
 
     // Calculate Status based on assigned shifts and arrival time
-    const arrivalHour = slDateObj.getHours();
-    const arrivalMin = slDateObj.getMinutes();
+    const arrivalHour = slHour;
+    const arrivalMin = slMinute;
     const arrivalTimeMinutes = arrivalHour * 60 + arrivalMin;
     
     let shiftStartMinutes = 8 * 60 + 30; // Default 08:30 AM
@@ -271,7 +286,9 @@ export async function POST(req: NextRequest) {
     try {
       // Find the specific shift for this employee on today's weekday
       if (employee && Array.isArray(employee.shiftIds) && employee.shiftIds.length > 0) {
-        const currentDayOfWeek = slDateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        // Create a UTC date at noon to reliably get the day of the week in Sri Lanka
+        const currentDayOfWeek = new Date(Date.UTC(slYear, slMonth - 1, slDay, 12)).getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
+
         const allShifts = await db.shift.findMany({
           where: { id: { in: employee.shiftIds as string[] } }
         });
