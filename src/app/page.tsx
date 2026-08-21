@@ -584,7 +584,13 @@ export default function Home() {
   }, [selectedMonth, payrollCycleStartDay]);
 
   const dashboardMetrics = useMemo(() => {
-    const today = hasMounted ? new Date().toISOString().split("T")[0] : "2026-07-10";
+    const today = hasMounted ? (() => {
+      const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Colombo', year: 'numeric', month: '2-digit', day: '2-digit' });
+      const parts = formatter.formatToParts(new Date());
+      const dateParts: Record<string, string> = {};
+      parts.forEach(p => { dateParts[p.type] = p.value; });
+      return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+    })() : "2026-07-10";
     const todayLogs = attendanceLogs.filter(l => l.date === today);
     const present = todayLogs.filter(l => ["On-Time","Late","Half-Day"].includes(l.status)).length;
     return { totalStaff: activeEmployees.length, present, late: todayLogs.filter(l=>l.status==="Late").length, onLeave: todayLogs.filter(l=>l.status==="On-Leave").length, absent: todayLogs.filter(l=>l.status==="Absent").length, presentPercent: activeEmployees.length>0 ? Math.round((present/activeEmployees.length)*100):0, todayLogs };

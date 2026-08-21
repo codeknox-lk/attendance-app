@@ -107,18 +107,24 @@ export async function POST(req: NextRequest) {
       // Hikvision Heartbeat / Registration Ping
       try {
         const serialNo = body.AccessControllerEvent?.serialNo || body.serialNo || "HK-TERMINAL-01";
-        await db.biometricDevice.upsert({
-          where: { serialNumber: serialNo },
-          update: { status: "Connected", lastSyncTime: new Date() },
-          create: {
-            name: body.deviceName || "Hikvision Terminal",
-            model: "DS-K1T320EFWX",
-            serialNumber: serialNo,
-            location: "Clinic Main Gate",
-            status: "Connected",
-            protocol: "ISUP 5.0",
-          },
-        });
+        const device = await db.biometricDevice.findFirst({ where: { serialNumber: serialNo } });
+        if (device) {
+          await db.biometricDevice.update({
+            where: { id: device.id },
+            data: { status: "Connected", lastSyncTime: new Date() }
+          });
+        } else {
+          await db.biometricDevice.create({
+            data: {
+              name: body.deviceName || "Hikvision Terminal",
+              model: "DS-K1T320EFWX",
+              serialNumber: serialNo,
+              location: "Clinic Main Gate",
+              status: "Connected",
+              protocol: "ISUP 5.0",
+            }
+          });
+        }
       } catch {
         // Fallback
       }
@@ -227,23 +233,29 @@ export async function POST(req: NextRequest) {
 
     // Update Device Status in DB
     try {
-      await db.biometricDevice.upsert({
-        where: { serialNumber: serialNo },
-        update: {
-          status: "Connected",
-          lastSyncTime: new Date(),
-          ipAddress: req.headers.get("x-forwarded-for") || "Cloud Wi-Fi Client",
-        },
-        create: {
-          name: deviceName,
-          model: "DS-K1T320EFWX",
-          serialNumber: serialNo,
-          location: "Clinic Main Gate",
-          status: "Connected",
-          protocol: "ISUP 5.0",
-          ipAddress: req.headers.get("x-forwarded-for") || "Cloud Wi-Fi Client",
-        },
-      });
+      const device = await db.biometricDevice.findFirst({ where: { serialNumber: serialNo } });
+      if (device) {
+        await db.biometricDevice.update({
+          where: { id: device.id },
+          data: {
+            status: "Connected",
+            lastSyncTime: new Date(),
+            ipAddress: req.headers.get("x-forwarded-for") || "Cloud Wi-Fi Client",
+          }
+        });
+      } else {
+        await db.biometricDevice.create({
+          data: {
+            name: deviceName,
+            model: "DS-K1T320EFWX",
+            serialNumber: serialNo,
+            location: "Clinic Main Gate",
+            status: "Connected",
+            protocol: "ISUP 5.0",
+            ipAddress: req.headers.get("x-forwarded-for") || "Cloud Wi-Fi Client",
+          }
+        });
+      }
     } catch {
       // Database bypass fallback
     }

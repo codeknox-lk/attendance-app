@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
@@ -29,9 +31,6 @@ export async function POST(req: NextRequest) {
       epfEligible,
       taxable,
       shiftIds,
-      attendanceBonusRate,
-      punctualBonusRate,
-      incomeBonusPercentage,
     } = body;
 
     const existing = await db.employee.findFirst({
@@ -54,9 +53,6 @@ export async function POST(req: NextRequest) {
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
           shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
-          attendanceBonusRate: Number(attendanceBonusRate) || 0,
-          punctualBonusRate: Number(punctualBonusRate) || 0,
-          incomeBonusPercentage: Number(incomeBonusPercentage) || 0,
         },
       });
     } else {
@@ -74,9 +70,6 @@ export async function POST(req: NextRequest) {
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
           shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
-          attendanceBonusRate: Number(attendanceBonusRate) || 0,
-          punctualBonusRate: Number(punctualBonusRate) || 0,
-          incomeBonusPercentage: Number(incomeBonusPercentage) || 0,
         },
       });
     }
@@ -106,9 +99,6 @@ export async function PUT(req: NextRequest) {
       taxable,
       active,
       shiftIds,
-      attendanceBonusRate,
-      punctualBonusRate,
-      incomeBonusPercentage,
     } = body;
 
     if (!id && !biometricId) {
@@ -162,9 +152,6 @@ export async function PUT(req: NextRequest) {
           taxable: taxable ?? false,
           active: active ?? true,
           shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
-          attendanceBonusRate: Number(attendanceBonusRate) || 0,
-          punctualBonusRate: Number(punctualBonusRate) || 0,
-          incomeBonusPercentage: Number(incomeBonusPercentage) || 0,
         },
       });
     }
