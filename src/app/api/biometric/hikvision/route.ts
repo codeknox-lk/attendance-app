@@ -165,8 +165,17 @@ export async function POST(req: NextRequest) {
     // Extract Event Timestamp in Sri Lanka Time (Asia/Colombo UTC+5:30) robustly
     const rawTimeInput = body.AccessControllerEvent?.time || body.time || body.timestamp;
     let eventDateObj = new Date();
+    
     if (rawTimeInput) {
-      const parsed = new Date(rawTimeInput);
+      // Hikvision sends local time (e.g. "2026-08-27T14:12:42").
+      // If we pass this to new Date() on Vercel, it assumes it's UTC and adds 5.5 hours.
+      // We fix this by ensuring the string explicitly declares it is already +05:30.
+      let safeTimeStr = rawTimeInput.replace("Z", ""); // Remove 'Z' if it incorrectly sends it
+      if (!safeTimeStr.includes("+") && !safeTimeStr.includes("-")) {
+        safeTimeStr += "+05:30";
+      }
+      
+      const parsed = new Date(safeTimeStr);
       if (!isNaN(parsed.getTime())) eventDateObj = parsed;
     }
 
