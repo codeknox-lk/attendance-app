@@ -576,9 +576,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setEmployees(dbEmployees);
         }
 
-        const today = new Date();
-        const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-        const attRes = await fetch(`/api/attendance?month=${currentMonth}`);
+        // Fetch ALL attendance logs initially so past months are available in the UI
+        const attRes = await fetch(`/api/attendance`);
         const attData = await attRes.json();
         if (attData.success && Array.isArray(attData.logs)) {
           const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
