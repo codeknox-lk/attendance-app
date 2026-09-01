@@ -94,11 +94,31 @@ export async function syncHikvisionDeviceMemory(
       : "Fingerprint";
 
     // Find Employee in DB
-    const employee = await db.employee.findUnique({
+    let employee = await db.employee.findUnique({
       where: { biometricId },
     }).catch(() => null);
 
-    const employeeId = employee ? employee.id : `EMP-${biometricId}`;
+    if (!employee) {
+      const users = await import("@/lib/hikvision").then(m => m.fetchHikvisionPersons(ip, port, username, password));
+      const user = users.find(u => u.employeeNo === biometricId);
+      const nameParts = user ? user.name.split(" ") : [];
+      const fName = nameParts[0] || "Staff";
+      const lName = nameParts.slice(1).join(" ") || `#${biometricId}`;
+
+      employee = await db.employee.create({
+        data: {
+          biometricId,
+          firstName: fName,
+          lastName: lName,
+          role: "Nurse",
+          payType: "Fixed Monthly",
+          basicSalary: 60000,
+        },
+      }).catch(() => null);
+    }
+
+    if (!employee) continue; // Skip if we completely failed to find or create the employee
+    const employeeId = employee.id;
 
     // Check if log already exists for today
     const existingLog = await db.attendanceLog.findFirst({
@@ -116,7 +136,7 @@ export async function syncHikvisionDeviceMemory(
           authMethod,
           deviceId: "DS-K1T320MFWX",
         },
-      }).catch(() => null);
+      });
       insertedCount++;
     } else if (existingLog.checkIn && !existingLog.checkOut) {
       // Update Check-Out
@@ -126,7 +146,7 @@ export async function syncHikvisionDeviceMemory(
           checkOut: timeStr,
           authMethod,
         },
-      }).catch(() => null);
+      });
       insertedCount++;
     }
   }

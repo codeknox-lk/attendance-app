@@ -217,14 +217,14 @@ export async function POST(req: NextRequest) {
       console.error("[HIKVISION] DB Employee lookup error:", err);
     }
 
-    // FINAL FALLBACK: If employee creation completely failed, grab any valid employee to prevent Postgres FK crash
     if (!employee) {
-      employee = await db.employee.findFirst().catch(() => null);
+      console.error("[HIKVISION] Cannot record log: Employee not found and auto-creation failed.");
+      return NextResponse.json({ statusCode: 0, statusString: "Employee Not Found" }, { status: 400 });
     }
 
     // We must use the true Prisma UUID/CUID for Postgres Foreign Key 'employeeId'
-    const employeeId = employee ? employee.id : "FALLBACK-EMP-ID";
-    const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : `Staff ID #${biometricId}`;
+    const employeeId = employee.id;
+    const employeeName = `${employee.firstName} ${employee.lastName}`;
 
     // Update Device Status in DB
     try {
