@@ -576,7 +576,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setEmployees(dbEmployees);
         }
 
-        const attRes = await fetch("/api/attendance");
+        const today = new Date();
+        const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+        const attRes = await fetch(`/api/attendance?month=${currentMonth}`);
         const attData = await attRes.json();
         if (attData.success && Array.isArray(attData.logs)) {
           const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
@@ -623,8 +625,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Live background polling every 4 seconds for instant biometric scan & staff updates
     const pollInterval = setInterval(async () => {
       try {
+        const today = new Date();
+        const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
         const [attRes, empRes] = await Promise.all([
-          fetch("/api/attendance"),
+          fetch(`/api/attendance?month=${currentMonth}`),
           fetch("/api/employees"),
         ]);
         const [attData, empData] = await Promise.all([
@@ -672,7 +676,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             deviceId: (l.deviceId as string) || "DS-K1T320MFWX",
             employee: l.employee as AttendanceLog["employee"],
           }));
-          setAttendanceLogs(dbLogs);
+          setAttendanceLogs(prev => {
+            const newLogIds = new Set(dbLogs.map(l => l.id));
+            const existingToKeep = prev.filter(p => !newLogIds.has(p.id));
+            return [...dbLogs, ...existingToKeep].sort((a,b) => b.date.localeCompare(a.date));
+          });
         }
       } catch {}
     }, 4000);

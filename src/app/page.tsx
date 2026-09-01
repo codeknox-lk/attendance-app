@@ -493,10 +493,16 @@ export default function Home() {
   const [pinError, setPinError] = useState("");
 
   // ── Filters ──
-  const [selectedMonth, setSelectedMonth] = useState("2026-08");
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [attendanceSearch, setAttendanceSearch] = useState("");
   const [attendanceStatusFilter, setAttendanceStatusFilter] = useState("All");
-  const [selectedCalMonth, setSelectedCalMonth] = useState("2026-08");
+  const [selectedCalMonth, setSelectedCalMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [selectedHistoryYear, setSelectedHistoryYear] = useState<string>("All Years");
   const [selectedHistoryPeriodId, setSelectedHistoryPeriodId] = useState<string | null>(null);
   const [auditSearch, setAuditSearch] = useState<string>("");
@@ -590,7 +596,10 @@ export default function Home() {
       const dateParts: Record<string, string> = {};
       parts.forEach(p => { dateParts[p.type] = p.value; });
       return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
-    })() : "2026-07-10";
+    })() : (() => {
+      const today = new Date();
+      return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    })();
     const todayLogs = attendanceLogs.filter(l => l.date === today);
     const present = todayLogs.filter(l => ["On-Time","Late","Half-Day"].includes(l.status)).length;
     return { totalStaff: activeEmployees.length, present, late: todayLogs.filter(l=>l.status==="Late").length, onLeave: todayLogs.filter(l=>l.status==="On-Leave").length, absent: todayLogs.filter(l=>l.status==="Absent").length, presentPercent: activeEmployees.length>0 ? Math.round((present/activeEmployees.length)*100):0, todayLogs };

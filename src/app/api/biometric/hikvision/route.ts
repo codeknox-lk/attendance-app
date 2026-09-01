@@ -7,20 +7,6 @@ import { db } from "@/lib/db";
  * Handles real-time face, fingerprint, and card scanning events pushed by the terminal.
  */
 
-interface LogRecord {
-  id?: string;
-  employeeId?: string;
-  date?: string;
-  checkIn?: string;
-  checkOut?: string | null;
-  authMethod?: string | null;
-  employee?: {
-    id?: string;
-    biometricId?: string;
-  } | null;
-  [key: string]: unknown;
-}
-
 interface HikvisionEventBody {
   AccessControllerEvent?: {
     deviceName?: string;
@@ -270,28 +256,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Check existing attendance log for today in DB or Memory
-    let existingLog: LogRecord | null = null;
-    try {
-      existingLog = await db.attendanceLog.findFirst({
-        where: {
-          date: dateStr,
-          OR: [
-            { employeeId: employeeId },
-            { employee: { biometricId: biometricId } },
-          ],
-        },
-      });
-    } catch {
-      // Database bypass fallback
-    }
+    const existingLog = await db.attendanceLog.findFirst({
+      where: {
+        date: dateStr,
+        OR: [
+          { employeeId: employeeId },
+          { employee: { biometricId: biometricId } },
+        ],
+      },
+    });
 
-    if (!existingLog && globalThis.globalAttendanceLogs) {
-      existingLog = (globalThis.globalAttendanceLogs as LogRecord[]).find(
-        (l: LogRecord) =>
-          l.date === dateStr &&
-          (l.employeeId === employeeId || l.employee?.biometricId === biometricId)
-      ) || null;
-    }
+
 
     const isCheckOut = Boolean(existingLog && existingLog.checkIn);
     const actionType = isCheckOut ? "checkOut" : "checkIn";
@@ -335,66 +310,24 @@ export async function POST(req: NextRequest) {
 
     if (isCheckOut && existingLog) {
       // SECOND SCAN TODAY -> Record Check-Out
-      if (globalThis.globalAttendanceLogs) {
-        const idx = (globalThis.globalAttendanceLogs as LogRecord[]).findIndex(
-          (l: LogRecord) =>
-            l.date === dateStr &&
-            (l.employeeId === employeeId || l.employee?.biometricId === biometricId)
-        );
-        if (idx >= 0 && globalThis.globalAttendanceLogs[idx]) {
-          globalThis.globalAttendanceLogs[idx].checkOut = timeStr;
-          globalThis.globalAttendanceLogs[idx].authMethod = authMethod;
-        }
-      }
-
-      try {
-        await db.attendanceLog.update({
-          where: { id: existingLog.id },
-          data: {
-            checkOut: timeStr,
-            authMethod: authMethod,
-          },
-        });
-      } catch {
-        // Fallback
-      }
-    } else {
-      // FIRST SCAN TODAY -> Record Check-In
-      const logEntry = {
-        id: `LOG-${Date.now()}`,
-        employeeId: employeeId,
-        date: dateStr,
-        checkIn: timeStr,
-        checkOut: null,
-        status: computedStatus,
-        authMethod: authMethod,
-        deviceId: serialNo,
-        employee: {
-          id: employeeId,
-          firstName: employee ? employee.firstName : (biometricId === "2" ? "ruwantha" : "Lakmina"),
-          lastName: employee ? employee.lastName : (biometricId === "2" ? "Alwis" : "Ekanayake"),
-          biometricId: biometricId,
+      await db.attendanceLog.update({
+        where: { id: existingLog.id },
+        data: {
+          checkOut: timeStr,
+          authMethod: authMethod,
         },
-      };
-
-      if (globalThis.globalAttendanceLogs) {
-        globalThis.globalAttendanceLogs.unshift(logEntry);
-      }
-
-      try {
-        await db.attendanceLog.create({
-          data: {
-            employeeId: employeeId,
-            date: dateStr,
-            checkIn: timeStr,
-            status: computedStatus,
-            authMethod: authMethod,
-            deviceId: serialNo,
-          },
-        });
-      } catch {
-        // Fallback
-      }
+      });
+    } else {
+      await db.attendanceLog.create({
+        data: {
+          employeeId: employeeId,
+          date: dateStr,
+          checkIn: timeStr,
+          status: computedStatus,
+          authMethod: authMethod,
+          deviceId: serialNo,
+        },
+      });
     }
 
     console.log(`[HIKVISION ISUP] Punch Received - ${employeeName} (${biometricId}) via ${authMethod} at ${timeStr}`);
