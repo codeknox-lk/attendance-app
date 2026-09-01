@@ -85,13 +85,15 @@ export async function syncHikvisionDeviceMemory(
 
     // Determine Auth Method (Fingerprint vs Face vs Card)
     const modeRaw = String(ev.currentVerifyMode || "").toLowerCase();
-    const authMethod = modeRaw.includes("finger") || ev.minor === 75
-      ? "Fingerprint"
-      : modeRaw.includes("face")
-      ? "Face"
-      : modeRaw.includes("card")
-      ? "Card"
-      : "Fingerprint";
+    
+    let authMethod = "Face"; // Default
+    if (ev.minor === 22 || ev.minor === 23 || ev.minor === 24 || ev.minor === 25 || modeRaw.includes("finger")) {
+      authMethod = "Fingerprint";
+    } else if (ev.minor === 75 || modeRaw.includes("face")) {
+      authMethod = "Face";
+    } else if (ev.minor === 1 || ev.minor === 38 || modeRaw.includes("card")) {
+      authMethod = "Card";
+    }
 
     // Find Employee in DB
     let employee = await db.employee.findUnique({

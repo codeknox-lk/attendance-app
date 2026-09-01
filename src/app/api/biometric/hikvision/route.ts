@@ -16,6 +16,8 @@ interface HikvisionEventBody {
     currentVerifyMode?: string;
     verifyResult?: string;
     time?: string;
+    minor?: number;
+    major?: number;
   };
   eventLog?: {
     employeeNo?: string;
@@ -139,14 +141,19 @@ export async function POST(req: NextRequest) {
     // Extract Event Metadata
     const deviceName = body.AccessControllerEvent?.deviceName || body.deviceName || "DS-K1T320EFWX Terminal";
     const serialNo = body.AccessControllerEvent?.serialNo || body.serialNo || "HK-TERMINAL-01";
-    const authMethodRaw = body.AccessControllerEvent?.currentVerifyMode || body.authMethod || "Face";
-    const authMethod = authMethodRaw.toLowerCase().includes("face")
-      ? "Face"
-      : authMethodRaw.toLowerCase().includes("finger")
-      ? "Fingerprint"
-      : authMethodRaw.toLowerCase().includes("card")
-      ? "Card"
-      : "Face";
+    
+    // Determine Auth Method (Fingerprint vs Face vs Card) based on Minor Code & VerifyMode
+    const minorCode = body.AccessControllerEvent?.minor;
+    const modeRaw = String(body.AccessControllerEvent?.currentVerifyMode || body.authMethod || "").toLowerCase();
+    
+    let authMethod = "Face"; // Default
+    if (minorCode === 22 || minorCode === 23 || minorCode === 24 || minorCode === 25 || modeRaw.includes("finger")) {
+      authMethod = "Fingerprint";
+    } else if (minorCode === 75 || modeRaw.includes("face")) {
+      authMethod = "Face";
+    } else if (minorCode === 1 || minorCode === 38 || modeRaw.includes("card")) {
+      authMethod = "Card";
+    }
 
     // Extract Event Timestamp in Sri Lanka Time (Asia/Colombo UTC+5:30) robustly
     const rawTimeInput = body.AccessControllerEvent?.time || body.time || body.timestamp;
