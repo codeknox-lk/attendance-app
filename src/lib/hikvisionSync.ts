@@ -38,11 +38,23 @@ export async function syncHikvisionDeviceMemory(
       headers["Authorization"] = authHeader;
     }
 
+    // Calculate time range (Last 7 days to cover missed logs)
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+
+    // Format: YYYY-MM-DDTHH:MM:SS+05:30
+    const toHikvisionTime = (d: Date) => {
+      return d.toISOString().split(".")[0] + "+05:30"; // Assuming Sri Lanka timezone
+    };
+
     const payload = {
       AcsEventSearchDescription: {
         searchID: "SYNC-" + Date.now(),
         searchResultPosition: 0,
-        maxResults: 100,
+        maxResults: 1000,
+        startTime: toHikvisionTime(start),
+        endTime: toHikvisionTime(end),
       },
     };
 
