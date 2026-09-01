@@ -777,14 +777,27 @@ export default function Home() {
   const handleSelfServicePin = () => { setSelfServiceError(""); const emp=activeEmployees.find(e=>e.biometricId===selfServicePin); if(emp){setSelfServiceEmp(emp);}else{setSelfServiceError("Biometric ID not found. Please try again.");} };
 
   // ── Shared UI pieces ──
-  const monthSelector = (value: string, onChange: (v:string)=>void) => (
-    <select value={value} onChange={e=>onChange(e.target.value)} className={`border rounded-md px-3 py-1.5 text-xs font-semibold focus:outline-none ${isDark?"bg-zinc-900 border-zinc-800 text-white":"bg-white border-zinc-200 text-zinc-800"}`}>
-      {["2026-08","2026-07","2026-06","2026-05","2026-04","2026-03","2026-02","2026-01"].map(m => {
-        const [y,mo]=m.split("-"); const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleString("default",{month:"long",year:"numeric"});
-        return <option key={m} value={m}>{label}</option>;
-      })}
-    </select>
-  );
+  const monthSelector = (value: string, onChange: (v:string)=>void) => {
+    const months = [];
+    const current = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(current.getFullYear(), current.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    if (value && !months.includes(value)) {
+      months.push(value);
+      months.sort((a, b) => b.localeCompare(a));
+    }
+
+    return (
+      <select value={value} onChange={e=>onChange(e.target.value)} className={`border rounded-md px-3 py-1.5 text-xs font-semibold focus:outline-none ${isDark?"bg-zinc-900 border-zinc-800 text-white":"bg-white border-zinc-200 text-zinc-800"}`}>
+        {months.map(m => {
+          const [y,mo]=m.split("-"); const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleString("default",{month:"long",year:"numeric"});
+          return <option key={m} value={m}>{label}</option>;
+        })}
+      </select>
+    );
+  };
 
   if (!hasMounted) return <div className="flex flex-1 min-h-screen items-center justify-center bg-zinc-950 text-zinc-500 text-xs font-bold">Initializing MedicFlow…</div>;
 
