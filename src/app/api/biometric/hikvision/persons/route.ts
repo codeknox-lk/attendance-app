@@ -13,7 +13,6 @@ export async function GET(req: NextRequest) {
     let persons = await fetchHikvisionPersons(ip, port, username, password);
     const deviceInfo = await fetchHikvisionDeviceInfo(ip, port, username, password);
 
-    try {
       const [dbEmployees, dbLogs] = await Promise.all([
         db.employee.findMany(),
         db.attendanceLog.findMany({ include: { employee: true } }),
@@ -52,9 +51,6 @@ export async function GET(req: NextRequest) {
       });
 
       persons = Array.from(mergedMap.values()).sort((a, b) => Number(a.employeeNo) - Number(b.employeeNo));
-    } catch {
-      // Fallback
-    }
 
     return NextResponse.json({
       success: true,

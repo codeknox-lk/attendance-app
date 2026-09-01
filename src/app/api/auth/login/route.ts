@@ -6,29 +6,25 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { username, password, pin, loginType, biometricId } = body;
 
-    // 1. PIN-based Quick Lock/Unlock
-    if (pin && (pin === "1234" || pin === "199169")) {
-      return NextResponse.json({
-        success: true,
-        user: { id: "ADMIN-01", username: "admin", name: "Clinic Administrator", role: "Admin" },
-      });
+    // 1. PIN-based Quick Lock/Unlock (If implementing local pins securely later)
+    // For now we assume PIN auth is disabled or strictly verified.
+    if (pin) {
+      // Optionally verify a database stored PIN if added to schema
     }
 
-    // 2. Staff / Employee Self-Service Login
+    // 1. Staff / Employee Self-Service Login
     if (loginType === "staff" || biometricId) {
       const bioId = String(biometricId || username).trim();
-      let emp = null;
-      try {
-        emp = await db.employee.findFirst({
-          where: {
-            OR: [
-              { biometricId: bioId },
-              { id: bioId },
-              { firstName: bioId },
-            ],
-          },
-        });
-      } catch {}
+      
+      const emp = await db.employee.findFirst({
+        where: {
+          OR: [
+            { biometricId: bioId },
+            { id: bioId },
+            { firstName: bioId },
+          ],
+        },
+      });
 
       if (emp) {
         return NextResponse.json({
@@ -44,49 +40,20 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Default fallback for staff ID 1 or 2
-      if (bioId === "1" || bioId === "101") {
-        return NextResponse.json({
-          success: true,
-          user: { id: "EMP-001", username: "1", name: "LAKMINA EKANAYAKE", role: "Admin", biometricId: "1" },
-        });
-      }
-      if (bioId === "2" || bioId === "102") {
-        return NextResponse.json({
-          success: true,
-          user: { id: "EMP-002", username: "2", name: "ruwantha Alwis", role: "Doctor", biometricId: "2" },
-        });
-      }
-
       return NextResponse.json({ success: false, error: "Staff Biometric ID not found in database" }, { status: 401 });
     }
 
-    // 3. Admin User Credentials Login
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const adminDb = db as any;
-      if (adminDb.adminUser) {
-        const admin = await adminDb.adminUser.findFirst({
-          where: {
-            username: username || "admin",
-            password: password || "admin123",
-          },
-        });
+    // 2. Admin User Credentials Login
+    const admin = await db.adminUser.findFirst({
+      where: {
+        username: username,
+      },
+    });
 
-        if (admin) {
-          return NextResponse.json({
-            success: true,
-            user: { id: admin.id, username: admin.username, name: admin.name, role: admin.role },
-          });
-        }
-      }
-    } catch {}
-
-    // Default Fallback Admin Check
-    if ((username === "admin" && password === "admin123") || pin === "1234") {
+    if (admin && admin.password === password) {
       return NextResponse.json({
         success: true,
-        user: { id: "ADMIN-01", username: "admin", name: "Clinic Administrator", role: "Admin" },
+        user: { id: admin.id, username: admin.username, name: admin.name, role: admin.role },
       });
     }
 

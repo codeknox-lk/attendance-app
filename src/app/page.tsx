@@ -534,7 +534,7 @@ export default function Home() {
   const [selectedPaySlip, setSelectedPaySlip] = useState<string|null>(null);
 
   const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
-  const [newLeave, setNewLeave] = useState<Omit<LeaveRequest,"id"|"appliedAt">>({ employeeId:"EMP-001", type:"Annual", startDate:"", endDate:"", status:"Pending", note:"" });
+  const [newLeave, setNewLeave] = useState<Omit<LeaveRequest,"id"|"appliedAt">>({ employeeId:"", type:"Annual", startDate:"", endDate:"", status:"Pending", note:"" });
 
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
@@ -1365,7 +1365,7 @@ export default function Home() {
               {/* Leave summary cards */}
               <div className="flex items-center justify-between">
                 <h2 className={`text-sm font-bold ${isDark?"text-white":"text-zinc-900"}`}>Leave Management</h2>
-                <button onClick={()=>{setNewLeave({employeeId:"EMP-001",type:"Annual",startDate:"",endDate:"",status:"Pending",note:""});setShowAddLeaveModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ New Leave Request</button>
+                <button onClick={()=>{setNewLeave({employeeId: activeEmployees[0]?.id || "",type:"Annual",startDate:"",endDate:"",status:"Pending",note:""});setShowAddLeaveModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ New Leave Request</button>
               </div>
 
               {/* Leave balances */}

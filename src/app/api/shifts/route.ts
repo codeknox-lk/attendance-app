@@ -45,23 +45,18 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Shift ID required" }, { status: 400 });
     }
 
-    let shift = null;
-    try {
-      shift = await db.shift.update({
-        where: { id },
-        data: {
-          ...(name !== undefined && { name }),
-          ...(startTime !== undefined && { startTime }),
-          ...(endTime !== undefined && { endTime }),
-          ...(gracePeriod !== undefined && { gracePeriod: Number(gracePeriod) }),
-          ...(overtimeStart !== undefined && { overtimeStart }),
-          ...(color !== undefined && { color }),
-          ...(workDays !== undefined && Array.isArray(workDays) && { workDays }),
-        },
-      });
-    } catch {
-      // Fallback
-    }
+    const shift = await db.shift.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(startTime !== undefined && { startTime }),
+        ...(endTime !== undefined && { endTime }),
+        ...(gracePeriod !== undefined && { gracePeriod: Number(gracePeriod) }),
+        ...(overtimeStart !== undefined && { overtimeStart }),
+        ...(color !== undefined && { color }),
+        ...(workDays !== undefined && Array.isArray(workDays) && { workDays }),
+      },
+    });
 
     return NextResponse.json({ success: true, shift: shift || body });
   } catch (error: unknown) {
@@ -79,13 +74,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Shift ID required" }, { status: 400 });
     }
 
-    try {
-      await db.shift.delete({
-        where: { id },
-      });
-    } catch {
-      // Fallback
-    }
+    await db.shift.delete({
+      where: { id },
+    });
 
     return NextResponse.json({ success: true, message: "Shift deleted successfully" });
   } catch (error: unknown) {

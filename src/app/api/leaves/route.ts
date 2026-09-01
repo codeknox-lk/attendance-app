@@ -21,13 +21,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { employeeId, type, startDate, endDate, reason } = body;
 
-    const inputEmpId = String(employeeId || "1");
-    let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } }).catch(() => null);
+    const inputEmpId = String(employeeId);
+    let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } });
     if (!dbEmp) {
-      dbEmp = await db.employee.findFirst({ where: { biometricId: inputEmpId } });
-    }
-    if (!dbEmp) {
-      dbEmp = await db.employee.findFirst();
+      dbEmp = await db.employee.findUnique({ where: { biometricId: inputEmpId } });
     }
 
     if (!dbEmp) {
@@ -62,15 +59,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, error: "ID and status are required" }, { status: 400 });
     }
 
-    let leave = null;
-    try {
-      leave = await db.leaveRequest.update({
-        where: { id },
-        data: { status },
-      });
-    } catch {
-      // Fallback
-    }
+    const leave = await db.leaveRequest.update({
+      where: { id },
+      data: { status },
+    });
 
     return NextResponse.json({ success: true, leave: leave || body });
   } catch (error: unknown) {

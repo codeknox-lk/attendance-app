@@ -616,6 +616,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return merged;
           });
         }
+
+        const shfRes = await fetch("/api/shifts");
+        const shfData = await shfRes.json();
+        if (shfData.success && shfData.shifts) {
+          const dbShifts: Shift[] = shfData.shifts.map((s: Record<string, unknown>) => ({
+            id: String(s.id),
+            name: String(s.name),
+            startTime: String(s.startTime),
+            endTime: String(s.endTime),
+            workDays: Array.isArray(s.workDays) ? s.workDays : [1, 2, 3, 4, 5],
+            otThresholdHours: Number(s.otThresholdHours) || 9,
+            otMultiplier: Number(s.otMultiplier) || 1.5,
+          }));
+          setShifts(dbShifts);
+        }
+
+        const allRes = await fetch("/api/allowances");
+        const allData = await allRes.json();
+        if (allData.success && allData.allowances) {
+          const dbAllowances: Allowance[] = allData.allowances.map((a: Record<string, unknown>) => ({
+            id: String(a.id),
+            name: String(a.name),
+            amount: Number(a.amount) || 0,
+            epfApplicable: Boolean(a.epfApplicable),
+            taxDeductible: Boolean(a.isTaxable),
+            type: (a.type as Allowance["type"]) || "Fixed",
+          }));
+          setAllowances(dbAllowances);
+        }
       } catch (err) {
         console.error("Database hydration error:", err);
       }

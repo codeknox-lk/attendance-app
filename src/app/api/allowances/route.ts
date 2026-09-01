@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, name, amount, type, isTaxable, taxDeductible } = body;
+    const { id, name, amount, type, isTaxable, epfApplicable } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Allowance ID required" }, { status: 400 });
@@ -49,8 +49,8 @@ export async function PUT(req: NextRequest) {
         ...(name !== undefined && { name }),
         ...(amount !== undefined && { amount: Number(amount) }),
         ...(type !== undefined && { type }),
-        ...(taxDeductible !== undefined && { isTaxable: !taxDeductible }),
-        ...(isTaxable !== undefined && { isTaxable: Boolean(isTaxable) }),
+        ...(isTaxable !== undefined && { isTaxable }),
+        ...(epfApplicable !== undefined && { epfApplicable }),
       },
     });
 
@@ -70,13 +70,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Allowance ID required" }, { status: 400 });
     }
 
-    try {
-      await db.allowance.delete({
-        where: { id },
-      });
-    } catch {
-      // Fallback
-    }
+    await db.allowance.delete({
+      where: { id },
+    });
 
     return NextResponse.json({ success: true, message: "Allowance deleted successfully" });
   } catch (error: unknown) {
