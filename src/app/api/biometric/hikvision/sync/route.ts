@@ -10,9 +10,13 @@ export async function POST(req: NextRequest) {
     const username = body.username || "admin";
     const password = body.password || "";
 
-    const syncResult = await syncHikvisionDeviceMemory(ip, port, username, password);
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
+    const syncResult = await syncHikvisionDeviceMemory(ip, port, username, password, clinicId);
 
     const logs = await db.attendanceLog.findMany({
+      where: { clinicId },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { employee: true },
@@ -37,9 +41,13 @@ export async function GET(req: NextRequest) {
     const ip = searchParams.get("ip") || "192.168.8.135";
     const port = parseInt(searchParams.get("port") || "80");
 
-    const syncResult = await syncHikvisionDeviceMemory(ip, port, "admin", "");
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
+    const syncResult = await syncHikvisionDeviceMemory(ip, port, "admin", "", clinicId);
 
     const logs = await db.attendanceLog.findMany({
+      where: { clinicId },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { employee: true },

@@ -3,9 +3,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const shifts = await db.shift.findMany();
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
+    const shifts = await db.shift.findMany({ where: { clinicId } });
     return NextResponse.json({ success: true, shifts });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error fetching shifts";
@@ -17,9 +20,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, startTime, endTime, graceMins, workDays } = body;
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     const shift = await db.shift.create({
       data: {
+        clinicId,
         name,
         startTime: startTime || "08:30",
         endTime: endTime || "17:00",
@@ -44,9 +50,11 @@ export async function PUT(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Shift ID required" }, { status: 400 });
     }
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     const shift = await db.shift.update({
-      where: { id },
+      where: { id, clinicId },
       data: {
         ...(name !== undefined && { name }),
         ...(startTime !== undefined && { startTime }),
@@ -73,9 +81,11 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Shift ID required" }, { status: 400 });
     }
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     await db.shift.delete({
-      where: { id },
+      where: { id, clinicId },
     });
 
     return NextResponse.json({ success: true, message: "Shift deleted successfully" });

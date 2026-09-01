@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
         } else {
           await db.biometricDevice.create({
             data: {
+              clinicId: "default-clinic-id",
               name: body.deviceName || "Hikvision Terminal",
               model: "DS-K1T320EFWX",
               serialNumber: serialNo,
@@ -193,11 +194,22 @@ export async function POST(req: NextRequest) {
     const dateStr = `${slYear}-${String(slMonth).padStart(2, "0")}-${String(slDay).padStart(2, "0")}`;
     const timeStr = `${String(slHour).padStart(2, "0")}:${String(slMinute).padStart(2, "0")}:${String(slSecond).padStart(2, "0")}`;
 
+    // Determine Clinic ID from the Device
+    let clinicId = "default-clinic-id";
+    try {
+      const device = await db.biometricDevice.findFirst({ where: { serialNumber: serialNo } });
+      if (device && device.clinicId) {
+        clinicId = device.clinicId;
+      }
+    } catch (e) {
+      // Use default
+    }
+
     // Find or Auto-Create Employee in Database (Ensures Foreign Key is 100% valid)
     let employee = null;
     try {
       employee = await db.employee.findFirst({
-        where: { biometricId: String(biometricId) },
+        where: { biometricId: String(biometricId), clinicId },
       });
 
       if (!employee) {
@@ -211,6 +223,7 @@ export async function POST(req: NextRequest) {
         // Auto-register missing biometric ID to guarantee database foreign key integrity
         employee = await db.employee.create({
           data: {
+            clinicId,
             biometricId: String(biometricId),
             firstName: fName,
             lastName: lName,
@@ -248,6 +261,7 @@ export async function POST(req: NextRequest) {
       } else {
         await db.biometricDevice.create({
           data: {
+            clinicId,
             name: deviceName,
             model: "DS-K1T320EFWX",
             serialNumber: serialNo,
@@ -266,6 +280,7 @@ export async function POST(req: NextRequest) {
     const existingLog = await db.attendanceLog.findFirst({
       where: {
         date: dateStr,
+        clinicId,
         OR: [
           { employeeId: employeeId },
           { employee: { biometricId: biometricId } },
@@ -318,7 +333,7 @@ export async function POST(req: NextRequest) {
     if (isCheckOut && existingLog) {
       // SECOND SCAN TODAY -> Record Check-Out
       await db.attendanceLog.update({
-        where: { id: existingLog.id },
+        where: { id: existingLog.id, clinicId },
         data: {
           checkOut: timeStr,
           authMethod: authMethod,
@@ -327,6 +342,7 @@ export async function POST(req: NextRequest) {
     } else {
       await db.attendanceLog.create({
         data: {
+          clinicId,
           employeeId: employeeId,
           date: dateStr,
           checkIn: timeStr,

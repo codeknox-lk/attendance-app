@@ -10,12 +10,15 @@ export async function GET(req: NextRequest) {
     const username = searchParams.get("username") || "admin";
     const password = searchParams.get("password") || "";
 
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
     let persons = await fetchHikvisionPersons(ip, port, username, password);
     const deviceInfo = await fetchHikvisionDeviceInfo(ip, port, username, password);
 
       const [dbEmployees, dbLogs] = await Promise.all([
-        db.employee.findMany(),
-        db.attendanceLog.findMany({ include: { employee: true } }),
+        db.employee.findMany({ where: { clinicId } }),
+        db.attendanceLog.findMany({ where: { clinicId }, include: { employee: true } }),
       ]);
 
       const mergedMap = new Map();

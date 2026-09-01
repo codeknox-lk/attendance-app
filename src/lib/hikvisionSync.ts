@@ -21,7 +21,8 @@ export async function syncHikvisionDeviceMemory(
   ip: string = "192.168.8.135",
   port: number = 80,
   username: string = "admin",
-  password?: string
+  password?: string,
+  clinicId: string = "default-clinic-id"
 ) {
   const protocol = port === 443 ? "https" : "http";
   const url = `${protocol}://${ip}:${port}/ISAPI/AccessControl/AcsEvent?format=json`;
@@ -108,8 +109,8 @@ export async function syncHikvisionDeviceMemory(
     }
 
     // Find Employee in DB
-    let employee = await db.employee.findUnique({
-      where: { biometricId },
+    let employee = await db.employee.findFirst({
+      where: { biometricId, clinicId },
     }).catch(() => null);
 
     if (!employee) {
@@ -121,6 +122,7 @@ export async function syncHikvisionDeviceMemory(
 
       employee = await db.employee.create({
         data: {
+          clinicId,
           biometricId,
           firstName: fName,
           lastName: lName,
@@ -136,13 +138,14 @@ export async function syncHikvisionDeviceMemory(
 
     // Check if log already exists for today
     const existingLog = await db.attendanceLog.findFirst({
-      where: { employeeId, date: dateStr },
+      where: { employeeId, date: dateStr, clinicId },
     }).catch(() => null);
 
     if (!existingLog) {
       // Create Check-In
       await db.attendanceLog.create({
         data: {
+          clinicId,
           employeeId,
           date: dateStr,
           checkIn: timeStr,
@@ -155,7 +158,7 @@ export async function syncHikvisionDeviceMemory(
     } else if (existingLog.checkIn && !existingLog.checkOut) {
       // Update Check-Out
       await db.attendanceLog.update({
-        where: { id: existingLog.id },
+        where: { id: existingLog.id, clinicId },
         data: {
           checkOut: timeStr,
           authMethod,
@@ -170,8 +173,9 @@ export async function syncHikvisionDeviceMemory(
   if (deviceInfo) {
     await db.biometricDevice.upsert({
       where: { serialNumber: deviceInfo.serialNumber },
-      update: { status: "Connected", lastSyncTime: new Date(), ipAddress: ip },
+      update: { status: "Connected", lastSyncTime: new Date(), ipAddress: ip, clinicId },
       create: {
+        clinicId,
         name: deviceInfo.deviceName,
         model: deviceInfo.model,
         serialNumber: deviceInfo.serialNumber,

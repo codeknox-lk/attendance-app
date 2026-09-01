@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
             role: emp.role,
             biometricId: emp.biometricId,
             employeeId: emp.id,
+            clinicId: emp.clinicId,
           },
         });
       }
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     if (admin && admin.password === password) {
       return NextResponse.json({
         success: true,
-        user: { id: admin.id, username: admin.username, name: admin.name, role: admin.role },
+        user: { id: admin.id, username: admin.username, name: admin.name, role: admin.role, clinicId: admin.clinicId },
       });
     }
 

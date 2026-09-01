@@ -11,11 +11,14 @@ export async function GET(req: NextRequest) {
     const date = searchParams.get("date");
     const month = searchParams.get("month");
 
-    let whereClause = {};
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
+    let whereClause: any = { clinicId };
     if (date) {
-      whereClause = { date };
+      whereClause.date = date;
     } else if (month) {
-      whereClause = { date: { startsWith: month } };
+      whereClause.date = { startsWith: month };
     }
 
     const logs = await db.attendanceLog.findMany({
@@ -39,15 +42,21 @@ export async function POST(req: NextRequest) {
     const inputEmpId = String(employeeId || "1");
     const logDate = date || new Date().toISOString().split("T")[0];
 
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
     // Dynamic Employee Lookup to guarantee valid Foreign Key
     let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } }).catch(() => null);
+    if (dbEmp && dbEmp.clinicId !== clinicId) dbEmp = null;
+
     if (!dbEmp) {
-      dbEmp = await db.employee.findFirst({ where: { biometricId: inputEmpId } });
+      dbEmp = await db.employee.findFirst({ where: { biometricId: inputEmpId, clinicId } });
     }
     if (!dbEmp) {
       // Auto create employee if missing
       dbEmp = await db.employee.create({
         data: {
+          clinicId,
           firstName: "Staff",
           lastName: `#${inputEmpId}`,
           biometricId: inputEmpId,
@@ -60,13 +69,13 @@ export async function POST(req: NextRequest) {
 
     // Check if log exists for today to update checkOut instead of creating duplicate
     const existing = await db.attendanceLog.findFirst({
-      where: { employeeId: dbEmp.id, date: logDate },
+      where: { employeeId: dbEmp.id, date: logDate, clinicId },
     });
 
     let savedLog = null;
     if (existing) {
       savedLog = await db.attendanceLog.update({
-        where: { id: existing.id },
+        where: { id: existing.id, clinicId },
         data: {
           ...(checkIn && { checkIn }),
           ...(checkOut && { checkOut }),
@@ -80,6 +89,7 @@ export async function POST(req: NextRequest) {
     } else {
       savedLog = await db.attendanceLog.create({
         data: {
+          clinicId,
           employeeId: dbEmp.id,
           date: logDate,
           checkIn: checkIn || "08:30:00",
@@ -108,9 +118,11 @@ export async function PUT(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Log ID is required" }, { status: 400 });
     }
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     const log = await db.attendanceLog.update({
-      where: { id },
+      where: { id, clinicId },
       data: {
         ...(checkIn !== undefined && { checkIn }),
         ...(checkOut !== undefined && { checkOut }),
@@ -135,9 +147,11 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Log ID is required" }, { status: 400 });
     }
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     await db.attendanceLog.delete({
-      where: { id },
+      where: { id, clinicId },
     });
 
     return NextResponse.json({ success: true, message: "Attendance log deleted" });

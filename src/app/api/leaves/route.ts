@@ -3,9 +3,13 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
     const leaves = await db.leaveRequest.findMany({
+      where: { clinicId },
       include: { employee: true },
       orderBy: { appliedAt: "desc" },
     });
@@ -22,9 +26,14 @@ export async function POST(req: NextRequest) {
     const { employeeId, type, startDate, endDate, reason } = body;
 
     const inputEmpId = String(employeeId);
-    let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } });
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
+    let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } }).catch(() => null);
+    if (dbEmp && dbEmp.clinicId !== clinicId) dbEmp = null;
+
     if (!dbEmp) {
-      dbEmp = await db.employee.findUnique({ where: { biometricId: inputEmpId } });
+      dbEmp = await db.employee.findFirst({ where: { biometricId: inputEmpId, clinicId } });
     }
 
     if (!dbEmp) {
@@ -33,6 +42,7 @@ export async function POST(req: NextRequest) {
 
     const leave = await db.leaveRequest.create({
       data: {
+        clinicId,
         employeeId: dbEmp.id,
         type: type || "Annual",
         startDate: startDate || new Date().toISOString().split("T")[0],
@@ -58,9 +68,11 @@ export async function PUT(req: NextRequest) {
     if (!id || !status) {
       return NextResponse.json({ success: false, error: "ID and status are required" }, { status: 400 });
     }
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     const leave = await db.leaveRequest.update({
-      where: { id },
+      where: { id, clinicId },
       data: { status },
     });
 

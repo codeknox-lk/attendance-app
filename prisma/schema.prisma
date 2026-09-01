@@ -6,8 +6,29 @@ datasource db {
   provider = "postgresql"
 }
 
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String   @default("MedicFlow Primary")
+  address   String?
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminUsers     AdminUser[]
+  employees      Employee[]
+  shifts         Shift[]
+  allowances     Allowance[]
+  devices        BiometricDevice[]
+  auditLogs      AuditLog[]
+  attendanceLogs AttendanceLog[]
+  leaveRequests  LeaveRequest[]
+}
+
 model AdminUser {
   id        String   @id @default(cuid())
+  clinicId  String   @default("default-clinic-id")
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   username  String   @unique
   password  String
   name      String   @default("Clinic Administrator")
@@ -17,41 +38,45 @@ model AdminUser {
 }
 
 model Employee {
-  id              String           @id @default(cuid())
-  firstName       String
-  lastName        String
-  email           String?
-  phone           String?
-  role            String           @default("Nurse")
-  payType         String           @default("Fixed Monthly")
-  basicSalary     Float            @default(50000)
-  hourlyRate      Float            @default(300)
-  sessionRate     Float            @default(0)
-  commissionRate  Float            @default(0)
-  biometricId     String           @unique
-  epfEligible     Boolean          @default(true)
-  taxable         Boolean          @default(false)
-  active          Boolean          @default(true)
-  attendanceBonusRate Float          @default(0)
-  punctualBonusRate   Float          @default(0)
-  incomeBonusPercentage Float        @default(0)
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  id                    String   @id @default(cuid())
+  clinicId              String   @default("default-clinic-id")
+  clinic                Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  firstName             String
+  lastName              String
+  email                 String?
+  phone                 String?
+  role                  String   @default("Nurse")
+  payType               String   @default("Fixed Monthly")
+  basicSalary           Float    @default(50000)
+  hourlyRate            Float    @default(300)
+  sessionRate           Float    @default(0)
+  commissionRate        Float    @default(0)
+  biometricId           String   @unique
+  epfEligible           Boolean  @default(true)
+  taxable               Boolean  @default(false)
+  active                Boolean  @default(true)
+  attendanceBonusRate   Float    @default(0)
+  punctualBonusRate     Float    @default(0)
+  incomeBonusPercentage Float    @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  shiftIds        String[]         @default([])
+  shiftIds String[] @default([])
 
-  attendanceLogs  AttendanceLog[]
-  leaveRequests   LeaveRequest[]
-  allowances      EmployeeAllowance[]
+  attendanceLogs AttendanceLog[]
+  leaveRequests  LeaveRequest[]
+  allowances     EmployeeAllowance[]
 }
 
 model AttendanceLog {
   id            String   @id @default(cuid())
+  clinicId      String   @default("default-clinic-id")
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   employeeId    String
   employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  date          String   // Format: YYYY-MM-DD
-  checkIn       String   // Format: HH:mm:ss
-  checkOut      String?  // Format: HH:mm:ss
+  date          String // Format: YYYY-MM-DD
+  checkIn       String // Format: HH:mm:ss
+  checkOut      String? // Format: HH:mm:ss
   status        String   @default("On-Time") // On-Time, Late, Half-Day, On-Leave, Absent
   overtimeHours Float    @default(0)
   noPayHours    Float    @default(0)
@@ -62,34 +87,40 @@ model AttendanceLog {
 }
 
 model LeaveRequest {
-  id          String   @id @default(cuid())
-  employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  type        String   // Annual, Sick, Casual, Unpaid
-  startDate   String   // Format: YYYY-MM-DD
-  endDate     String   // Format: YYYY-MM-DD
-  reason      String?
-  status      String   @default("Pending") // Pending, Approved, Rejected
-  appliedAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  clinicId   String   @default("default-clinic-id")
+  clinic     Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       String // Annual, Sick, Casual, Unpaid
+  startDate  String // Format: YYYY-MM-DD
+  endDate    String // Format: YYYY-MM-DD
+  reason     String?
+  status     String   @default("Pending") // Pending, Approved, Rejected
+  appliedAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Shift {
-  id            String     @id @default(cuid())
+  id            String  @id @default(cuid())
+  clinicId      String  @default("default-clinic-id")
+  clinic        Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   name          String
-  startTime     String     // Format: HH:mm
-  endTime       String     // Format: HH:mm
-  gracePeriod   Int        @default(15) // Minutes
-  overtimeStart String     // Format: HH:mm
-  color         String     @default("indigo")
-  workDays      Int[]      @default([1, 2, 3, 4, 5])
+  startTime     String // Format: HH:mm
+  endTime       String // Format: HH:mm
+  gracePeriod   Int     @default(15) // Minutes
+  overtimeStart String // Format: HH:mm
+  color         String  @default("indigo")
+  workDays      Int[]   @default([1, 2, 3, 4, 5])
 }
 
 model Allowance {
-  id          String              @id @default(cuid())
-  name        String
-  description String?
-  amount      Float
+  id            String              @id @default(cuid())
+  clinicId      String              @default("default-clinic-id")
+  clinic        Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  amount        Float
   type          String              @default("Monthly") // Monthly, Daily, Per-Session
   isTaxable     Boolean             @default(false)
   epfApplicable Boolean             @default(false)
@@ -108,6 +139,8 @@ model EmployeeAllowance {
 
 model BiometricDevice {
   id           String   @id @default(cuid())
+  clinicId     String   @default("default-clinic-id")
+  clinic       Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   name         String
   model        String   @default("DS-K1T320MFWX")
   serialNumber String   @unique
@@ -122,6 +155,8 @@ model BiometricDevice {
 
 model AuditLog {
   id        String   @id @default(cuid())
+  clinicId  String   @default("default-clinic-id")
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   action    String
   entity    String
   entityId  String

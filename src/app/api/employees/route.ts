@@ -3,9 +3,13 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
     const employees = await db.employee.findMany({
+      where: { clinicId },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json({ success: true, employees });
@@ -33,14 +37,17 @@ export async function POST(req: NextRequest) {
       shiftIds,
     } = body;
 
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
     const existing = await db.employee.findFirst({
-      where: { biometricId: String(biometricId) },
+      where: { biometricId: String(biometricId), clinicId },
     });
 
     let employee = null;
     if (existing) {
       employee = await db.employee.update({
-        where: { id: existing.id },
+        where: { id: existing.id, clinicId },
         data: {
           firstName,
           lastName: lastName || "",
@@ -58,6 +65,7 @@ export async function POST(req: NextRequest) {
     } else {
       employee = await db.employee.create({
         data: {
+          clinicId,
           firstName,
           lastName: lastName || "",
           role: role || "Doctor",
@@ -101,6 +109,9 @@ export async function PUT(req: NextRequest) {
       shiftIds,
     } = body;
 
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
     if (!id && !biometricId) {
       return NextResponse.json({ success: false, error: "Employee ID or Biometric ID is required" }, { status: 400 });
     }
@@ -108,12 +119,13 @@ export async function PUT(req: NextRequest) {
     let target = null;
     if (id) {
       target = await db.employee.findUnique({ where: { id } }).catch(() => null);
+      if (target && target.clinicId !== clinicId) target = null;
     }
     if (!target && biometricId) {
-      target = await db.employee.findFirst({ where: { biometricId: String(biometricId) } });
+      target = await db.employee.findFirst({ where: { biometricId: String(biometricId), clinicId } });
     }
     if (!target && id) {
-      target = await db.employee.findFirst({ where: { biometricId: String(id) } });
+      target = await db.employee.findFirst({ where: { biometricId: String(id), clinicId } });
     }
 
     let employee = null;
@@ -139,6 +151,7 @@ export async function PUT(req: NextRequest) {
     } else {
       employee = await db.employee.create({
         data: {
+          clinicId,
           firstName: firstName || "Staff",
           lastName: lastName || "",
           role: role || "Nurse",
@@ -165,6 +178,9 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -173,8 +189,10 @@ export async function DELETE(req: NextRequest) {
     }
 
     let target = await db.employee.findUnique({ where: { id } }).catch(() => null);
+    if (target && target.clinicId !== clinicId) target = null;
+
     if (!target) {
-      target = await db.employee.findFirst({ where: { biometricId: String(id) } });
+      target = await db.employee.findFirst({ where: { biometricId: String(id), clinicId } });
     }
 
     if (target) {

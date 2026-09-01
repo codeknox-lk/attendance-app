@@ -2,6 +2,23 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 
+
+// ─── API Wrapper ──────────────────────────────────────────────────────────────
+export const apiFetch = async (url: string, init?: RequestInit) => {
+  const headers = new Headers(init?.headers);
+  let clinicId = "default-clinic-id";
+  if (typeof window !== "undefined") {
+    try {
+      const savedUser = localStorage.getItem("medicflow_user_session");
+      if (savedUser) {
+        clinicId = JSON.parse(savedUser).clinicId || "default-clinic-id";
+      }
+    } catch {}
+  }
+  headers.set("x-clinic-id", clinicId);
+  return fetch(url, { ...init, headers });
+};
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface Employee {
@@ -184,6 +201,7 @@ export interface UserAccount {
   role: string;
   biometricId?: string;
   employeeId?: string;
+  clinicId?: string;
 }
 
 // ─── Context Interface ────────────────────────────────────────────────────────
@@ -503,7 +521,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loginUser = async (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string }) => {
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -548,7 +566,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const hydrateFromDatabase = async () => {
       try {
-        const empRes = await fetch("/api/employees");
+        const empRes = await apiFetch("/api/employees");
         const empData = await empRes.json();
         if (empData.success && empData.employees && empData.employees.length > 0) {
           const dbEmployees: Employee[] = empData.employees.map((e: Record<string, unknown>) => ({
@@ -577,7 +595,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         // Fetch ALL attendance logs initially so past months are available in the UI
-        const attRes = await fetch(`/api/attendance`);
+        const attRes = await apiFetch(`/api/attendance`);
         const attData = await attRes.json();
         if (attData.success && Array.isArray(attData.logs)) {
           const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
@@ -596,7 +614,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setAttendanceLogs(dbLogs);
         }
 
-        const lvrRes = await fetch("/api/leaves");
+        const lvrRes = await apiFetch("/api/leaves");
         const lvrData = await lvrRes.json();
         if (lvrData.success && lvrData.leaves && lvrData.leaves.length > 0) {
           const dbLeaves: LeaveRequest[] = lvrData.leaves.map((l: Record<string, unknown>) => ({
@@ -616,7 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
 
-        const shfRes = await fetch("/api/shifts");
+        const shfRes = await apiFetch("/api/shifts");
         const shfData = await shfRes.json();
         if (shfData.success && shfData.shifts) {
           const dbShifts: Shift[] = shfData.shifts.map((s: Record<string, unknown>) => ({
@@ -631,7 +649,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setShifts(dbShifts);
         }
 
-        const allRes = await fetch("/api/allowances");
+        const allRes = await apiFetch("/api/allowances");
         const allData = await allRes.json();
         if (allData.success && allData.allowances) {
           const dbAllowances: Allowance[] = allData.allowances.map((a: Record<string, unknown>) => ({
@@ -656,8 +674,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const today = new Date();
         const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
         const [attRes, empRes] = await Promise.all([
-          fetch(`/api/attendance?month=${currentMonth}`),
-          fetch("/api/employees"),
+          apiFetch(`/api/attendance?month=${currentMonth}`),
+          apiFetch("/api/employees"),
         ]);
         const [attData, empData] = await Promise.all([
           attRes.json(),
@@ -721,7 +739,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmployees(p => [...p, e]);
     pushAudit({ action: "CREATE", entity: "Employee", entityId: e.id, details: `Added ${e.firstName} ${e.lastName}` });
     try {
-      await fetch("/api/employees", {
+      await apiFetch("/api/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(e),
@@ -734,7 +752,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmployees(p => p.map(e => e.id === id ? { ...e, ...f } : e));
     pushAudit({ action: "UPDATE", entity: "Employee", entityId: id, details: "Updated profile" });
     try {
-      await fetch("/api/employees", {
+      await apiFetch("/api/employees", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...f }),
@@ -746,7 +764,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmployees(p => p.filter(e => e.id !== id));
     pushAudit({ action: "DELETE", entity: "Employee", entityId: id, details: "Deleted employee" });
     try {
-      await fetch(`/api/employees?id=${id}`, {
+      await apiFetch(`/api/employees?id=${id}`, {
         method: "DELETE",
       });
     } catch {
@@ -760,7 +778,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAttendanceLogs(p => p.map(l => l.id === id ? { ...l, ...f } : l));
     pushAudit({ action: "UPDATE", entity: "AttendanceLog", entityId: id, details: "Adjusted log" });
     try {
-      await fetch("/api/attendance", {
+      await apiFetch("/api/attendance", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...f }),
@@ -772,7 +790,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAttendanceLogs(p => p.filter(l => l.id !== id));
     pushAudit({ action: "DELETE", entity: "AttendanceLog", entityId: id, details: "Deleted attendance log" });
     try {
-      await fetch(`/api/attendance?id=${id}`, {
+      await apiFetch(`/api/attendance?id=${id}`, {
         method: "DELETE",
       });
     } catch {}
@@ -783,7 +801,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAllowances(p => [...p, na]);
     pushAudit({ action: "CREATE", entity: "Allowance", entityId: na.id, details: `Added: ${na.name}` });
     try {
-      await fetch("/api/allowances", {
+      await apiFetch("/api/allowances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(na),
@@ -798,7 +816,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmployeeAllowances(p => p.filter(ea => ea.allowanceId !== id));
     pushAudit({ action: "DELETE", entity: "Allowance", entityId: id, details: "Deleted allowance" });
     try {
-      await fetch(`/api/allowances?id=${id}`, {
+      await apiFetch(`/api/allowances?id=${id}`, {
         method: "DELETE",
       });
     } catch {}
@@ -823,7 +841,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     pushAudit({ action: "CREATE", entity: "Shift", entityId: ns.id, details: `Added shift: ${ns.name}` });
     try {
-      await fetch("/api/shifts", {
+      await apiFetch("/api/shifts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ns),
@@ -838,7 +856,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return list;
     });
     try {
-      await fetch("/api/shifts", {
+      await apiFetch("/api/shifts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...f }),
@@ -854,7 +872,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     setEmployees(p => p.map(e => e.shiftIds.includes(id) ? { ...e, shiftIds: e.shiftIds.filter(s => s !== id) } : e));
     try {
-      await fetch(`/api/shifts?id=${id}`, {
+      await apiFetch(`/api/shifts?id=${id}`, {
         method: "DELETE",
       });
     } catch {}
@@ -865,7 +883,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeaveRequests(p => [nr,...p]);
     pushAudit({ action: "CREATE", entity: "LeaveRequest", entityId: nr.id, details: `${req.type} leave by ${req.employeeId}` });
     try {
-      await fetch("/api/leaves", {
+      await apiFetch("/api/leaves", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req),
@@ -879,7 +897,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeaveRequests(p => p.map(r => r.id === id ? { ...r, status: "Approved" } : r));
     pushAudit({ action: "APPROVE", entity: "LeaveRequest", entityId: id, details: "Approved leave" });
     try {
-      await fetch("/api/leaves", {
+      await apiFetch("/api/leaves", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "Approved" }),
@@ -891,7 +909,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeaveRequests(p => p.map(r => r.id === id ? { ...r, status: "Rejected" } : r));
     pushAudit({ action: "REJECT", entity: "LeaveRequest", entityId: id, details: "Rejected leave" });
     try {
-      await fetch("/api/leaves", {
+      await apiFetch("/api/leaves", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "Rejected" }),
@@ -974,7 +992,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const simulateHikvisionScan = async (biometricId: string = "101", authMethod: string = "Face") => {
     setBiometricSettings(p => ({ ...p, status: "Syncing" }));
     try {
-      const res = await fetch("/api/biometric/simulate", {
+      const res = await apiFetch("/api/biometric/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ biometricId, authMethod, timestamp: new Date().toISOString() }),
@@ -1030,13 +1048,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBiometricSettings(p => ({ ...p, status: "Syncing" }));
     try {
       // Execute hardware memory sync
-      await fetch("/api/biometric/hikvision/sync", {
+      await apiFetch("/api/biometric/hikvision/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ip: biometricSettings.ip, port: biometricSettings.port }),
       }).catch(() => null);
 
-      const attRes = await fetch("/api/attendance");
+      const attRes = await apiFetch("/api/attendance");
       const attData = await attRes.json();
       if (attData.success && attData.logs) {
         const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
@@ -1069,7 +1087,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchMachinePersons = async () => {
     setIsFetchingPersons(true);
     try {
-      const res = await fetch(`/api/biometric/hikvision/persons?ip=${biometricSettings.ip}&port=${biometricSettings.port}`);
+      const res = await apiFetch(`/api/biometric/hikvision/persons?ip=${biometricSettings.ip}&port=${biometricSettings.port}`);
       const data = await res.json();
       if (data.success && data.persons) {
         setMachinePersons(data.persons);

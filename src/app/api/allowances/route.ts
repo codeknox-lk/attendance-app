@@ -3,9 +3,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const allowances = await db.allowance.findMany();
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+
+    const allowances = await db.allowance.findMany({ where: { clinicId } });
     return NextResponse.json({ success: true, allowances });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error fetching allowances";
@@ -17,9 +20,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, amount, type, isTaxable, taxDeductible } = body;
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     const allowance = await db.allowance.create({
       data: {
+        clinicId,
         name,
         amount: Number(amount) || 0,
         type: type || "Monthly",
@@ -42,9 +48,11 @@ export async function PUT(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Allowance ID required" }, { status: 400 });
     }
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     const allowance = await db.allowance.update({
-      where: { id },
+      where: { id, clinicId },
       data: {
         ...(name !== undefined && { name }),
         ...(amount !== undefined && { amount: Number(amount) }),
@@ -69,9 +77,11 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Allowance ID required" }, { status: 400 });
     }
+    const clinicId = req.headers.get("x-clinic-id");
+    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     await db.allowance.delete({
-      where: { id },
+      where: { id, clinicId },
     });
 
     return NextResponse.json({ success: true, message: "Allowance deleted successfully" });
