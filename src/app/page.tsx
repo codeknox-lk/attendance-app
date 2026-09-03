@@ -506,9 +506,7 @@ export default function Home() {
       try {
         const saved = localStorage.getItem("medsync_theme");
         if (saved !== null) {
-          const dark = saved === "dark";
-          setIsDark(dark);
-          if (dark) {
+          if (saved === "dark") {
             document.documentElement.classList.add("dark");
           } else {
             document.documentElement.classList.remove("dark");
