@@ -688,6 +688,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             type: (a.type as Allowance["type"]) || "Fixed",
           }));
           setAllowances(dbAllowances);
+          
+          if (allData.employeeAllowances) {
+            const dbEmpAllowances: EmployeeAllowance[] = allData.employeeAllowances.map((ea: Record<string, unknown>) => ({
+              id: String(ea.id),
+              employeeId: String(ea.employeeId),
+              allowanceId: String(ea.allowanceId),
+              overrideAmount: ea.overrideAmount ? Number(ea.overrideAmount) : undefined,
+            }));
+            setEmployeeAllowances(dbEmpAllowances);
+          }
         }
       } catch (err) {
         console.error("Database hydration error:", err);

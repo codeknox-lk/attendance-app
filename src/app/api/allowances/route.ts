@@ -9,7 +9,10 @@ export async function GET(req: NextRequest) {
     if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
     const allowances = await db.allowance.findMany({ where: { clinicId } });
-    return NextResponse.json({ success: true, allowances });
+    const employeeAllowances = await db.employeeAllowance.findMany({
+      where: { employee: { clinicId } }
+    });
+    return NextResponse.json({ success: true, allowances, employeeAllowances });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error fetching allowances";
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
