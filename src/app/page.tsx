@@ -490,6 +490,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [isDark, setIsDark] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => { const h = requestAnimationFrame(() => setHasMounted(true)); return () => cancelAnimationFrame(h); }, []);
 
 
@@ -812,8 +813,122 @@ export default function Home() {
   // ─── MAIN APPLICATION RENDER ──────────────────────────────────────────────────
   return (
     <div className={`flex flex-1 min-h-screen ${isDark ? "dark bg-[#090d16] text-slate-100" : "bg-slate-50 text-slate-800"}`} style={isDark ? { colorScheme: "dark" } : {}}>
-      {/* ── Sidebar ── */}
-      <aside className={`w-52 border-r flex flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
+      {/* ── Mobile/Tablet Backdrop Drawer Overlay ── */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      {/* ── Mobile/Tablet Slide-out Drawer ── */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } ${isDark ? "bg-slate-900 border-slate-800 shadow-2xl" : "bg-white border-slate-200 shadow-2xl"}`}
+      >
+        <div className="p-4 overflow-y-auto">
+          <div className="flex items-center justify-between mb-7 px-1">
+            <div className="flex items-center gap-2.5">
+              <div className={`h-9 w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60" : "bg-white border border-slate-200"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="MedSync" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <h1 className={`font-extrabold text-sm tracking-tight bg-gradient-to-r ${isDark ? "from-white via-slate-200 to-[#7dd3fc]" : "from-slate-900 via-indigo-950 to-[#0F85B0]"} bg-clip-text text-transparent`}>MedSync</h1>
+                <p className={`text-[10px] ${isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"} font-semibold tracking-wider uppercase leading-none mt-0.5`}>Clinic OS</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className={`p-1.5 rounded-lg transition ${isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"}`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <nav className="space-y-1">
+            {NAV_TABS.map(tab => {
+              const isProtected = tab.id === "payroll" || tab.id === "settings";
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (isProtected && !isAdminAuthenticated) {
+                      setTargetProtectedTab(tab.id);
+                      setPinError("");
+                      setAdminPinInput("");
+                      setShowAdminPinModal(true);
+                    } else {
+                      setActiveTab(tab.id);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold rounded-lg transition-smooth ${
+                    isActive
+                      ? isDark
+                        ? "bg-gradient-to-r from-indigo-950/60 to-slate-900 text-white border-l-2 border-[#0ea5e9] shadow-sm"
+                        : "bg-gradient-to-r from-[#f0f9ff] to-white text-[#06394d] border-l-2 border-[#0F85B0] shadow-sm font-bold"
+                      : isDark
+                        ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <svg className={`w-4 h-4 shrink-0 transition-smooth ${isActive ? (isDark ? "text-[#38bdf8]" : "text-[#0F85B0]") : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon}/>
+                    </svg>
+                    <span className="truncate">{tab.label}</span>
+                  </div>
+                  {isProtected && !isAdminAuthenticated && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">PIN</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+        <div className={`p-4 border-t space-y-2 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+          <button
+            onClick={() => {
+              if (isAdminAuthenticated) {
+                logoutAdmin();
+              } else {
+                setTargetProtectedTab(null);
+                setPinError("");
+                setAdminPinInput("");
+                setShowAdminPinModal(true);
+              }
+            }}
+            className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold rounded-lg border transition-smooth ${
+              isAdminAuthenticated
+                ? isDark
+                  ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
+                : isDark
+                  ? "bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800"
+                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${isAdminAuthenticated ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}/>
+              {isAdminAuthenticated ? "Session Active" : "Admin Locked"}
+            </span>
+            <span className="text-[10px] opacity-75">{isAdminAuthenticated ? "Lock" : "Unlock"}</span>
+          </button>
+          <button onClick={()=>setIsDark(!isDark)} className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
+            <span className="flex items-center gap-2">
+              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-[#0ea5e9]" />}
+              <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+            </span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Desktop Pinned Sidebar ── */}
+      <aside className={`hidden lg:flex w-56 border-r flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
         <div className="p-4">
           <div className="flex items-center gap-2.5 mb-7 px-1">
             <div className={`h-9 w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md transition-all shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60 shadow-black/40" : "bg-white border border-slate-200 shadow-slate-200"}`}>
@@ -906,45 +1021,60 @@ export default function Home() {
       {/* ── Main ── */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className={`h-14 border-b flex items-center justify-between px-8 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-slate-900/60 border-slate-800/80" : "bg-white/80 border-slate-200 shadow-sm"}`}>
-          <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${
+        <header className={`h-14 border-b flex items-center justify-between px-3 sm:px-6 lg:px-8 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-slate-900/60 border-slate-800/80" : "bg-white/80 border-slate-200 shadow-sm"}`}>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Hamburger Button on small screens */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className={`p-2 rounded-lg lg:hidden transition ${isDark ? "text-slate-300 hover:bg-slate-800" : "text-slate-700 hover:bg-slate-100"}`}
+              title="Open Navigation"
+              aria-label="Open Navigation"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+
+            <div className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full border text-xs font-semibold ${
               biometricSettings.status === "Connected"
                 ? isDark ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald" : "bg-emerald-50 border-emerald-200 text-emerald-700"
                 : biometricSettings.status === "Syncing"
                 ? isDark ? "bg-amber-950/40 border-amber-800/50 text-amber-400 glow-amber" : "bg-amber-50 border-amber-200 text-amber-700"
                 : isDark ? "bg-rose-950/40 border-rose-800/50 text-rose-400" : "bg-rose-50 border-rose-200 text-rose-700"
             }`}>
-              <span className={`w-2 h-2 rounded-full ${biometricSettings.status === "Connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-ping"}`}/>
-              <span>Hikvision DS-K1T320MFWX (HTTP Real-time Push - Connected)</span>
+              <span className={`w-2 h-2 shrink-0 rounded-full ${biometricSettings.status === "Connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-ping"}`}/>
+              <span className="hidden xl:inline">Hikvision DS-K1T320MFWX (HTTP Real-time Push - Connected)</span>
+              <span className="hidden sm:inline xl:hidden">DS-K1T320MFWX · Connected</span>
+              <span className="inline sm:hidden">Online</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={triggerSync}
               disabled={biometricSettings.status === "Syncing"}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg border transition-smooth flex items-center gap-2 ${
+              className={`px-2.5 sm:px-3.5 py-1.5 text-xs font-bold rounded-lg border transition-smooth flex items-center gap-1.5 sm:gap-2 ${
                 isDark
                   ? "bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-200"
                   : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
               }`}
             >
               <Icons.Refresh className={`w-3.5 h-3.5 ${biometricSettings.status === "Syncing" ? "animate-spin text-amber-400" : "text-[#38bdf8]"}`} />
-              <span>{biometricSettings.status === "Syncing" ? "Syncing Logs..." : "Refresh Cloud Logs"}</span>
+              <span className="hidden md:inline">{biometricSettings.status === "Syncing" ? "Syncing Logs..." : "Refresh Cloud Logs"}</span>
+              <span className="inline md:hidden">{biometricSettings.status === "Syncing" ? "..." : "Sync"}</span>
             </button>
 
-            <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border text-xs font-semibold ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#0ea5e9] via-purple-500 to-emerald-400 flex items-center justify-center text-white text-[11px] font-black shadow glow-indigo">
+            <div className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
+              <div className="w-6 h-6 shrink-0 rounded-lg bg-gradient-to-tr from-[#0ea5e9] via-purple-500 to-emerald-400 flex items-center justify-center text-white text-[11px] font-black shadow glow-indigo">
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
               </div>
-              <div className="flex flex-col text-left">
-                <span className="font-bold text-xs leading-none">{currentUser?.name || "Clinic Administrator"}</span>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="font-bold text-xs leading-none max-w-[120px] truncate">{currentUser?.name || "Clinic Administrator"}</span>
                 <span className="text-[9px] text-[#38bdf8] font-semibold uppercase tracking-wider leading-none mt-0.5">{currentUser?.role || "Admin"}</span>
               </div>
               <button
                 onClick={logoutUser}
-                className="ml-1 px-2 py-1 text-[10px] font-bold rounded border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition"
+                className="ml-1 px-1.5 sm:px-2 py-1 text-[10px] font-bold rounded border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition"
                 title="Sign Out"
               >
                 Sign Out
@@ -954,14 +1084,14 @@ export default function Home() {
         </header>
 
         {/* Content */}
-        <div className="p-8 max-w-[1500px] w-full mx-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6 flex-1">
 
           {/* ═══════════════ DASHBOARD ═══════════════ */}
           {activeTab === "dashboard" && (
             <div className="space-y-6">
 
               {/* Stat cards with gradient borders & modern counters */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                 {[
                   { label: "Total Staff", value: dashboardMetrics.totalStaff, color: "from-[#0ea5e9] to-[#0F85B0]", badge: "Active", icon: <Icons.Users className="w-4 h-4 text-[#38bdf8]" /> },
                   { label: "Present Today", value: dashboardMetrics.present, color: "from-emerald-500 to-teal-600", badge: "On Time", icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
@@ -993,9 +1123,9 @@ export default function Home() {
               </div>
 
               {/* Charts Row */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* ── Premium Area Chart with hover tooltips ── */}
-                <div className={`${cardCls(isDark)} col-span-2`}>
+                <div className={`${cardCls(isDark)} col-span-1 lg:col-span-2`}>
                   {payrollHistory.length >= 2 && (
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -1720,12 +1850,12 @@ export default function Home() {
           {/* ═══════════════ SETTINGS ═══════════════ */}
           {activeTab==="settings" && (
             <div className={`rounded-xl border overflow-hidden ${isDark?"bg-zinc-900 border-zinc-800":"bg-white border-zinc-200 shadow-sm"}`}>
-              <div className={`flex border-b ${isDark?"border-zinc-800":"border-zinc-200"}`}>
+              <div className={`flex border-b overflow-x-auto ${isDark?"border-zinc-800":"border-zinc-200"}`}>
                 {SETTINGS_TABS.map(t=>(
                   <button key={t.id} onClick={()=>setSettingsTab(t.id as SettingsTabId)} className={`px-4 py-3 text-xs font-bold border-b-2 transition whitespace-nowrap ${settingsTab===t.id?(isDark?"border-white text-white":"border-zinc-800 text-zinc-900"):"border-transparent text-zinc-400 hover:text-zinc-600"}`}>{t.label}</button>
                 ))}
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
 
                 {/* BIOMETRIC & HIKVISION CLOUD SETTINGS */}
                 {settingsTab==="biometric" && (
@@ -2607,10 +2737,12 @@ export default function Home() {
         const epfBase = calc.basicEarnings + empAllowances.filter(a => a.epfApplicable).reduce((sum, a) => sum + a.amount, 0);
         
         return (
-          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm print:bg-white print:inset-0 ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-            <div className="bg-white text-zinc-900 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl print:shadow-none print:rounded-none">
-              <div className="p-6">
+          <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm print:bg-white print:inset-0 ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
+            <div className="bg-white text-zinc-900 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col print:max-h-none print:shadow-none print:rounded-none">
+              <div className="p-6 overflow-y-auto print:overflow-visible">
                 <div className="text-center mb-4 pb-4 border-b-2 border-dashed border-zinc-300">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="MedSync Logo" className="w-8 h-8 object-contain mx-auto mb-2" />
                   <p className="font-extrabold text-base tracking-wider uppercase text-zinc-900">{companyProfile.name}</p>
                   <p className="text-[10px] text-zinc-500 mt-0.5">{companyProfile.address}</p>
                   <p className="text-[10px] font-mono text-zinc-500 mt-1">EPF Reg: {""} · Salary Period: {dateRange.startDate} → {dateRange.endDate}</p>
