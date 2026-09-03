@@ -418,8 +418,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const nowStr = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")} ${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}:${String(n.getSeconds()).padStart(2,"0")}`; };
   const pushAudit = (entry: Omit<AuditLog, "id"|"timestamp">) => setAuditLogs(prev => [{ ...entry, id: `AUD-${Date.now()}`, timestamp: nowStr() }, ...prev]);
 
-  const [epfSettings, setEpfSettings] = useState<EpfSettings>({ employeeRate: 8, employerRate: 12, etfRate: 3 });
-  const [salarySettings, setSalarySettings] = useState<SalarySettings>({ workingDaysPerMonth: 20, globalWorkedDayBonus: 0, globalPunctualBonus: 0, globalIncomeBonusPct: 0, otCalculationType: "Manual", otGracePeriodMinutes: 30 });
+  const [epfSettings, setEpfSettings] = useState<EpfSettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_epf_settings");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return { employeeRate: 8, employerRate: 12, etfRate: 3 };
+  });
+
+  const [salarySettings, setSalarySettings] = useState<SalarySettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_salary_settings");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return { workingDaysPerMonth: 20, globalWorkedDayBonus: 0, globalPunctualBonus: 0, globalIncomeBonusPct: 0, otCalculationType: "Manual", otGracePeriodMinutes: 30 };
+  });
   const [adminPin, setAdminPin] = useState<string>(() => {
     if (typeof window !== "undefined") {
       try {
