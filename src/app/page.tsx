@@ -488,10 +488,53 @@ export default function Home() {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medsync_theme");
+        if (saved !== null) return saved === "dark";
+      } catch {}
+    }
+    return true;
+  });
   const [hasMounted, setHasMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  useEffect(() => { const h = requestAnimationFrame(() => setHasMounted(true)); return () => cancelAnimationFrame(h); }, []);
+
+  useEffect(() => {
+    const h = requestAnimationFrame(() => setHasMounted(true));
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medsync_theme");
+        if (saved !== null) {
+          const dark = saved === "dark";
+          setIsDark(dark);
+          if (dark) {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        }
+      } catch {}
+    }
+    return () => cancelAnimationFrame(h);
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("medsync_theme", next ? "dark" : "light");
+          if (next) {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        } catch {}
+      }
+      return next;
+    });
+  };
 
 
   // ── Admin Security state ──
@@ -807,7 +850,7 @@ export default function Home() {
 
   // ─── LOGIN PORTAL (UNAUTHENTICATED) ───────────────────────────────────────────
   if (!currentUser) {
-    return <LoginView isDark={isDark} onToggleDark={() => setIsDark(!isDark)} loginUser={loginUser} />;
+    return <LoginView isDark={isDark} onToggleDark={toggleTheme} loginUser={loginUser} />;
   }
 
   // ─── MAIN APPLICATION RENDER ──────────────────────────────────────────────────
@@ -918,7 +961,7 @@ export default function Home() {
             </span>
             <span className="text-[10px] opacity-75">{isAdminAuthenticated ? "Lock" : "Unlock"}</span>
           </button>
-          <button onClick={()=>setIsDark(!isDark)} className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
+          <button onClick={toggleTheme} className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
             <span className="flex items-center gap-2">
               {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-[#0ea5e9]" />}
               <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
@@ -1009,7 +1052,7 @@ export default function Home() {
             </span>
             <span className="text-[10px] opacity-75">{isAdminAuthenticated ? "Lock" : "Unlock"}</span>
           </button>
-          <button onClick={()=>setIsDark(!isDark)} className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
+          <button onClick={toggleTheme} className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
             <span className="flex items-center gap-2">
               {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-[#0ea5e9]" />}
               <span>{isDark ? "Light Mode" : "Dark Mode"}</span>

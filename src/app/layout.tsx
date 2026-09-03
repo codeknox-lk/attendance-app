@@ -21,8 +21,25 @@ export default function RootLayout({
     <html
       lang="en"
       className="h-full antialiased dark"
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#030712] text-slate-100 font-sans selection:bg-[#0F85B0] selection:text-white relative">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var theme = localStorage.getItem('medsync_theme');
+                if (theme === 'light') {
+                  document.documentElement.classList.remove('dark');
+                } else if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch (_) {}
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans selection:bg-[#0F85B0] selection:text-white relative">
         {/* Global Ambient Glows */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
           <div className="absolute top-[-15%] left-[-10%] w-[50vw] h-[50vw] bg-[#0F85B0]/10 blur-[120px] rounded-full mix-blend-screen"></div>
