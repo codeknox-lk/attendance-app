@@ -50,8 +50,8 @@ body {
 }
 
 /* ═══════════════ GLOW EFFECTS ═══════════════ */
-.glow-indigo {
-  box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.3);
+.glow-ocean {
+  box-shadow: 0 0 25px -5px rgba(15, 133, 176, 0.4);
 }
 
 .glow-emerald {

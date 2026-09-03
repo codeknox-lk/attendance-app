@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
     const employees = await db.employee.findMany({
       where: { clinicId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "desc" }, include: { customOperatingHours: true }
     });
     return NextResponse.json({ success: true, employees });
   } catch (error: unknown) {
@@ -33,9 +33,7 @@ export async function POST(req: NextRequest) {
       commissionRate,
       biometricId,
       epfEligible,
-      taxable,
-      shiftIds,
-    } = body;
+      taxable, customOperatingHours } = body;
 
     const clinicId = req.headers.get("x-clinic-id");
     if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
@@ -58,10 +56,18 @@ export async function POST(req: NextRequest) {
           sessionRate: Number(sessionRate) || 0,
           commissionRate: Number(commissionRate) || 0,
           epfEligible: epfEligible ?? true,
-          taxable: taxable ?? false,
-          shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
-        },
-      });
+          taxable: taxable ?? false, }, });
+      if (customOperatingHours && Array.isArray(customOperatingHours)) {
+        await db.employeeOperatingHours.deleteMany({ where: { employeeId: existing.id } });
+        for (const h of customOperatingHours) {
+          await db.employeeOperatingHours.create({ data: { employeeId: existing.id, dayOfWeek: h.dayOfWeek, isOpen: h.isOpen, startTime: h.startTime, endTime: h.endTime } });
+        }
+      }
+      if (customOperatingHours && Array.isArray(customOperatingHours)) {
+        for (const h of customOperatingHours) {
+          await db.employeeOperatingHours.create({ data: { employeeId: employee.id, dayOfWeek: h.dayOfWeek, isOpen: h.isOpen, startTime: h.startTime, endTime: h.endTime } });
+        }
+      }
     } else {
       employee = await db.employee.create({
         data: {
@@ -76,10 +82,13 @@ export async function POST(req: NextRequest) {
           commissionRate: Number(commissionRate) || 0,
           biometricId: String(biometricId),
           epfEligible: epfEligible ?? true,
-          taxable: taxable ?? false,
-          shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
-        },
+          taxable: taxable ?? false, },
       });
+      if (customOperatingHours && Array.isArray(customOperatingHours)) {
+        for (const h of customOperatingHours) {
+          await db.employeeOperatingHours.create({ data: { employeeId: employee.id, dayOfWeek: h.dayOfWeek, isOpen: h.isOpen, startTime: h.startTime, endTime: h.endTime } });
+        }
+      }
     }
 
     return NextResponse.json({ success: true, employee });
@@ -105,9 +114,7 @@ export async function PUT(req: NextRequest) {
       biometricId,
       epfEligible,
       taxable,
-      active,
-      shiftIds,
-    } = body;
+      active, customOperatingHours } = body;
 
     const clinicId = req.headers.get("x-clinic-id");
     if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
@@ -144,10 +151,13 @@ export async function PUT(req: NextRequest) {
           ...(biometricId !== undefined && { biometricId: String(biometricId) }),
           ...(epfEligible !== undefined && { epfEligible: Boolean(epfEligible) }),
           ...(taxable !== undefined && { taxable: Boolean(taxable) }),
-          ...(active !== undefined && { active: Boolean(active) }),
-          ...(shiftIds !== undefined && Array.isArray(shiftIds) && { shiftIds }),
-        },
-      });
+          ...((active !== undefined) && { active: Boolean(active) }), }, });
+      if (customOperatingHours && Array.isArray(customOperatingHours)) {
+        await db.employeeOperatingHours.deleteMany({ where: { employeeId: employee.id } });
+        for (const h of customOperatingHours) {
+          await db.employeeOperatingHours.create({ data: { employeeId: employee.id, dayOfWeek: h.dayOfWeek, isOpen: h.isOpen, startTime: h.startTime, endTime: h.endTime } });
+        }
+      }
     } else {
       employee = await db.employee.create({
         data: {
@@ -164,7 +174,6 @@ export async function PUT(req: NextRequest) {
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
           active: active ?? true,
-          shiftIds: Array.isArray(shiftIds) ? shiftIds : [],
         },
       });
     }

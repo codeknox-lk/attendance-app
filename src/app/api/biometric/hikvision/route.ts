@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
       if (device && device.clinicId) {
         clinicId = device.clinicId;
       }
-    } catch (e) {
+    } catch {
       // Use default
     }
 
@@ -299,44 +299,50 @@ export async function POST(req: NextRequest) {
     const arrivalTimeMinutes = arrivalHour * 60 + arrivalMin;
     
     let shiftStartMinutes = 8 * 60 + 30; // Default 08:30 AM
-    let gracePeriodMinutes = 15;
+    let shiftEndMinutes = 17 * 60 + 0;   // Default 05:00 PM
+    const gracePeriodMinutes = 15;
 
     try {
-      // Find the specific shift for this employee on today's weekday
-      if (employee && Array.isArray(employee.shiftIds) && employee.shiftIds.length > 0) {
-        // Create a UTC date at noon to reliably get the day of the week in Sri Lanka
-        const currentDayOfWeek = new Date(Date.UTC(slYear, slMonth - 1, slDay, 12)).getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
+      const currentDayOfWeek = new Date(Date.UTC(slYear, slMonth - 1, slDay, 12)).getUTCDay();
+      let targetHours: { startTime: string; endTime: string } | null = await db.employeeOperatingHours.findUnique({
+        where: { employeeId_dayOfWeek: { employeeId, dayOfWeek: currentDayOfWeek } }
+      });
 
-        const allShifts = await db.shift.findMany({
-          where: { id: { in: employee.shiftIds as string[] } }
+      if (!targetHours) {
+        targetHours = await db.clinicOperatingHours.findUnique({
+          where: { clinicId_dayOfWeek: { clinicId, dayOfWeek: currentDayOfWeek } }
         });
-        
-        // Find the active shift for today based on workDays
-        const todayShift = allShifts.find(s => Array.isArray(s.workDays) && s.workDays.includes(currentDayOfWeek));
-        
-        if (todayShift) {
-          const [h, m] = todayShift.startTime.split(':').map(Number);
-          shiftStartMinutes = h * 60 + m;
-          gracePeriodMinutes = todayShift.gracePeriod || 15;
-        }
+      }
+      
+      if (targetHours) {
+        const [h1, m1] = targetHours.startTime.split(':').map(Number);
+        shiftStartMinutes = h1 * 60 + m1;
+        const [h2, m2] = targetHours.endTime.split(':').map(Number);
+        shiftEndMinutes = h2 * 60 + m2;
       }
     } catch (err) {
-      console.error("[HIKVISION] Error calculating dynamic shift:", err);
+      console.error("[HIKVISION] Error fetching operating hours:", err);
     }
 
     let computedStatus: "On-Time" | "Late" | "Half-Day" | "On-Leave" | "Absent" = "On-Time";
-    if (arrivalTimeMinutes > shiftStartMinutes + gracePeriodMinutes) {
+    if (!isCheckOut && arrivalTimeMinutes > shiftStartMinutes + gracePeriodMinutes) {
       computedStatus = "Late";
     }
 
-
     if (isCheckOut && existingLog) {
+      let overtimeHours = existingLog.overtimeHours || 0;
+      if (arrivalTimeMinutes > shiftEndMinutes) {
+         const otMinutes = arrivalTimeMinutes - shiftEndMinutes;
+         overtimeHours = Math.round((otMinutes / 60) * 10) / 10;
+      }
+
       // SECOND SCAN TODAY -> Record Check-Out
       await db.attendanceLog.update({
         where: { id: existingLog.id, clinicId },
         data: {
           checkOut: timeStr,
           authMethod: authMethod,
+          overtimeHours,
         },
       });
     } else {

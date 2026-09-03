@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, Shift, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings
+  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings
 } from "./context/AppContext";
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ const SETTINGS_TABS = [
   { id: "security", label: "Security & PIN" },
   { id: "epf", label: "Salary Settings" },
   { id: "staff", label: "Staff" },
-  { id: "shifts", label: "Shifts" },
+  { id: "operating-hours", label: "Operating Hours" },
   { id: "holidays", label: "Holidays" },
 ] as const;
 
@@ -46,7 +46,7 @@ const statusColor = (status: string, dark: boolean): string => {
     Rejected:   ["text-rose-600 bg-rose-50 border-rose-200",            "text-rose-400 bg-rose-950/40 border-rose-900"],
     Connected:  ["text-emerald-600 bg-emerald-50 border-emerald-200",   "text-emerald-400 bg-emerald-950/40 border-emerald-900"],
     Disconnected:["text-rose-600 bg-rose-50 border-rose-200",           "text-rose-400 bg-rose-950/40 border-rose-900"],
-    Finalized:  ["text-indigo-600 bg-indigo-50 border-indigo-200",      "text-indigo-400 bg-indigo-950/40 border-indigo-900"],
+    Finalized:  ["text-[#0F85B0] bg-[#f0f9ff] border-[#bae6fd]",      "text-[#38bdf8] bg-[#042633]/40 border-[#06394d]"],
     Draft:      ["text-zinc-600 bg-zinc-50 border-zinc-200",            "text-zinc-400 bg-zinc-900 border-zinc-800"],
   };
   const pair = map[status] ?? ["text-zinc-600 bg-zinc-50 border-zinc-200", "text-zinc-400 bg-zinc-900 border-zinc-800"];
@@ -55,7 +55,7 @@ const statusColor = (status: string, dark: boolean): string => {
 
 const inputCls = (dark: boolean) => `w-full border rounded-md px-3 py-2 text-xs focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 ${dark ? "bg-zinc-950 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-800"}`;
 const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5";
-const cardCls = (dark: boolean) => `rounded-lg border p-4 ${dark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"}`;
+const cardCls = (dark: boolean) => `rounded-2xl border p-5 backdrop-blur-xl transition-all ${dark ? "bg-white/5 border-white/10 shadow-xl" : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"}`;
 
 const daySuffix = (d: number) => d===1||d===21||d===31?"st":d===2||d===22?"nd":d===3||d===23?"rd":"th";
 
@@ -173,6 +173,8 @@ const Icons = {
 type PayrollPeriodSummary = { id: string; label: string; grossSalaryPool: number; netRemittances: number; };
 
 function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: boolean }) {
+  const { operatingHours, publicHolidays } = useApp();
+
   const daysData = useMemo(() => {
     const today = new Date();
     const result = [];
@@ -197,10 +199,15 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
         }
       });
 
-      result.push({ date: dateStr, day: dayName, present: presentCount, hours: Math.min(12, hours) });
+      const dayOfWeek = d.getDay();
+      const opHour = operatingHours.find(h => h.dayOfWeek === dayOfWeek);
+      const isPublicHoliday = publicHolidays.some(h => h.date === dateStr);
+      const isClosed = (opHour && !opHour.isOpen) || isPublicHoliday;
+      
+      result.push({ date: dateStr, day: dayName, present: presentCount, hours: Math.min(12, hours), isClosed });
     }
     return result;
-  }, [logs]);
+  }, [logs, operatingHours, publicHolidays]);
 
   const totalWeeklyHours = daysData.reduce((acc, d) => acc + d.hours, 0);
 
@@ -211,7 +218,7 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">7-Day Clinic Attendance &amp; Shift Activity</h3>
           <p className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-slate-500"}`}>Live worked hours calculated from biometric scans</p>
         </div>
-        <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-lg">
+        <span className="text-[10px] font-mono font-bold text-[#38bdf8] bg-[#0ea5e9]/10 border border-[#0ea5e9]/20 px-2.5 py-1 rounded-lg">
           {totalWeeklyHours.toFixed(1)} hrs Logged
         </span>
       </div>
@@ -221,17 +228,19 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
           const heightPct = d.hours > 0 ? Math.max(18, (d.hours / 10) * 100) : 6;
           return (
             <div key={idx} className="flex flex-col items-center gap-1.5 group">
-              <span className={`text-[10px] font-mono font-bold ${d.hours > 0 ? "text-indigo-400" : "text-slate-400"}`}>
-                {d.hours > 0 ? `${d.hours}h` : "0h"}
+              <span className={`text-[10px] font-mono font-bold ${d.hours > 0 ? "text-[#38bdf8]" : d.isClosed ? "text-amber-500" : "text-slate-400"}`}>
+                {d.hours > 0 ? `${d.hours}h` : d.isClosed ? "CLOSED" : "0h"}
               </span>
               <div className={`w-full max-w-[32px] rounded-t-xl overflow-hidden h-24 flex items-end p-0.5 border ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
                 <div
                   className={`w-full rounded-t-lg transition-all duration-500 ${
                     d.hours > 0
-                      ? "bg-gradient-to-t from-indigo-600 via-purple-600 to-emerald-400 shadow-md glow-indigo"
-                      : isDark ? "bg-slate-800/20" : "bg-slate-200/50"
+                      ? "bg-gradient-to-t from-[#0F85B0] via-purple-600 to-emerald-400 shadow-md glow-indigo"
+                      : d.isClosed
+                        ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(245,158,11,0.2)_4px,rgba(245,158,11,0.2)_8px)] border border-amber-500/30"
+                        : isDark ? "bg-slate-800/20" : "bg-slate-200/50"
                   }`}
-                  style={{ height: `${heightPct}%` }}
+                  style={{ height: d.isClosed && d.hours === 0 ? "100%" : `${heightPct}%` }}
                 />
               </div>
               <span className={`text-[11px] font-extrabold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{d.day}</span>
@@ -240,9 +249,13 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
         })}
       </div>
 
-      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/>Real-time Neon Postgres Database Activity</span>
-        <span className="font-mono text-indigo-400">Shift Target: 08:30 AM → 05:00 PM</span>
+      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-3 mt-1">
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#0F85B0] animate-pulse"/>Weekly Attendance Overview</span>
+        <span className="font-mono font-bold text-[#38bdf8]">
+          {operatingHours.find(h => h.dayOfWeek === new Date().getDay())?.isOpen 
+            ? `Today's Clinic Hours: ${operatingHours.find(h => h.dayOfWeek === new Date().getDay())?.startTime} → ${operatingHours.find(h => h.dayOfWeek === new Date().getDay())?.endTime}`
+            : "Today: CLOSED"}
+        </span>
       </div>
     </div>
   );
@@ -454,13 +467,13 @@ function SalaryTrendChart({ history, logs, isDark }: { history: PayrollPeriodSum
 export default function Home() {
   const {
     currentUser, loginUser, logoutUser,
-    employees, attendanceLogs, allowances, employeeAllowances, shifts, leaveRequests,
+    employees, attendanceLogs, allowances, employeeAllowances, operatingHours, leaveRequests,
     payrollHistory, auditLogs, publicHolidays, apitSlabs,
     biometricSettings, epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
     addEmployee, updateEmployee, deleteEmployee,
     updateAttendanceLog, deleteAttendanceLog,
     addAllowance, deleteAllowance,
-    addShift, updateShift, deleteShift,
+    updateOperatingHours,
     addLeaveRequest, approveLeave, rejectLeave,
     finalizePayroll,
     addHoliday, deleteHoliday, toggleHolidayDoubleOT,
@@ -524,7 +537,7 @@ export default function Home() {
   const [newEmp, setNewEmp] = useState<Omit<Employee,"id"|"active">>({
     firstName:"", lastName:"", role:"Nurse", payType:"Fixed Monthly",
     basicSalary:50000, hourlyRate:300, sessionRate:0, commissionRate:0,
-    biometricId:"", epfEligible:true, taxable:false, shiftIds:[], branchId:null,
+    biometricId:"", epfEligible:true, taxable:false,  branchId:null,
     allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3}, attendanceBonusRate:0, punctualBonusRate:0, incomeBonusPercentage:0,
   });
 
@@ -536,9 +549,6 @@ export default function Home() {
   const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
   const [newLeave, setNewLeave] = useState<Omit<LeaveRequest,"id"|"appliedAt">>({ employeeId:"", type:"Annual", startDate:"", endDate:"", status:"Pending", note:"" });
 
-  const [showAddShiftModal, setShowAddShiftModal] = useState(false);
-  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
-  const [newShift, setNewShift] = useState<Omit<Shift,"id">>({ name:"", startTime:"08:00", endTime:"17:00", workDays:[1,2,3,4,5], otThresholdHours:9, otMultiplier:1.5 });
 
 
 
@@ -662,13 +672,12 @@ export default function Home() {
 
       let basicEarnings = 0; let otPay = 0; let sessionPay = 0;
       // Auto no-pay from absent days
-      const noPayDeduction = emp.payType==="Fixed Monthly" ? (emp.basicSalary / epfSettings.workingDaysPerMonth) * absentCount : 0;
+      const noPayDeduction = emp.payType==="Fixed Monthly" ? (emp.basicSalary / (salarySettings.workingDaysPerMonth || 20)) * absentCount : 0;
 
       if (emp.payType==="Fixed Monthly") {
         basicEarnings = emp.basicSalary;
-        const shift = shifts.find(s => emp.shiftIds?.includes(s.id));
-        const otRate = emp.hourlyRate || (emp.basicSalary / (epfSettings.workingDaysPerMonth * 9));
-        otPay = totalOtHours * otRate * (shift?.otMultiplier ?? 1.5);
+        const otRate = emp.hourlyRate || (emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9));
+        otPay = totalOtHours * otRate * 1.5;
         epfBase += basicEarnings;
       } else if (emp.payType==="Session-based") {
         sessionPay = sessionCount * emp.sessionRate;
@@ -712,7 +721,7 @@ export default function Home() {
         attBonusRate, puncBonusRate, incBonusPct
       };
     });
-  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, shifts, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings]);
+  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings]);
 
   const payrollTotals = useMemo(() => payrollCalcs.reduce((t,c) => ({ gross:t.gross+c.grossEarnings, net:t.net+c.netSalary, epfEmp:t.epfEmp+c.employeeEpf, epfEmr:t.epfEmr+c.employerEpf, etf:t.etf+c.employerEtf, apit:t.apit+c.apitMonthly }), {gross:0,net:0,epfEmp:0,epfEmr:0,etf:0,apit:0}), [payrollCalcs]);
 
@@ -720,9 +729,9 @@ export default function Home() {
 
   // ── Handlers ──
 
-  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, epfEligible:emp.epfEligible, taxable:emp.taxable, shiftIds:emp.shiftIds || [], branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage }); setShowAddEmpModal(true); };
+  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, epfEligible:emp.epfEligible, taxable:emp.taxable,  branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage, customOperatingHours: emp.customOperatingHours || [] }); setShowAddEmpModal(true); };
 
-  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0}); };
+  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]}); };
 
   const openDrawer = (log: AttendanceLog) => { setPunchEdit({checkIn:log.checkIn,checkOut:log.checkOut||"",status:log.status,overtimeHours:log.overtimeHours,noPayHours:log.noPayHours}); setDrawerLogId(log.id); };
 
@@ -799,7 +808,7 @@ export default function Home() {
     );
   };
 
-  if (!hasMounted) return <div className="flex flex-1 min-h-screen items-center justify-center bg-zinc-950 text-zinc-500 text-xs font-bold">Initializing MedicFlow…</div>;
+  if (!hasMounted) return <div className="flex flex-1 min-h-screen items-center justify-center bg-zinc-950 text-zinc-500 text-xs font-bold">Initializing MedSync…</div>;
 
   // ─── LOGIN PORTAL (UNAUTHENTICATED) ───────────────────────────────────────────
   if (!currentUser) {
@@ -813,7 +822,7 @@ export default function Home() {
               isDark ? "bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800" : "bg-white border-slate-200 text-slate-700 shadow-sm hover:bg-slate-100"
             }`}
           >
-            {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-indigo-500" />}
+            {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-[#0ea5e9]" />}
             <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
           </button>
         </div>
@@ -821,11 +830,11 @@ export default function Home() {
         <div className="w-full max-w-md space-y-6">
           {/* Brand Logo Header */}
           <div className="text-center space-y-2">
-            <div className="mx-auto h-14 w-14 bg-gradient-to-tr from-indigo-600 via-purple-600 to-emerald-400 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl glow-indigo">
+            <div className="mx-auto h-14 w-14 bg-gradient-to-tr from-[#0F85B0] via-purple-600 to-emerald-400 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl glow-indigo">
               MF
             </div>
             <h1 className={`text-2xl font-extrabold tracking-tight bg-gradient-to-r ${isDark ? "from-white via-indigo-200 to-emerald-400" : "from-slate-900 via-indigo-900 to-purple-700"} bg-clip-text text-transparent`}>
-              MedicFlow Dental OS
+              MedSync Dental OS
             </h1>
             <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>Cloud Biometric Attendance &amp; Payroll Management</p>
           </div>
@@ -837,14 +846,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => { setLoginType("admin"); setLoginError(""); }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "admin" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-slate-900"}`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "admin" ? "bg-[#0F85B0] text-white shadow-lg glow-indigo" : isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-slate-900"}`}
               >
                 Clinic Admin
               </button>
               <button
                 type="button"
                 onClick={() => { setLoginType("staff"); setLoginError(""); }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "staff" ? "bg-indigo-600 text-white shadow-lg glow-indigo" : isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-slate-900"}`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${loginType === "staff" ? "bg-[#0F85B0] text-white shadow-lg glow-indigo" : isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-slate-900"}`}
               >
                 Staff Portal
               </button>
@@ -919,7 +928,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg transition-all glow-indigo"
+                className="w-full py-3 bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:from-[#0ea5e9] hover:to-[#0F85B0] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg transition-all glow-indigo"
               >
                 {isLoggingIn ? "Signing In..." : `Sign In to ${loginType === "admin" ? "Clinic Admin" : "Staff Portal"}`}
               </button>
@@ -934,11 +943,11 @@ export default function Home() {
                   onClick={() => loginUser({ loginType: "admin", username: "admin", password: "admin123" })}
                   className={`py-1.5 px-2 rounded border text-[10px] font-bold transition flex items-center justify-center gap-1.5 ${
                     isDark
-                      ? "bg-slate-800/60 hover:bg-slate-800 border-slate-700 text-indigo-300"
-                      : "bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700"
+                      ? "bg-slate-800/60 hover:bg-slate-800 border-slate-700 text-[#7dd3fc]"
+                      : "bg-[#f0f9ff] hover:bg-[#e0f2fe] border-[#bae6fd] text-[#0c6c8f]"
                   }`}
                 >
-                  <Icons.Shield className="w-3.5 h-3.5 text-indigo-400" />
+                  <Icons.Shield className="w-3.5 h-3.5 text-[#38bdf8]" />
                   <span>Admin Sign-In</span>
                 </button>
                 <button
@@ -968,12 +977,12 @@ export default function Home() {
       <aside className={`w-52 border-r flex flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
         <div className="p-4">
           <div className="flex items-center gap-2.5 mb-7 px-1">
-            <div className="h-8 w-8 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 rounded-lg flex items-center justify-center text-white font-extrabold text-xs shadow-lg glow-indigo">
+            <div className="h-8 w-8 bg-gradient-to-tr from-[#0F85B0] via-indigo-500 to-emerald-400 rounded-lg flex items-center justify-center text-white font-extrabold text-xs shadow-lg glow-indigo">
               MF
             </div>
             <div>
-              <h1 className={`font-extrabold text-sm tracking-tight bg-gradient-to-r ${isDark ? "from-white via-slate-200 to-indigo-300" : "from-slate-900 via-indigo-950 to-indigo-600"} bg-clip-text text-transparent`}>MedicFlow</h1>
-              <p className={`text-[10px] ${isDark ? "text-indigo-400" : "text-indigo-600"} font-semibold tracking-wider uppercase leading-none mt-0.5`}>Clinic OS</p>
+              <h1 className={`font-extrabold text-sm tracking-tight bg-gradient-to-r ${isDark ? "from-white via-slate-200 to-[#7dd3fc]" : "from-slate-900 via-indigo-950 to-[#0F85B0]"} bg-clip-text text-transparent`}>MedSync</h1>
+              <p className={`text-[10px] ${isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"} font-semibold tracking-wider uppercase leading-none mt-0.5`}>Clinic OS</p>
             </div>
           </div>
           <nav className="space-y-1">
@@ -996,15 +1005,15 @@ export default function Home() {
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold rounded-lg transition-smooth ${
                     isActive
                       ? isDark
-                        ? "bg-gradient-to-r from-indigo-950/60 to-slate-900 text-white border-l-2 border-indigo-500 shadow-sm"
-                        : "bg-gradient-to-r from-indigo-50 to-white text-indigo-900 border-l-2 border-indigo-600 shadow-sm font-bold"
+                        ? "bg-gradient-to-r from-indigo-950/60 to-slate-900 text-white border-l-2 border-[#0ea5e9] shadow-sm"
+                        : "bg-gradient-to-r from-[#f0f9ff] to-white text-[#06394d] border-l-2 border-[#0F85B0] shadow-sm font-bold"
                       : isDark
                         ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
-                    <svg className={`w-4 h-4 shrink-0 transition-smooth ${isActive ? (isDark ? "text-indigo-400" : "text-indigo-600") : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-4 h-4 shrink-0 transition-smooth ${isActive ? (isDark ? "text-[#38bdf8]" : "text-[#0F85B0]") : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon}/>
                     </svg>
                     <span className="truncate">{tab.label}</span>
@@ -1047,7 +1056,7 @@ export default function Home() {
           </button>
           <button onClick={()=>setIsDark(!isDark)} className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold rounded-md transition ${isDark?"text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800":"text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100"}`}>
             <span className="flex items-center gap-2">
-              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-indigo-500" />}
+              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400" /> : <Icons.Moon className="w-3.5 h-3.5 text-[#0ea5e9]" />}
               <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
             </span>
           </button>
@@ -1081,17 +1090,17 @@ export default function Home() {
                   : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
               }`}
             >
-              <Icons.Refresh className={`w-3.5 h-3.5 ${biometricSettings.status === "Syncing" ? "animate-spin text-amber-400" : "text-indigo-400"}`} />
+              <Icons.Refresh className={`w-3.5 h-3.5 ${biometricSettings.status === "Syncing" ? "animate-spin text-amber-400" : "text-[#38bdf8]"}`} />
               <span>{biometricSettings.status === "Syncing" ? "Syncing Logs..." : "Refresh Cloud Logs"}</span>
             </button>
 
             <div className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border text-xs font-semibold ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-indigo-500 via-purple-500 to-emerald-400 flex items-center justify-center text-white text-[11px] font-black shadow glow-indigo">
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#0ea5e9] via-purple-500 to-emerald-400 flex items-center justify-center text-white text-[11px] font-black shadow glow-indigo">
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
               </div>
               <div className="flex flex-col text-left">
                 <span className="font-bold text-xs leading-none">{currentUser?.name || "Clinic Administrator"}</span>
-                <span className="text-[9px] text-indigo-400 font-semibold uppercase tracking-wider leading-none mt-0.5">{currentUser?.role || "Admin"}</span>
+                <span className="text-[9px] text-[#38bdf8] font-semibold uppercase tracking-wider leading-none mt-0.5">{currentUser?.role || "Admin"}</span>
               </div>
               <button
                 onClick={logoutUser}
@@ -1114,18 +1123,18 @@ export default function Home() {
               {/* Stat cards with gradient borders & modern counters */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
-                  { label: "Total Staff", value: dashboardMetrics.totalStaff, color: "from-indigo-500 to-indigo-600", badge: "Active", icon: <Icons.Users className="w-4 h-4 text-indigo-400" /> },
+                  { label: "Total Staff", value: dashboardMetrics.totalStaff, color: "from-[#0ea5e9] to-[#0F85B0]", badge: "Active", icon: <Icons.Users className="w-4 h-4 text-[#38bdf8]" /> },
                   { label: "Present Today", value: dashboardMetrics.present, color: "from-emerald-500 to-teal-600", badge: "On Time", icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
                   { label: "Late Arrivals", value: dashboardMetrics.late, color: "from-amber-500 to-orange-600", badge: "Grace 15m", icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
-                  { label: "On Leave", value: dashboardMetrics.onLeave, color: "from-purple-500 to-indigo-600", badge: "Approved", icon: <Icons.Sun className="w-4 h-4 text-purple-400" /> },
+                  { label: "On Leave", value: dashboardMetrics.onLeave, color: "from-[#0ea5e9] to-[#0F85B0]", badge: "Approved", icon: <Icons.Sun className="w-4 h-4 text-purple-400" /> },
                   { label: "Absent", value: dashboardMetrics.absent, color: "from-rose-500 to-red-600", badge: "Action Req", icon: <Icons.AlertTriangle className="w-4 h-4 text-rose-400" /> },
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-4 rounded-xl border transition-smooth relative overflow-hidden group ${
+                    className={`p-4 rounded-xl border transition-smooth relative overflow-hidden group backdrop-blur-xl ${
                       isDark
-                        ? "bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900"
-                        : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
+                        ? "bg-white/5 border-white/10 hover:border-white/20 shadow-xl"
+                        : "bg-white/80 border-black/5 hover:border-black/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1154,7 +1163,7 @@ export default function Home() {
                         <p className={`text-[10px] mt-0.5 ${isDark ? "text-zinc-600" : "text-zinc-400"}`}>Gross vs Net · hover dots for details</p>
                       </div>
                       <div className="flex items-center gap-4 text-[10px]">
-                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block opacity-80"/>Gross</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0ea5e9] inline-block opacity-80"/>Gross</span>
                         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block opacity-80"/>Net</span>
                       </div>
                     </div>
@@ -1202,7 +1211,7 @@ export default function Home() {
                     })}
                   </div>
                   {/* Legend */}
-                  <div className={`flex flex-wrap gap-3 mt-4 pt-3 border-t text-[9px] ${isDark?"border-zinc-800":"border-zinc-100"}`}>
+                  <div className={`flex flex-wrap gap-3 mt-4 pt-3 border-t text-[9px] ${isDark?"border-white/10":"border-black/5"}`}>
                     {[["bg-emerald-500","On-Time"],["bg-amber-400","Late"],["bg-purple-500","Leave"],["bg-rose-500","Absent"]].map(([cls,lbl])=>(
                       <span key={lbl} className="flex items-center gap-1 text-zinc-500">
                         <span className={`w-2 h-2 rounded-sm ${cls} inline-block`}/>
@@ -1223,16 +1232,19 @@ export default function Home() {
                   </div>
                   <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md border transition ${
                     isDark
-                      ? "bg-indigo-950/40 border-indigo-800/50 text-indigo-300"
-                      : "bg-indigo-50 border-indigo-200 text-indigo-700"
+                      ? "bg-[#042633]/40 border-[#09526e]/50 text-[#7dd3fc]"
+                      : "bg-[#f0f9ff] border-[#bae6fd] text-[#0c6c8f]"
                   }`}>
                     {dashboardMetrics.todayLogs.length} {dashboardMetrics.todayLogs.length === 1 ? "Scan" : "Scans"} Recorded Today
                   </span>
                 </div>
                 <div className="space-y-2.5">
                   {dashboardMetrics.todayLogs.length === 0 && (
-                    <div className="p-6 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                      No punches recorded today yet. Put your finger on the Hikvision terminal to test live!
+                    <div className={`p-8 mt-2 text-center text-xs rounded-2xl flex flex-col items-center justify-center gap-3 transition-all ${isDark ? "bg-white/5 border border-white/10 text-slate-400 shadow-inner" : "bg-slate-50/50 border border-black/5 text-slate-500 shadow-inner"}`}>
+                      <div className="w-12 h-12 rounded-full bg-[#0ea5e9]/20 flex items-center justify-center animate-pulse-slow">
+                        <Icons.Clock className="w-6 h-6 text-[#0ea5e9]" />
+                      </div>
+                      <span>No punches recorded today yet. Place your finger on the Hikvision terminal to test live sync!</span>
                     </div>
                   )}
                   {dashboardMetrics.todayLogs.map(log => {
@@ -1244,20 +1256,20 @@ export default function Home() {
                     return (
                       <div key={log.id} className={`flex items-center justify-between p-3.5 rounded-xl border text-xs transition-all ${isDark ? "bg-slate-900/60 border-slate-800/80 hover:border-slate-700" : "bg-white border-slate-200 shadow-sm"}`}>
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-emerald-400 flex items-center justify-center text-white font-black text-sm shadow glow-indigo">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0F85B0] via-purple-600 to-emerald-400 flex items-center justify-center text-white font-black text-sm shadow glow-indigo">
                             {initial}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
                               <span className={`font-bold text-sm ${isDark ? "text-white" : "text-slate-900"}`}>{empName}</span>
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${isDark ? "bg-indigo-950/60 border border-indigo-800/50 text-indigo-300" : "bg-indigo-50 border border-indigo-200 text-indigo-700"}`}>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${isDark ? "bg-[#042633]/60 border border-[#09526e]/50 text-[#7dd3fc]" : "bg-[#f0f9ff] border border-[#bae6fd] text-[#0c6c8f]"}`}>
                                 {empRole}
                               </span>
                             </div>
                             <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2">
                               <span>Verified via <strong className="text-slate-300">{log.authMethod || "Fingerprint"}</strong></span>
                               <span>•</span>
-                              <span>Terminal: <code className="text-indigo-400 font-mono">DS-K1T320MFWX</code></span>
+                              <span>Terminal: <code className="text-[#38bdf8] font-mono">DS-K1T320MFWX</code></span>
                             </p>
                           </div>
                         </div>
@@ -1268,7 +1280,7 @@ export default function Home() {
                               In: {log.checkIn}
                             </span>
                             <span className="text-slate-600">→</span>
-                            <span className={`px-2.5 py-1 rounded-lg border font-bold ${log.checkOut ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
+                            <span className={`px-2.5 py-1 rounded-lg border font-bold ${log.checkOut ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/20 text-[#38bdf8]" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
                               Out: {log.checkOut || "Active Shift"}
                             </span>
                           </div>
@@ -1365,7 +1377,7 @@ export default function Home() {
               {/* Leave summary cards */}
               <div className="flex items-center justify-between">
                 <h2 className={`text-sm font-bold ${isDark?"text-white":"text-zinc-900"}`}>Leave Management</h2>
-                <button onClick={()=>{setNewLeave({employeeId: activeEmployees[0]?.id || "",type:"Annual",startDate:"",endDate:"",status:"Pending",note:""});setShowAddLeaveModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ New Leave Request</button>
+                <button onClick={()=>{setNewLeave({employeeId: activeEmployees[0]?.id || "",type:"Annual",startDate:"",endDate:"",status:"Pending",note:""});setShowAddLeaveModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>+ New Leave Request</button>
               </div>
 
               {/* Leave balances */}
@@ -1492,7 +1504,7 @@ export default function Home() {
             <div className="space-y-4">
               {/* Summary cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[{label:"Gross Salaries Pool",value:`LKR ${payrollTotals.gross.toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"Net Remittances",value:`LKR ${payrollTotals.net.toLocaleString()}`,color:isDark ? "text-indigo-400" : "text-indigo-600"},{label:"EPF (8%+12%)",value:`LKR ${(payrollTotals.epfEmp+payrollTotals.epfEmr).toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"APIT Total",value:`LKR ${Math.round(payrollTotals.apit).toLocaleString()}`,color:isDark ? "text-amber-400" : "text-amber-600"}].map(s=>(
+                {[{label:"Gross Salaries Pool",value:`LKR ${payrollTotals.gross.toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"Net Remittances",value:`LKR ${payrollTotals.net.toLocaleString()}`,color:isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"},{label:"EPF (8%+12%)",value:`LKR ${(payrollTotals.epfEmp+payrollTotals.epfEmr).toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"APIT Total",value:`LKR ${Math.round(payrollTotals.apit).toLocaleString()}`,color:isDark ? "text-amber-400" : "text-amber-600"}].map(s=>(
                   <div key={s.label} className={cardCls(isDark)}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">{s.label}</p>
                     <p className={`text-xl font-extrabold ${s.color}`}>{s.value}</p>
@@ -1513,7 +1525,7 @@ export default function Home() {
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>Export CSV</span>
                   </button>
-                  {!isCurrentMonthFinalized&&<button onClick={handleFinalizePayroll} className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 text-white hover:bg-indigo-700 transition shadow flex items-center gap-1.5"><Icons.LockClosed className="w-3.5 h-3.5" /><span>Finalize Month</span></button>}
+                  {!isCurrentMonthFinalized&&<button onClick={handleFinalizePayroll} className="px-3 py-1.5 text-xs font-bold rounded bg-[#0F85B0] text-white hover:bg-[#0c6c8f] transition shadow flex items-center gap-1.5"><Icons.LockClosed className="w-3.5 h-3.5" /><span>Finalize Month</span></button>}
                   <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>EPF Form C3</span>
@@ -1538,14 +1550,14 @@ export default function Home() {
                           <td className="px-5 py-3.5"><span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${isDark?"bg-zinc-900 border-zinc-700 text-zinc-400":"bg-zinc-50 border-zinc-200 text-zinc-600"}`}>{c.employee.payType}</span></td>
                           <td className="px-5 py-3.5 font-mono font-semibold whitespace-nowrap">
                             <p>LKR {c.basicEarnings.toLocaleString()}</p>
-                            {c.employee.payType==="Session-based"&&<p className="text-[9px] text-indigo-400 mt-0.5">{c.sessionCount} sessions</p>}
+                            {c.employee.payType==="Session-based"&&<p className="text-[9px] text-[#38bdf8] mt-0.5">{c.sessionCount} sessions</p>}
                           </td>
                           <td className="px-5 py-3.5 font-mono text-zinc-500 whitespace-nowrap">LKR {c.otPay.toLocaleString()}</td>
                           <td className="px-5 py-3.5 font-mono text-emerald-500 font-bold whitespace-nowrap">+LKR {c.totalAllowances.toLocaleString()}</td>
                           <td className="px-5 py-3.5 font-mono text-rose-500 whitespace-nowrap">{c.noPayDeduction>0?`-LKR ${Math.round(c.noPayDeduction).toLocaleString()}`:"LKR 0"}</td>
                           <td className="px-5 py-3.5 font-mono text-zinc-400 whitespace-nowrap">{c.employee.epfEligible?`-LKR ${Math.round(c.employeeEpf).toLocaleString()}`:"Exempt"}</td>
                           <td className="px-5 py-3.5 font-mono text-amber-500 whitespace-nowrap">{c.apitMonthly>0?`-LKR ${Math.round(c.apitMonthly).toLocaleString()}`:"—"}</td>
-                          <td className="px-5 py-3.5 font-mono font-extrabold text-indigo-500 whitespace-nowrap">LKR {Math.round(c.netSalary).toLocaleString()}</td>
+                          <td className="px-5 py-3.5 font-mono font-extrabold text-[#0ea5e9] whitespace-nowrap">LKR {Math.round(c.netSalary).toLocaleString()}</td>
                           <td className="px-5 py-3.5 text-right whitespace-nowrap">
                             <div className="inline-flex items-center gap-2">
                               <button
@@ -1557,7 +1569,7 @@ export default function Home() {
                                   setManualDeductionInput(existing.deductionAmount);
                                   setPayslipNoteInput(existing.note);
                                 }}
-                                className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition inline-flex items-center gap-1 ${isDark ? "bg-zinc-800 border-zinc-700 text-indigo-300 hover:bg-zinc-750" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"}`}
+                                className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition inline-flex items-center gap-1 ${isDark ? "bg-zinc-800 border-zinc-700 text-[#7dd3fc] hover:bg-zinc-750" : "bg-[#f0f9ff] border-[#bae6fd] text-[#0c6c8f] hover:bg-[#e0f2fe]"}`}
                               >
                                 <Icons.Edit className="w-3 h-3" />
                                 <span>Adjust</span>
@@ -1606,7 +1618,7 @@ export default function Home() {
                             onClick={() => setSelectedHistoryYear(yr)}
                             className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
                               selectedHistoryYear === yr
-                                ? isDark ? "bg-indigo-600 text-white shadow" : "bg-white text-indigo-900 shadow-sm"
+                                ? isDark ? "bg-[#0F85B0] text-white shadow" : "bg-white text-[#06394d] shadow-sm"
                                 : isDark ? "text-zinc-400 hover:text-white" : "text-zinc-600 hover:text-zinc-900"
                             }`}
                           >
@@ -1623,23 +1635,23 @@ export default function Home() {
                           onClick={() => setSelectedHistoryPeriodId(period.id)}
                           className={`p-4 rounded-lg border transition-all cursor-pointer group hover:-translate-y-0.5 ${
                             isDark
-                              ? "bg-zinc-950/40 border-zinc-800 hover:border-indigo-500/50 hover:bg-zinc-900"
-                              : "bg-zinc-50 border-zinc-200 hover:border-indigo-300 hover:bg-white shadow-sm"
+                              ? "bg-zinc-950/40 border-zinc-800 hover:border-[#0ea5e9]/50 hover:bg-zinc-900"
+                              : "bg-zinc-50 border-zinc-200 hover:border-[#7dd3fc] hover:bg-white shadow-sm"
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-xs group-hover:text-indigo-500 transition">{period.label}</span>
+                            <span className="font-bold text-xs group-hover:text-[#0ea5e9] transition">{period.label}</span>
                             <div className="flex items-center gap-1.5">
                               <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
                               <span className="text-zinc-400 text-[10px]">➜</span>
                             </div>
                           </div>
-                          <p className="text-lg font-extrabold text-indigo-500 mb-1">LKR {period.grossSalaryPool.toLocaleString()}</p>
+                          <p className="text-lg font-extrabold text-[#0ea5e9] mb-1">LKR {period.grossSalaryPool.toLocaleString()}</p>
                           <p className="text-[10px] text-zinc-500">Net: LKR {period.netRemittances.toLocaleString()}</p>
                           <p className="text-[10px] text-zinc-500">EPF: LKR {period.totalEpf.toLocaleString()} · ETF: LKR {period.totalEtf.toLocaleString()}</p>
                           <div className="mt-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
                             <span>Finalized: {period.finalizedAt?.split(" ")[0]}</span>
-                            <span className="font-sans text-indigo-500 font-bold group-hover:underline">View Details</span>
+                            <span className="font-sans text-[#0ea5e9] font-bold group-hover:underline">View Details</span>
                           </div>
                         </div>
                       ))}
@@ -1674,7 +1686,7 @@ export default function Home() {
                     case "UPDATE":
                       return isDark ? "bg-blue-500/10 text-blue-400 border-blue-500/30" : "bg-blue-50 text-blue-700 border-blue-200";
                     case "FINALIZE":
-                      return isDark ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/30" : "bg-indigo-50 text-indigo-700 border-indigo-200";
+                      return isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border-[#0ea5e9]/30" : "bg-[#f0f9ff] text-[#0c6c8f] border-[#bae6fd]";
                     case "APPROVE":
                       return isDark ? "bg-teal-500/10 text-teal-400 border-teal-500/30" : "bg-teal-50 text-teal-700 border-teal-200";
                     case "DELETE":
@@ -1716,7 +1728,7 @@ export default function Home() {
                               onClick={() => setAuditActionFilter(act)}
                               className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                                 auditActionFilter === act
-                                  ? isDark ? "bg-indigo-600 text-white shadow" : "bg-white text-indigo-900 shadow-sm"
+                                  ? isDark ? "bg-[#0F85B0] text-white shadow" : "bg-white text-[#06394d] shadow-sm"
                                   : isDark ? "text-zinc-400 hover:text-white" : "text-zinc-600 hover:text-zinc-900"
                               }`}
                             >
@@ -1734,8 +1746,8 @@ export default function Home() {
                           onClick={() => setSelectedAuditLogId(log.id)}
                           className={`p-3 rounded-lg border transition-all cursor-pointer group hover:-translate-y-0.5 ${
                             isDark
-                              ? "bg-zinc-950/40 border-zinc-800/80 hover:border-indigo-500/40 hover:bg-zinc-900"
-                              : "bg-zinc-50 border-zinc-200/80 hover:border-indigo-300 hover:bg-white shadow-sm"
+                              ? "bg-zinc-950/40 border-zinc-800/80 hover:border-[#0ea5e9]/40 hover:bg-zinc-900"
+                              : "bg-zinc-50 border-zinc-200/80 hover:border-[#7dd3fc] hover:bg-white shadow-sm"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
@@ -1752,7 +1764,7 @@ export default function Home() {
                             <div className="flex items-center gap-3 text-[10px]">
                               {log.actor && (
                                 <span className={`font-semibold flex items-center gap-1 ${isDark ? "text-zinc-400" : "text-zinc-600"}`}>
-                                  <Icons.User className="w-3 h-3 text-indigo-400" />
+                                  <Icons.User className="w-3 h-3 text-[#38bdf8]" />
                                   <span>{log.actor}</span>
                                 </span>
                               )}
@@ -1772,9 +1784,9 @@ export default function Home() {
                             <p className={`text-xs ${isDark ? "text-zinc-200" : "text-zinc-800"} font-medium`}>
                               {log.details}
                             </p>
-                            <span className="text-[10px] font-bold text-indigo-500 opacity-0 group-hover:opacity-100 transition whitespace-nowrap flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-[#0ea5e9] opacity-0 group-hover:opacity-100 transition whitespace-nowrap flex items-center gap-1">
                               <span>Inspect</span>
-                              <Icons.Search className="w-3 h-3 text-indigo-400" />
+                              <Icons.Search className="w-3 h-3 text-[#38bdf8]" />
                             </span>
                           </div>
                         </div>
@@ -1797,12 +1809,12 @@ export default function Home() {
             <div className="space-y-5 max-w-xl mx-auto">
               {!selfServiceEmp ? (
                 <div className={`${cardCls(isDark)} text-center py-12`}>
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4 ${isDark ? "bg-zinc-800 text-zinc-100" : "bg-indigo-100 text-indigo-700"}`}>👤</div>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4 ${isDark ? "bg-zinc-800 text-zinc-100" : "bg-[#e0f2fe] text-[#0c6c8f]"}`}>👤</div>
                   <h2 className="font-bold text-lg mb-1">Employee Self-Service</h2>
                   <p className="text-xs text-zinc-500 mb-6">Enter your Biometric ID to view your payslip and attendance summary</p>
                   <div className="flex gap-2 max-w-xs mx-auto">
                     <input value={selfServicePin} onChange={e=>setSelfServicePin(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")handleSelfServicePin();}} placeholder="Biometric ID (e.g. 101)" className={`${inputCls(isDark)} text-center font-mono text-lg`}/>
-                    <button onClick={handleSelfServicePin} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>Go</button>
+                    <button onClick={handleSelfServicePin} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>Go</button>
                   </div>
                   {selfServiceError&&<p className="text-xs text-rose-500 mt-3">{selfServiceError}</p>}
                   <p className="text-[10px] text-zinc-600 mt-6">Try: 101, 102, 103, 104, or 105</p>
@@ -1842,7 +1854,7 @@ export default function Home() {
                               <span className="text-zinc-500">{lbl}</span><span className="font-mono font-semibold">{val}</span>
                             </div>
                           ))}
-                          <div className="flex justify-between pt-1"><span className="font-bold">Net Salary</span><span className="font-extrabold text-indigo-500 text-base">LKR {Math.round(calc.netSalary).toLocaleString()}</span></div>
+                          <div className="flex justify-between pt-1"><span className="font-bold">Net Salary</span><span className="font-extrabold text-[#0ea5e9] text-base">LKR {Math.round(calc.netSalary).toLocaleString()}</span></div>
                         </div>
                       </div>
                     );
@@ -1889,8 +1901,8 @@ export default function Home() {
                           <h3 className="text-base font-bold mt-2">Hikvision DS-K1T320MFWX Face Terminal</h3>
                           <p className="text-xs text-zinc-500 mt-0.5">Touchless Facial & Biometric Time Attendance — IP: 192.168.8.135</p>
                         </div>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-slate-800/80 border border-slate-700" : "bg-indigo-50 border border-indigo-200 shadow-sm"}`}>
-                          <Icons.Camera className={`w-5 h-5 ${isDark ? "text-indigo-400" : "text-indigo-600"}`} />
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-slate-800/80 border border-slate-700" : "bg-[#f0f9ff] border border-[#bae6fd] shadow-sm"}`}>
+                          <Icons.Camera className={`w-5 h-5 ${isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"}`} />
                         </div>
                       </div>
 
@@ -1951,7 +1963,7 @@ export default function Home() {
                             setSettingsSaveMsg("Biometric settings updated successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
-                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition"
+                          className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition"
                         >
                           Save Biometric Settings
                         </button>
@@ -1965,7 +1977,7 @@ export default function Home() {
                           <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Live Hardware Simulator</h4>
                           <p className="text-[11px] text-zinc-500">Test incoming face / fingerprint scan payloads as if sent by the Hikvision DS-K1T320EFWX terminal.</p>
                         </div>
-                        <span className={`px-2 py-1 text-[10px] font-bold rounded border ${isDark ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-indigo-50 text-indigo-700 border-indigo-200"}`}>Cloud API Tester</span>
+                        <span className={`px-2 py-1 text-[10px] font-bold rounded border ${isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border-[#bae6fd]"}`}>Cloud API Tester</span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
@@ -2022,8 +2034,8 @@ export default function Home() {
                         <label className={labelCls}>Clinic / Company Name</label>
                         <input
                           className={inputCls(isDark)}
-                          value={profileForm.clinicName}
-                          onChange={e => setProfileForm(p => ({ ...p, clinicName: e.target.value }))}
+                          value={profileForm.name}
+                          onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -2035,21 +2047,29 @@ export default function Home() {
                           onChange={e => setProfileForm(p => ({ ...p, address: e.target.value }))}
                         />
                       </div>
+                      <div>
+                        <label className={labelCls}>Contact Phone Number</label>
+                        <input
+                          className={inputCls(isDark)}
+                          value={profileForm.phone}
+                          onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                        />
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className={labelCls}>EPF Registration No.</label>
                           <input
                             className={inputCls(isDark)}
-                            value={profileForm.epfRegNo}
-                            onChange={e => setProfileForm(p => ({ ...p, epfRegNo: e.target.value }))}
+                            value={profileForm.email}
+                            onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
                           />
                         </div>
                         <div>
                           <label className={labelCls}>ETF Registration No.</label>
                           <input
                             className={inputCls(isDark)}
-                            value={profileForm.etfRegNo}
-                            onChange={e => setProfileForm(p => ({ ...p, etfRegNo: e.target.value }))}
+                            value={profileForm.phone}
+                            onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
                           />
                         </div>
                       </div>
@@ -2065,7 +2085,7 @@ export default function Home() {
                             setSettingsSaveMsg("Clinic profile saved successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
-                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition"
+                          className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition"
                         >
                           Save Clinic Profile
                         </button>
@@ -2078,7 +2098,7 @@ export default function Home() {
                 {settingsTab === "security" && (
                   <div className="space-y-5 max-w-md">
                     <div className="flex items-center gap-2">
-                      <Icons.LockClosed className="w-5 h-5 text-indigo-400" />
+                      <Icons.LockClosed className="w-5 h-5 text-[#38bdf8]" />
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Admin Security Settings</h3>
                     </div>
                     <p className="text-xs text-zinc-500">Customize the 4-digit PIN required to unlock sensitive Payroll Engine &amp; System Configuration tabs.</p>
@@ -2128,7 +2148,7 @@ export default function Home() {
                       <button
                         type="submit"
                         disabled={newPinInput.length !== 4}
-                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded shadow transition"
+                        className="w-full py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] disabled:opacity-50 text-white font-bold rounded shadow transition"
                       >
                         Update Security PIN
                       </button>
@@ -2175,7 +2195,7 @@ export default function Home() {
                         <div><label className={labelCls}>Employer EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employerRate} onChange={e=>setEpfForm(p=>({...p, employerRate: parseFloat(e.target.value)||0}))}/></div>
                         <div><label className={labelCls}>ETF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.etfRate} onChange={e=>setEpfForm(p=>({...p, etfRate: parseFloat(e.target.value)||0}))}/></div>
                       </div>
-                      <div><label className={labelCls}>Working Days / Month</label><input type="number" className={`${inputCls(isDark)} max-w-[120px]`} value={epfForm.workingDaysPerMonth} onChange={e=>setEpfForm(p=>({...p, workingDaysPerMonth: parseInt(e.target.value)||26}))}/><p className="text-[10px] text-zinc-500 mt-1">Used to calculate daily no-pay rate.</p></div>
+                      <div><label className={labelCls}>Working Days / Month</label><input type="number" className={`${inputCls(isDark)} max-w-[120px]`} value={salarySettings.workingDaysPerMonth} onChange={e=>updateSalarySettings({workingDaysPerMonth: parseInt(e.target.value)||20})}/><p className="text-[10px] text-zinc-500 mt-1">Used to calculate daily no-pay rate.</p></div>
                       
                       <div className="pt-2 border-t border-zinc-800">
                         <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Salary Period Cycle</h4>
@@ -2186,7 +2206,7 @@ export default function Home() {
 
                       <div className="pt-2 flex items-center justify-between">
                         {settingsSaveMsg && settingsTab === "epf" ? <span className="text-xs font-bold text-emerald-400">{settingsSaveMsg}</span> : <span />}
-                        <button type="button" onClick={() => { updateEpfSettings(epfForm); updatePayrollCycleStartDay(cycleStartDayForm); setSettingsSaveMsg("Salary Settings updated successfully!"); setTimeout(() => setSettingsSaveMsg(""), 3000); }} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition">Save Salary Settings</button>
+                        <button type="button" onClick={() => { updateEpfSettings(epfForm); updatePayrollCycleStartDay(cycleStartDayForm); setSettingsSaveMsg("Salary Settings updated successfully!"); setTimeout(() => setSettingsSaveMsg(""), 3000); }} className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition">Save Salary Settings</button>
                       </div>
                     </div>
 
@@ -2211,7 +2231,7 @@ export default function Home() {
                         <div className="flex items-center gap-5 mt-3">
                           <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.epfApplicable} onChange={e=>setNewAllowance(p=>({...p,epfApplicable:e.target.checked}))} className="rounded"/>EPF Applicable</label>
                           <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.taxDeductible} onChange={e=>setNewAllowance(p=>({...p,taxDeductible:e.target.checked}))} className="rounded"/>Tax Deductible</label>
-                          <button onClick={()=>{if(newAllowance.name.trim()){addAllowance(newAllowance);setNewAllowance({name:"",amount:10000,epfApplicable:false,taxDeductible:true,type:"Fixed"});}}} className={`ml-auto px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>Add Allowance</button>
+                          <button onClick={()=>{if(newAllowance.name.trim()){addAllowance(newAllowance);setNewAllowance({name:"",amount:10000,epfApplicable:false,taxDeductible:true,type:"Fixed"});}}} className={`ml-auto px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>Add Allowance</button>
                         </div>
                       </div>
                     </div>
@@ -2264,7 +2284,7 @@ export default function Home() {
                               biometricId: nextBioId,
                               epfEligible: true,
                               taxable: false,
-                              shiftIds: [],
+                              
                               branchId: null,
                               allowanceIds: [],
                               leaveBalances: { annual: 14, sick: 7, casual: 3 },
@@ -2276,10 +2296,10 @@ export default function Home() {
                           }}
                           className={`px-3 py-1.5 text-xs font-bold rounded border shadow transition flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200"}`}
                         >
-                          <Icons.Refresh className="w-3.5 h-3.5 text-indigo-400" />
+                          <Icons.Refresh className="w-3.5 h-3.5 text-[#38bdf8]" />
                           <span>Import Staff from Terminal</span>
                         </button>
-                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,shiftIds:[],branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>+ Register Member</button>
+                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>+ Register Member</button>
                       </div>
                     </div>
                     <div className="space-y-2 max-w-3xl">
@@ -2341,7 +2361,7 @@ export default function Home() {
                                 epfEligible: true,
                                 taxable: false,
                                 active: true,
-                                shiftIds: [],
+                                
                                 branchId: null,
                                 allowanceIds: [],
                                 leaveBalances: { annual: 14, sick: 7, casual: 3 },
@@ -2350,7 +2370,7 @@ export default function Home() {
                                 incomeBonusPercentage: 0,
                               });
                             }}
-                            className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 hover:bg-indigo-500 text-white shadow transition flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-xs font-bold rounded bg-[#0F85B0] hover:bg-[#0ea5e9] text-white shadow transition flex items-center gap-1.5"
                           >
                             <span>+ Link New Terminal ID</span>
                           </button>
@@ -2364,15 +2384,15 @@ export default function Home() {
                             }}
                             className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
                           >
-                            <Icons.Refresh className={`w-3.5 h-3.5 text-indigo-400 ${isFetchingPersons ? "animate-spin" : ""}`} />
+                            <Icons.Refresh className={`w-3.5 h-3.5 text-[#38bdf8] ${isFetchingPersons ? "animate-spin" : ""}`} />
                             <span>{isFetchingPersons ? "Syncing..." : "Sync Enrolled Persons"}</span>
                           </button>
                         </div>
                       </div>
 
-                      <div className={`p-3 rounded-lg text-xs border ${isDark ? "bg-indigo-950/20 border-indigo-800/40 text-indigo-300" : "bg-indigo-50 border-indigo-200 text-indigo-800"}`}>
+                      <div className={`p-3 rounded-lg text-xs border ${isDark ? "bg-[#042633]/20 border-[#09526e]/40 text-[#7dd3fc]" : "bg-[#f0f9ff] border-[#bae6fd] text-[#09526e]"}`}>
                         <div className="font-bold flex items-center gap-1.5 mb-1">
-                          <Icons.Shield className="w-3.5 h-3.5 text-indigo-400" />
+                          <Icons.Shield className="w-3.5 h-3.5 text-[#38bdf8]" />
                           <span>Connecting Local Router IP (192.168.8.135) to Cloud App</span>
                         </div>
                         <p className="text-[11px] leading-relaxed">
@@ -2402,13 +2422,13 @@ export default function Home() {
                               const matchedEmp = employees.find(e => e.biometricId === p.employeeNo);
                               return (
                                 <tr key={p.employeeNo} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-slate-50"}>
-                                  <td className="px-4 py-3 font-mono font-bold text-indigo-400">#{p.employeeNo}</td>
+                                  <td className="px-4 py-3 font-mono font-bold text-[#38bdf8]">#{p.employeeNo}</td>
                                   <td className="px-4 py-3 font-semibold">{p.name}</td>
                                   <td className="px-4 py-3 text-zinc-400 uppercase text-[10px] font-bold">{p.userType}</td>
                                   <td className="px-4 py-3">
                                     <div className="flex gap-2 text-[10px]">
                                       {p.numOfFace ? <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Face</span> : null}
-                                      {p.numOfFingerprint ? <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold">Fingerprint</span> : null}
+                                      {p.numOfFingerprint ? <span className="px-1.5 py-0.5 rounded bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20 font-bold">Fingerprint</span> : null}
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 text-right">
@@ -2420,7 +2440,7 @@ export default function Home() {
                                       <button
                                         type="button"
                                         onClick={() => {
-                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true, shiftIds: [], branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 }, attendanceBonusRate: 0, punctualBonusRate: 0, incomeBonusPercentage: 0 });
+                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true,  branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 }, attendanceBonusRate: 0, punctualBonusRate: 0, incomeBonusPercentage: 0 });
                                         }}
                                         className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20"
                                       >
@@ -2438,50 +2458,45 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* SHIFTS */}
-                {settingsTab==="shifts" && (
-                  <div className="space-y-4 max-w-2xl">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Shift Templates</h3>
-                      <button
-                        onClick={() => {
-                          setEditingShiftId(null);
-                          setNewShift({ name: "", startTime: "08:00", endTime: "17:00", workDays: [1, 2, 3, 4, 5], otThresholdHours: 9, otMultiplier: 1.5 });
-                          setShowAddShiftModal(true);
-                        }}
-                        className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
-                      >
-                        + New Shift
-                      </button>
+                {/* OPERATING HOURS */}
+                {settingsTab==="operating-hours" && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Clinic Operating Hours</h3>
+                      <button onClick={() => updateOperatingHours(operatingHours)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>Save Hours</button>
                     </div>
-                    <div className="space-y-2">
-                      {shifts.map(s=>{
-                        const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-                        const empCount = activeEmployees.filter(e=>e.shiftIds?.includes(s.id)).length;
-                        return (
-                          <div key={s.id} className={`flex items-center justify-between p-4 rounded-lg border ${isDark?"bg-zinc-950/30 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                            <div>
-                              <p className="font-bold text-xs">{s.name}</p>
-                              <p className="text-[10px] text-zinc-500">{s.startTime} – {s.endTime} · OT after {s.otThresholdHours}h · {s.otMultiplier}× rate</p>
-                              <p className="text-[10px] text-zinc-500">{s.workDays.map(d=>dayNames[d]).join(", ")}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] text-zinc-500">{empCount} staff</span>
-                              <button
-                                onClick={() => {
-                                  setEditingShiftId(s.id);
-                                  setNewShift({ name: s.name, startTime: s.startTime, endTime: s.endTime, workDays: s.workDays, otThresholdHours: s.otThresholdHours, otMultiplier: s.otMultiplier });
-                                  setShowAddShiftModal(true);
-                                }}
-                                className="text-indigo-400 hover:underline text-[10px] font-bold"
-                              >
-                                Edit
-                              </button>
-                              <button onClick={()=>deleteShift(s.id)} className="text-rose-500 hover:underline text-[10px] font-bold">Delete</button>
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {operatingHours.map(h => (
+                        <div key={h.id} className={`p-4 rounded-xl border ${isDark ? "bg-white/5 border-white/10" : "bg-white border-black/5 shadow-sm"}`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-bold text-sm">{["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][h.dayOfWeek]}</span>
+                            <label className="flex items-center cursor-pointer">
+                              <div className="relative">
+                                <input type="checkbox" className="sr-only" checked={h.isOpen} onChange={() => {
+                                  const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, isOpen: !o.isOpen } : o);
+                                  updateOperatingHours(updated);
+                                }} />
+                                <div className={`block w-10 h-6 rounded-full transition-colors ${h.isOpen ? "bg-[#0ea5e9]" : (isDark ? "bg-zinc-700" : "bg-zinc-300")}`}></div>
+                                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${h.isOpen ? "transform translate-x-4" : ""}`}></div>
+                              </div>
+                            </label>
                           </div>
-                        );
-                      })}
+                          {h.isOpen ? (
+                            <div className="flex gap-2">
+                              <input type="time" value={h.startTime} onChange={e => {
+                                const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, startTime: e.target.value } : o);
+                                updateOperatingHours(updated);
+                              }} className={`w-full border rounded-md px-3 py-2 text-xs focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 ${isDark ? "bg-zinc-950 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-800"}`} />
+                              <input type="time" value={h.endTime} onChange={e => {
+                                const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, endTime: e.target.value } : o);
+                                updateOperatingHours(updated);
+                              }} className={`w-full border rounded-md px-3 py-2 text-xs focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 ${isDark ? "bg-zinc-950 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-800"}`} />
+                            </div>
+                          ) : (
+                            <div className="text-xs text-zinc-500 italic py-2 text-center">Closed</div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -2583,13 +2598,64 @@ export default function Home() {
                 <div><label className={labelCls}>Punctual Bonus (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.punctualBonusRate} onChange={e=>setNewEmp(p=>({...p,punctualBonusRate:parseFloat(e.target.value)||0}))}/></div>
                 <div><label className={labelCls}>Income Bonus (%)</label><input type="number" className={inputCls(isDark)} value={newEmp.incomeBonusPercentage} onChange={e=>setNewEmp(p=>({...p,incomeBonusPercentage:parseFloat(e.target.value)||0}))}/></div>
               </div>
-              <div><label className={labelCls}>Assign Shifts</label><div className="flex flex-wrap gap-2 mt-1">{shifts.map(s=>{const has=newEmp.shiftIds?.includes(s.id);return(<label key={s.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,shiftIds:has?p.shiftIds.filter((id: string)=>id!==s.id):[...(p.shiftIds||[]),s.id]}))}/>{s.name}</label>);})}</div></div>
 
               <div><label className={labelCls}>Assign Allowances</label><div className="flex flex-wrap gap-2 mt-1">{allowances.map(al=>{const has=newEmp.allowanceIds.includes(al.id);return(<label key={al.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,allowanceIds:has?p.allowanceIds.filter(id=>id!==al.id):[...p.allowanceIds,al.id]}))}/>{al.name}</label>);})}</div></div>
-              <div className="flex gap-5">
-                <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newEmp.epfEligible} onChange={e=>setNewEmp(p=>({...p,epfEligible:e.target.checked}))} className="rounded"/>EPF / ETF Eligible</label>
-                <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newEmp.taxable} onChange={e=>setNewEmp(p=>({...p,taxable:e.target.checked}))} className="rounded"/>APIT Taxable</label>
+              <div className="flex justify-between gap-5 border-t border-zinc-200 dark:border-zinc-800 pt-3">
+                <div className="flex gap-5">
+                  <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newEmp.epfEligible} onChange={e=>setNewEmp(p=>({...p,epfEligible:e.target.checked}))} className="rounded"/>EPF / ETF Eligible</label>
+                  <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newEmp.taxable} onChange={e=>setNewEmp(p=>({...p,taxable:e.target.checked}))} className="rounded"/>APIT Taxable</label>
+                </div>
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input type="checkbox" checked={newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0} onChange={e => {
+                    if (e.target.checked) {
+                      setNewEmp(p => ({ ...p, customOperatingHours: operatingHours.map(h => ({ ...h, id: `NEW-${Math.random()}` })) }));
+                    } else {
+                      setNewEmp(p => ({ ...p, customOperatingHours: [] }));
+                    }
+                  }} className="rounded"/>
+                  <span className="font-bold text-amber-500">Use Custom Operating Hours</span>
+                </label>
               </div>
+
+              {newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0 && (
+                <div className={`p-4 rounded-xl border ${isDark ? "border-amber-500/30 bg-amber-500/5" : "border-amber-200 bg-amber-50"}`}>
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-3">Custom Weekly Schedule</h4>
+                  <div className="space-y-2">
+                    {newEmp.customOperatingHours.map((hour, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <label className="flex items-center gap-2 w-28">
+                          <input type="checkbox" className="rounded" checked={hour.isOpen} onChange={e => {
+                            const updated = [...newEmp.customOperatingHours!];
+                            updated[idx].isOpen = e.target.checked;
+                            setNewEmp(p => ({ ...p, customOperatingHours: updated }));
+                          }}/>
+                          <span className={`font-bold ${hour.isOpen ? (isDark ? "text-zinc-200" : "text-zinc-800") : "text-zinc-500 line-through"}`}>
+                            {["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][hour.dayOfWeek]}
+                          </span>
+                        </label>
+                        {hour.isOpen ? (
+                          <div className="flex items-center gap-2">
+                            <input type="time" className={inputCls(isDark)} value={hour.startTime} onChange={e => {
+                              const updated = [...newEmp.customOperatingHours!];
+                              updated[idx].startTime = e.target.value;
+                              setNewEmp(p => ({ ...p, customOperatingHours: updated }));
+                            }}/>
+                            <span className="text-zinc-500">to</span>
+                            <input type="time" className={inputCls(isDark)} value={hour.endTime} onChange={e => {
+                              const updated = [...newEmp.customOperatingHours!];
+                              updated[idx].endTime = e.target.value;
+                              setNewEmp(p => ({ ...p, customOperatingHours: updated }));
+                            }}/>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] uppercase font-bold text-amber-500 w-[220px] text-right">Closed</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                 <button type="button" onClick={()=>setShowAddEmpModal(false)} className={`px-4 py-2 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400":"border-zinc-200 text-zinc-600"}`}>Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow">{editingEmpId?"Save Changes":"Register Profile"}</button>
@@ -2627,55 +2693,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ═══════════════ MODAL: ADD/EDIT SHIFT ═══════════════ */}
-      {showAddShiftModal && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-          <div className={`w-full max-w-md rounded-xl shadow-2xl border ${isDark?"bg-zinc-900 border-zinc-800":"bg-white border-zinc-200"}`}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{editingShiftId ? "Edit Shift Template" : "New Shift Template"}</h3>
-              <button onClick={()=>setShowAddShiftModal(false)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
-            </div>
-            <div className="p-6 space-y-4 text-xs">
-              <div><label className={labelCls}>Shift Name</label><input className={inputCls(isDark)} value={newShift.name} onChange={e=>setNewShift(p=>({...p,name:e.target.value}))}/></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Start Time</label><input type="time" className={inputCls(isDark)} value={newShift.startTime} onChange={e=>setNewShift(p=>({...p,startTime:e.target.value}))}/></div>
-                <div><label className={labelCls}>End Time</label><input type="time" className={inputCls(isDark)} value={newShift.endTime} onChange={e=>setNewShift(p=>({...p,endTime:e.target.value}))}/></div>
-              </div>
-              <div><label className={labelCls}>Work Days</label>
-                <div className="flex gap-1.5 mt-1">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i) => {
-                  const isActive = newShift.workDays.includes(i);
-                  const toggleDay = () => setNewShift(p => {
-                    const next = isActive ? p.workDays.filter(x => x !== i) : [...p.workDays, i];
-                    return { ...p, workDays: next.slice().sort((a,b) => a - b) };
-                  });
-                  return (
-                    <button key={d} type="button" onClick={toggleDay} className={`px-2 py-1 rounded text-[10px] font-bold border transition ${isActive ? (isDark ? "bg-zinc-700 border-zinc-600 text-white" : "bg-zinc-800 border-zinc-800 text-white") : (isDark ? "border-zinc-700 text-zinc-500" : "border-zinc-200 text-zinc-500")}`}>{d}</button>
-                  );
-                })}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>OT Threshold (hrs)</label><input type="number" step="0.5" className={inputCls(isDark)} value={newShift.otThresholdHours} onChange={e=>setNewShift(p=>({...p,otThresholdHours:parseFloat(e.target.value)||9}))}/></div>
-                <div><label className={labelCls}>OT Multiplier</label><select className={inputCls(isDark)} value={newShift.otMultiplier} onChange={e=>setNewShift(p=>({...p,otMultiplier:parseFloat(e.target.value)}))}><option value="1.5">1.5× (Normal)</option><option value="2">2× (Holiday)</option></select></div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <button onClick={()=>setShowAddShiftModal(false)} className={`px-4 py-2 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400":"border-zinc-200 text-zinc-600"}`}>Cancel</button>
-                <button onClick={()=>{
-                  if (newShift.name.trim()) {
-                    if (editingShiftId) {
-                      updateShift(editingShiftId, newShift);
-                    } else {
-                      addShift(newShift);
-                    }
-                    setShowAddShiftModal(false);
-                  }
-                }} className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow">
-                  {editingShiftId ? "Save Changes" : "Create Shift"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
 
 
@@ -2719,9 +2737,9 @@ export default function Home() {
             <div className="bg-white text-zinc-900 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl print:shadow-none print:rounded-none">
               <div className="p-6">
                 <div className="text-center mb-4 pb-4 border-b-2 border-dashed border-zinc-300">
-                  <p className="font-extrabold text-base tracking-wider uppercase text-zinc-900">{companyProfile.clinicName}</p>
+                  <p className="font-extrabold text-base tracking-wider uppercase text-zinc-900">{companyProfile.name}</p>
                   <p className="text-[10px] text-zinc-500 mt-0.5">{companyProfile.address}</p>
-                  <p className="text-[10px] font-mono text-zinc-500 mt-1">EPF Reg: {companyProfile.epfRegNo} · Salary Period: {dateRange.startDate} → {dateRange.endDate}</p>
+                  <p className="text-[10px] font-mono text-zinc-500 mt-1">EPF Reg: {""} · Salary Period: {dateRange.startDate} → {dateRange.endDate}</p>
                 </div>
                 <div className="text-center mb-4">
                   <p className="font-extrabold text-base">{emp.firstName} {emp.lastName}</p>
@@ -2813,7 +2831,7 @@ export default function Home() {
 
                 <div className="flex justify-between border-t-2 border-dashed border-zinc-300 pt-3 mb-5 mt-4">
                   <span className="font-extrabold text-sm">NET SALARY</span>
-                  <span className="font-extrabold text-xl text-indigo-700">LKR {Math.round(calc.netSalary).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                  <span className="font-extrabold text-xl text-[#0c6c8f]">LKR {Math.round(calc.netSalary).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                 </div>
                 
                 <div className="flex justify-between text-[10px] text-zinc-400 border-t border-dashed border-zinc-200 pt-4 mt-8">
@@ -2842,7 +2860,7 @@ export default function Home() {
             <div className={`w-full max-w-md rounded-xl shadow-2xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
               <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">Manual Payslip Adjustment</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#38bdf8]">Manual Payslip Adjustment</h3>
                   <p className="text-[11px] text-zinc-500">{emp.firstName} {emp.lastName} · {selectedMonth}</p>
                 </div>
                 <button onClick={() => setAdjustingPayslipEmpId(null)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white">
@@ -2906,7 +2924,7 @@ export default function Home() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition"
+                    className="flex-1 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition"
                   >
                     Save Adjustment
                   </button>
@@ -2923,7 +2941,7 @@ export default function Home() {
           <div className={`w-full max-w-sm rounded-xl shadow-2xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <Icons.LockClosed className="w-4 h-4 text-indigo-400" />
+                <Icons.LockClosed className="w-4 h-4 text-[#38bdf8]" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Admin Authentication Required</h3>
               </div>
               <button onClick={() => setShowAdminPinModal(false)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white">
@@ -2978,7 +2996,7 @@ export default function Home() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded shadow transition"
+                  className="flex-1 py-2 bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:from-[#0ea5e9] hover:to-[#0F85B0] text-white text-xs font-bold rounded shadow transition"
                 >
                   Unlock Access
                 </button>
@@ -3017,7 +3035,7 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Action Type</span>
-                    <span className="font-bold text-sm text-indigo-500 block mt-0.5">{log.action}</span>
+                    <span className="font-bold text-sm text-[#0ea5e9] block mt-0.5">{log.action}</span>
                   </div>
                   <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Target Module</span>
@@ -3028,7 +3046,7 @@ export default function Home() {
                 <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"} space-y-2`}>
                   <div className="flex justify-between">
                     <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Entity ID</span>
-                    <span className="font-mono text-indigo-400 font-bold">{log.entityId}</span>
+                    <span className="font-mono text-[#38bdf8] font-bold">{log.entityId}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Triggered By / Actor</span>
@@ -3057,7 +3075,7 @@ export default function Home() {
 
               {/* Modal Footer */}
               <div className="flex justify-end px-6 py-4 border-t border-zinc-200 dark:border-zinc-800">
-                <button onClick={() => setSelectedAuditLogId(null)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>
+                <button onClick={() => setSelectedAuditLogId(null)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>
                   Close Inspection
                 </button>
               </div>
@@ -3097,7 +3115,7 @@ export default function Home() {
                   </div>
                   <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Net Remittance</span>
-                    <span className="text-lg font-extrabold text-indigo-500 block mt-0.5">LKR {period.netRemittances.toLocaleString()}</span>
+                    <span className="text-lg font-extrabold text-[#0ea5e9] block mt-0.5">LKR {period.netRemittances.toLocaleString()}</span>
                   </div>
                   <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">EPF (8%+12%)</span>
@@ -3138,7 +3156,7 @@ export default function Home() {
                                 <td className="py-2.5 px-3 text-right font-mono">LKR {base.toLocaleString()}</td>
                                 <td className="py-2.5 px-3 text-right font-mono text-emerald-500">+LKR {allw.toLocaleString()}</td>
                                 <td className="py-2.5 px-3 text-right font-mono text-zinc-400">{epf ? `-LKR ${epf.toLocaleString()}` : "Exempt"}</td>
-                                <td className="py-2.5 px-3 text-right font-mono font-bold text-indigo-500">LKR {net.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-[#0ea5e9]">LKR {net.toLocaleString()}</td>
                               </tr>
                             );
                           })}
@@ -3161,7 +3179,7 @@ export default function Home() {
                     <span>EPF Form C3</span>
                   </button>
                 </div>
-                <button onClick={() => setSelectedHistoryPeriodId(null)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>
+                <button onClick={() => setSelectedHistoryPeriodId(null)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>
                   Close Summary
                 </button>
               </div>

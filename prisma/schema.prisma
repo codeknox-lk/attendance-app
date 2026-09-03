@@ -7,22 +7,37 @@ datasource db {
 }
 
 model Clinic {
-  id        String   @id @default(cuid())
-  name      String   @default("MedicFlow Primary")
-  address   String?
-  phone     String?
-  email     String?
+  id                    String   @id @default(cuid())
+  clinicCode            String   @unique @default("MEDICFLOW")
+  name                  String   @default("MedicFlow Primary")
+  address               String?
+  phone                 String?
+  email                 String?
+  
+  // Settings
+  epfRegNo              String?
+  etfRegNo              String?
+  epfEmployeeRate       Float    @default(8)
+  epfEmployerRate       Float    @default(12)
+  etfRate               Float    @default(3)
+  workingDaysPerMonth   Int      @default(20)
+  globalWorkedDayBonus  Float    @default(0)
+  globalPunctualBonus   Float    @default(0)
+  globalIncomeBonusPct  Float    @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   adminUsers     AdminUser[]
   employees      Employee[]
-  shifts         Shift[]
+  operatingHours ClinicOperatingHours[]
   allowances     Allowance[]
   devices        BiometricDevice[]
   auditLogs      AuditLog[]
   attendanceLogs AttendanceLog[]
   leaveRequests  LeaveRequest[]
+  payrollPeriods PayrollPeriod[]
+  publicHolidays PublicHoliday[]
 }
 
 model AdminUser {
@@ -35,6 +50,8 @@ model AdminUser {
   role      String   @default("Admin")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([clinicId, username])
 }
 
 model Employee {
@@ -51,7 +68,7 @@ model Employee {
   hourlyRate            Float    @default(300)
   sessionRate           Float    @default(0)
   commissionRate        Float    @default(0)
-  biometricId           String   @unique
+  biometricId           String
   epfEligible           Boolean  @default(true)
   taxable               Boolean  @default(false)
   active                Boolean  @default(true)
@@ -61,11 +78,25 @@ model Employee {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  shiftIds String[] @default([])
 
   attendanceLogs AttendanceLog[]
   leaveRequests  LeaveRequest[]
   allowances     EmployeeAllowance[]
+  customOperatingHours EmployeeOperatingHours[]
+
+  @@unique([clinicId, biometricId])
+}
+
+model EmployeeOperatingHours {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int      // 0 = Sunday, 1 = Monday, etc.
+  isOpen     Boolean  @default(true)
+  startTime  String   @default("08:30")
+  endTime    String   @default("17:00")
+
+  @@unique([employeeId, dayOfWeek])
 }
 
 model AttendanceLog {
@@ -101,17 +132,16 @@ model LeaveRequest {
   updatedAt  DateTime @updatedAt
 }
 
-model Shift {
-  id            String  @id @default(cuid())
-  clinicId      String  @default("default-clinic-id")
-  clinic        Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  name          String
-  startTime     String // Format: HH:mm
-  endTime       String // Format: HH:mm
-  gracePeriod   Int     @default(15) // Minutes
-  overtimeStart String // Format: HH:mm
-  color         String  @default("indigo")
-  workDays      Int[]   @default([1, 2, 3, 4, 5])
+model ClinicOperatingHours {
+  id        String  @id @default(cuid())
+  clinicId  String
+  clinic    Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  dayOfWeek Int     // 0 = Sunday, 1 = Monday, etc.
+  isOpen    Boolean @default(true)
+  startTime String  @default("08:30") // Format: HH:mm
+  endTime   String  @default("17:00") // Format: HH:mm
+
+  @@unique([clinicId, dayOfWeek])
 }
 
 model Allowance {
@@ -163,3 +193,33 @@ model AuditLog {
   details   String?
   timestamp DateTime @default(now())
 }
+
+model PayrollPeriod {
+  id              String   @id @default(cuid())
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  month           String   // Format: YYYY-MM
+  label           String
+  status          String   @default("Finalized") // Draft, Finalized
+  finalizedAt     DateTime @default(now())
+  grossSalaryPool Float    @default(0)
+  netRemittances  Float    @default(0)
+  totalEpf        Float    @default(0)
+  totalEtf        Float    @default(0)
+  totalApit       Float    @default(0)
+  employeeCount   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PublicHoliday {
+  id          String   @id @default(cuid())
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  date        String   // Format: YYYY-MM-DD
+  name        String
+  isDoubleOT  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

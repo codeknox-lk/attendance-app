@@ -35,9 +35,9 @@ export interface Employee {
   epfEligible: boolean;
   taxable: boolean;
   active: boolean;
-  shiftIds: string[];
   branchId: string | null;
   allowanceIds: string[];
+  customOperatingHours?: ClinicOperatingHours[];
   leaveBalances: { annual: number; sick: number; casual: number };
   attendanceBonusRate: number;
   punctualBonusRate: number;
@@ -81,14 +81,13 @@ export interface EmployeeAllowance {
   overrideAmount: number | null;
 }
 
-export interface Shift {
+export interface ClinicOperatingHours {
   id: string;
-  name: string;
+  clinicId: string;
+  dayOfWeek: number;
+  isOpen: boolean;
   startTime: string;
   endTime: string;
-  workDays: number[];
-  otThresholdHours: number;
-  otMultiplier: number;
 }
 
 export interface LeaveRequest {
@@ -169,10 +168,11 @@ export interface BiometricSettings {
 }
 
 export interface EpfSettings {
+  epfRegNo?: string;
+  etfRegNo?: string;
   employeeRate: number;
   employerRate: number;
   etfRate: number;
-  workingDaysPerMonth: number;
 }
 
 export interface PayslipAdjustment {
@@ -182,16 +182,17 @@ export interface PayslipAdjustment {
 }
 
 export interface SalarySettings {
+  workingDaysPerMonth: number;
   globalWorkedDayBonus: number;
   globalPunctualBonus: number;
   globalIncomeBonusPct: number;
 }
 
 export interface CompanyProfile {
-  clinicName: string;
+  name: string;
   address: string;
-  epfRegNo: string;
-  etfRegNo: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface UserAccount {
@@ -202,19 +203,22 @@ export interface UserAccount {
   biometricId?: string;
   employeeId?: string;
   clinicId?: string;
+  clinicName?: string;
+  clinicCode?: string;
+  loginType?: "admin" | "staff";
 }
 
 // ─── Context Interface ────────────────────────────────────────────────────────
 
 export interface AppContextProps {
   currentUser: UserAccount | null;
-  loginUser: (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string }) => Promise<{ success: boolean; error?: string }>;
+  loginUser: (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string; clinicCode?: string }) => Promise<{ success: boolean; error?: string }>;
   logoutUser: () => void;
   employees: Employee[];
   attendanceLogs: AttendanceLog[];
   allowances: Allowance[];
   employeeAllowances: EmployeeAllowance[];
-  shifts: Shift[];
+  operatingHours: ClinicOperatingHours[];
   leaveRequests: LeaveRequest[];
   payrollHistory: PayrollPeriod[];
   branches: Branch[];
@@ -238,9 +242,9 @@ export interface AppContextProps {
   deleteAllowance: (id: string) => void;
   assignAllowanceToEmployee: (employeeId: string, allowanceId: string, overrideAmount?: number) => void;
   removeAllowanceFromEmployee: (employeeId: string, allowanceId: string) => void;
-  addShift: (shift: Omit<Shift, "id">) => void;
-  updateShift: (id: string, shift: Partial<Shift>) => void;
-  deleteShift: (id: string) => void;
+  
+  updateOperatingHours: (hours: ClinicOperatingHours[]) => void;
+  
   addLeaveRequest: (req: Omit<LeaveRequest, "id" | "appliedAt">) => void;
   updateLeaveRequest: (id: string, req: Partial<LeaveRequest>) => void;
   approveLeave: (id: string) => void;
@@ -279,10 +283,7 @@ const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const initialShifts: Shift[] = [
-  { id: "SHF-001", name: "Standard Clinic Hours", startTime: "08:00", endTime: "17:00", workDays: [1,2,3,4,5], otThresholdHours: 9, otMultiplier: 1.5 },
-  { id: "SHF-002", name: "Extended Evening Shift", startTime: "12:00", endTime: "21:00", workDays: [1,2,3,4,5,6], otThresholdHours: 9, otMultiplier: 1.5 },
-];
+
 
 const initialBranches: Branch[] = [];
 const initialEmployees: Employee[] = [];
@@ -352,15 +353,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const [allowances, setAllowances] = useState<Allowance[]>(initialAllowances);
   const [employeeAllowances, setEmployeeAllowances] = useState<EmployeeAllowance[]>(initialEmployeeAllowances);
-  const [shifts, setShifts] = useState<Shift[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("medicflow_shifts");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return initialShifts;
-  });
+  const [operatingHours, setOperatingHours] = useState<ClinicOperatingHours[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [payrollHistory, setPayrollHistory] = useState<PayrollPeriod[]>(initialPayrollHistory);
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
@@ -392,19 +385,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return {};
   });
-  const [salarySettings, setSalarySettings] = useState<SalarySettings>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("medicflow_salary_settings");
-        if (stored) return JSON.parse(stored);
-      } catch {}
-    }
-    return {
-      globalWorkedDayBonus: 0,
-      globalPunctualBonus: 0,
-      globalIncomeBonusPct: 0,
-    };
-  });
+
   const [payrollCycleStartDay, setPayrollCycleStartDay] = useState<number>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -431,18 +412,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cloudWebhookUrl: "/api/biometric/hikvision",
     };
   });
-  const [epfSettings, setEpfSettings] = useState<EpfSettings>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("medicflow_epf_settings");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return { employeeRate: 8, employerRate: 12, etfRate: 3, workingDaysPerMonth: 26 };
-  });
+
   const nowStr = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")} ${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}:${String(n.getSeconds()).padStart(2,"0")}`; };
   const pushAudit = (entry: Omit<AuditLog, "id"|"timestamp">) => setAuditLogs(prev => [{ ...entry, id: `AUD-${Date.now()}`, timestamp: nowStr() }, ...prev]);
 
+  const [epfSettings, setEpfSettings] = useState<EpfSettings>({ employeeRate: 8, employerRate: 12, etfRate: 3 });
+  const [salarySettings, setSalarySettings] = useState<SalarySettings>({ workingDaysPerMonth: 20, globalWorkedDayBonus: 0, globalPunctualBonus: 0, globalIncomeBonusPct: 0 });
   const [adminPin, setAdminPin] = useState<string>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -460,7 +435,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
     }
     return {
-      clinicName: "MedicFlow Healthcare Ltd",
+      clinicName: "MedSync Healthcare Ltd",
       address: "No. 42, Duplication Road, Colombo 07",
       epfRegNo: "EPF/A/98765",
       etfRegNo: "ETF/B/43210",
@@ -468,17 +443,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [manualAdjustments, setManualAdjustments] = useState<Record<string, PayslipAdjustment>>({});
 
-  const updateCompanyProfile = (profile: Partial<CompanyProfile>) => {
-    setCompanyProfile(prev => {
-      const updated = { ...prev, ...profile };
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("medicflow_company_profile", JSON.stringify(updated));
-        } catch {}
-      }
-      return updated;
-    });
+  const updateCompanyProfile = async (profile: Partial<CompanyProfile>) => {
+    const updated = { ...companyProfile, ...profile };
+    setCompanyProfile(updated);
     pushAudit({ action: "UPDATE", entity: "CompanyProfile", entityId: "COMPANY", details: "Updated clinic profile" });
+    try {
+      await apiFetch("/api/clinics", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profile),
+      });
+    } catch {}
   };
 
   const updatePayslipAdjustment = (key: string, adj: PayslipAdjustment) => {
@@ -519,7 +494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const loginUser = async (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string }) => {
+  const loginUser = async (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string; clinicCode?: string }) => {
     try {
       const res = await apiFetch("/api/auth/login", {
         method: "POST",
@@ -530,7 +505,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (data.success && data.user) {
         setCurrentUser(data.user);
-        setIsAdminAuthenticated(true);
+        const isTrueAdmin = data.user.role === "Admin" && data.user.loginType !== "staff";
+        setIsAdminAuthenticated(isTrueAdmin);
         try {
           localStorage.setItem("medicflow_user_session", JSON.stringify(data.user));
         } catch {}
@@ -583,7 +559,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             epfEligible: Boolean(e.epfEligible),
             taxable: Boolean(e.taxable),
             active: Boolean(e.active),
-            shiftIds: Array.isArray(e.shiftIds) ? (e.shiftIds as string[]) : [],
             branchId: (e.branchId as string) || null,
             allowanceIds: [],
             leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
@@ -634,20 +609,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
 
-        const shfRes = await apiFetch("/api/shifts");
-        const shfData = await shfRes.json();
-        if (shfData.success && shfData.shifts) {
-          const dbShifts: Shift[] = shfData.shifts.map((s: Record<string, unknown>) => ({
-            id: String(s.id),
-            name: String(s.name),
-            startTime: String(s.startTime),
-            endTime: String(s.endTime),
-            workDays: Array.isArray(s.workDays) ? s.workDays : [1, 2, 3, 4, 5],
-            otThresholdHours: Number(s.otThresholdHours) || 9,
-            otMultiplier: Number(s.otMultiplier) || 1.5,
-          }));
-          setShifts(dbShifts);
+        const hoursRes = await apiFetch("/api/operating-hours");
+        const hoursData = await hoursRes.json();
+        if (hoursData.success && hoursData.operatingHours) {
+          setOperatingHours(hoursData.operatingHours);
         }
+
+        const holRes = await apiFetch("/api/holidays");
+        const holData = await holRes.json();
+        if (holData.success && holData.holidays) {
+          setPublicHolidays(holData.holidays.map((h: Record<string, unknown>) => ({
+            id: String(h.id),
+            date: String(h.date),
+            name: String(h.name),
+            isDoubleOT: Boolean(h.isDoubleOT),
+          })));
+        }
+
+        const payRes = await apiFetch("/api/payroll");
+        const payData = await payRes.json();
+        if (payData.success && payData.payrolls) {
+          setPayrollHistory(payData.payrolls.map((p: Record<string, unknown>) => ({
+            id: String(p.id),
+            month: String(p.month),
+            label: String(p.label),
+            status: String(p.status),
+            finalizedAt: String(p.finalizedAt),
+            grossSalaryPool: Number(p.grossSalaryPool),
+            netRemittances: Number(p.netRemittances),
+            totalEpf: Number(p.totalEpf),
+            totalEtf: Number(p.totalEtf),
+            totalApit: Number(p.totalApit),
+            employeeCount: Number(p.employeeCount),
+          })));
+        }
+
+        const clnRes = await apiFetch("/api/clinics");
+        const clnData = await clnRes.json();
+        if (clnData.success && clnData.clinic) {
+          setCompanyProfile(prev => ({
+            ...prev,
+            name: clnData.clinic.name || prev.name,
+            address: clnData.clinic.address || prev.address,
+            phone: clnData.clinic.phone || prev.phone,
+            email: clnData.clinic.email || prev.email,
+          }));
+          setEpfSettings(prev => ({
+            ...prev,
+            epfRegNo: clnData.clinic.epfRegNo || prev.epfRegNo,
+            etfRegNo: clnData.clinic.etfRegNo || prev.etfRegNo,
+            employeeRate: clnData.clinic.epfEmployeeRate ?? prev.employeeRate,
+            employerRate: clnData.clinic.epfEmployerRate ?? prev.employerRate,
+            etfRate: clnData.clinic.etfRate ?? prev.etfRate,
+          }));
+          setSalarySettings(prev => ({
+            ...prev,
+            workingDaysPerMonth: clnData.clinic.workingDaysPerMonth ?? prev.workingDaysPerMonth,
+            globalWorkedDayBonus: clnData.clinic.globalWorkedDayBonus ?? prev.globalWorkedDayBonus,
+            globalPunctualBonus: clnData.clinic.globalPunctualBonus ?? prev.globalPunctualBonus,
+            globalIncomeBonusPct: clnData.clinic.globalIncomeBonusPct ?? prev.globalIncomeBonusPct,
+          }));
+        }
+
 
         const allRes = await apiFetch("/api/allowances");
         const allData = await allRes.json();
@@ -697,7 +720,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             epfEligible: Boolean(e.epfEligible),
             taxable: Boolean(e.taxable),
             active: Boolean(e.active),
-            shiftIds: Array.isArray(e.shiftIds) ? (e.shiftIds as string[]) : [],
             branchId: (e.branchId as string) || null,
             allowanceIds: [],
             leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
@@ -832,49 +854,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmployees(p => p.map(e => e.id===employeeId ? { ...e, allowanceIds: e.allowanceIds.filter(id => id!==allowanceId) } : e));
   };
 
-  const addShift = async (s: Omit<Shift,"id">) => {
-    const ns: Shift = { ...s, id: `SHF-${String(Date.now()).slice(-4)}` };
-    setShifts(p => {
-      const list = [...p, ns];
-      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_shifts", JSON.stringify(list)); } catch {} }
-      return list;
-    });
-    pushAudit({ action: "CREATE", entity: "Shift", entityId: ns.id, details: `Added shift: ${ns.name}` });
+  const updateOperatingHours = async (hours: ClinicOperatingHours[]) => {
+    setOperatingHours(hours);
     try {
-      await apiFetch("/api/shifts", {
+      await apiFetch("/api/operating-hours", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ns),
+        body: JSON.stringify({ operatingHours: hours }),
       });
-    } catch {}
-  };
-
-  const updateShift = async (id: string, f: Partial<Shift>) => {
-    setShifts(p => {
-      const list = p.map(s => s.id === id ? { ...s, ...f } : s);
-      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_shifts", JSON.stringify(list)); } catch {} }
-      return list;
-    });
-    try {
-      await apiFetch("/api/shifts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...f }),
-      });
-    } catch {}
-  };
-
-  const deleteShift = async (id: string) => {
-    setShifts(p => {
-      const list = p.filter(s => s.id !== id);
-      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_shifts", JSON.stringify(list)); } catch {} }
-      return list;
-    });
-    setEmployees(p => p.map(e => e.shiftIds.includes(id) ? { ...e, shiftIds: e.shiftIds.filter(s => s !== id) } : e));
-    try {
-      await apiFetch(`/api/shifts?id=${id}`, {
-        method: "DELETE",
-      });
+      pushAudit({ action: "UPDATE", entity: "ClinicOperatingHours", entityId: "all", details: "Updated clinic operating hours" });
     } catch {}
   };
 
@@ -917,30 +905,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   };
 
-  const finalizePayroll = (period: Omit<PayrollPeriod,"id"|"finalizedAt"|"status">) => {
+  const finalizePayroll = async (period: Omit<PayrollPeriod,"id"|"finalizedAt"|"status">) => {
     if (payrollHistory.find(p => p.month===period.month)) return;
     const np: PayrollPeriod = { ...period, id: `PAY-${Date.now()}`, status: "Finalized", finalizedAt: nowStr() };
     setPayrollHistory(p => [np,...p]);
     pushAudit({ action: "FINALIZE", entity: "PayrollPeriod", entityId: np.id, details: `Finalized ${period.label}` });
+    try {
+      await apiFetch("/api/payroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(period),
+      });
+    } catch {}
   };
 
   const addBranch = (b: Omit<Branch,"id">) => { const nb: Branch = { ...b, id: `BRN-${String(Date.now()).slice(-4)}` }; setBranches(p => [...p,nb]); pushAudit({ action: "CREATE", entity: "Branch", entityId: nb.id, details: `Added: ${nb.name}` }); };
   const updateBranch = (id: string, f: Partial<Branch>) => setBranches(p => p.map(b => b.id===id ? {...b,...f} : b));
   const deleteBranch = (id: string) => setBranches(p => p.filter(b => b.id!==id));
 
-  const addHoliday = (h: Omit<PublicHoliday,"id">) => {
-    setPublicHolidays(p => {
-      const list = [...p, { ...h, id: `HOL-${Date.now()}` }].sort((a,b)=>a.date.localeCompare(b.date));
-      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_public_holidays", JSON.stringify(list)); } catch {} }
-      return list;
-    });
+  const addHoliday = async (h: Omit<PublicHoliday,"id">) => {
+    const tempId = `HOL-${Date.now()}`;
+    const nh = { ...h, id: tempId };
+    setPublicHolidays(p => [...p, nh].sort((a,b)=>a.date.localeCompare(b.date)));
+    try {
+      const res = await apiFetch("/api/holidays", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(h),
+      });
+      const data = await res.json();
+      if (data.success && data.holiday) {
+        setPublicHolidays(p => p.map(x => x.id === tempId ? { ...x, id: data.holiday.id } : x));
+      }
+    } catch {}
   };
-  const deleteHoliday = (id: string) => {
-    setPublicHolidays(p => {
-      const list = p.filter(h => h.id !== id);
-      if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_public_holidays", JSON.stringify(list)); } catch {} }
-      return list;
-    });
+  const deleteHoliday = async (id: string) => {
+    setPublicHolidays(p => p.filter(h => h.id !== id));
+    try {
+      await apiFetch(`/api/holidays?id=${id}`, {
+        method: "DELETE",
+      });
+    } catch {}
   };
   const toggleHolidayDoubleOT = (id: string) => {
     setPublicHolidays(p => {
@@ -1120,7 +1125,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           biometricId: String(p.employeeNo),
           epfEligible: true,
           taxable: false,
-          shiftIds: [],
           branchId: null,
           allowanceIds: [],
           leaveBalances: { annual: 14, sick: 7, casual: 3 },
@@ -1157,14 +1161,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       currentUser, loginUser, logoutUser,
-      employees, attendanceLogs, allowances, employeeAllowances, shifts, leaveRequests,
+      employees, attendanceLogs, allowances, employeeAllowances, operatingHours, leaveRequests,
       payrollHistory, branches, auditLogs, publicHolidays, apitSlabs, biometricSettings,
       epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments, monthlyExcessIncome,
       addEmployee, updateEmployee, deleteEmployee,
       addAttendanceLog, updateAttendanceLog, deleteAttendanceLog,
       addAllowance, updateAllowance, deleteAllowance,
       assignAllowanceToEmployee, removeAllowanceFromEmployee,
-      addShift, updateShift, deleteShift,
+      updateOperatingHours,
       addLeaveRequest, updateLeaveRequest, approveLeave, rejectLeave,
       finalizePayroll, addBranch, updateBranch, deleteBranch,
       addHoliday, deleteHoliday, toggleHolidayDoubleOT,

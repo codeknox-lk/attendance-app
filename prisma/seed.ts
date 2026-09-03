@@ -3,7 +3,7 @@ import { db } from "../src/lib/db";
 async function main() {
   // Create Default Admin User
   await db.adminUser.upsert({
-    where: { username: "admin" },
+    where: { clinicId_username: { clinicId: "default-clinic-id", username: "admin" } },
     update: { password: "admin123" },
     create: {
       username: "admin",
@@ -15,7 +15,7 @@ async function main() {
 
   // Create Staff #1 Lakmina
   await db.employee.upsert({
-    where: { biometricId: "1" },
+    where: { clinicId_biometricId: { clinicId: "default-clinic-id", biometricId: "1" } },
     update: { firstName: "LAKMINA", lastName: "EKANAYAKE" },
     create: {
       firstName: "LAKMINA",
@@ -32,7 +32,7 @@ async function main() {
 
   // Create Staff #2 Ruwantha
   await db.employee.upsert({
-    where: { biometricId: "2" },
+    where: { clinicId_biometricId: { clinicId: "default-clinic-id", biometricId: "2" } },
     update: { firstName: "ruwantha", lastName: "Alwis" },
     create: {
       firstName: "ruwantha",
