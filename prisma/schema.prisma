@@ -24,6 +24,10 @@ model Clinic {
   globalWorkedDayBonus  Float    @default(0)
   globalPunctualBonus   Float    @default(0)
   globalIncomeBonusPct  Float    @default(0)
+  
+  // Overtime Policy
+  otCalculationType     String   @default("Manual") // Manual, Strict, Grace Period
+  otGracePeriodMinutes  Int      @default(30)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

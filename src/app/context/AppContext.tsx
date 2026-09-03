@@ -186,6 +186,8 @@ export interface SalarySettings {
   globalWorkedDayBonus: number;
   globalPunctualBonus: number;
   globalIncomeBonusPct: number;
+  otCalculationType: "Manual" | "Strict" | "Grace Period";
+  otGracePeriodMinutes: number;
 }
 
 export interface CompanyProfile {
@@ -417,7 +419,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const pushAudit = (entry: Omit<AuditLog, "id"|"timestamp">) => setAuditLogs(prev => [{ ...entry, id: `AUD-${Date.now()}`, timestamp: nowStr() }, ...prev]);
 
   const [epfSettings, setEpfSettings] = useState<EpfSettings>({ employeeRate: 8, employerRate: 12, etfRate: 3 });
-  const [salarySettings, setSalarySettings] = useState<SalarySettings>({ workingDaysPerMonth: 20, globalWorkedDayBonus: 0, globalPunctualBonus: 0, globalIncomeBonusPct: 0 });
+  const [salarySettings, setSalarySettings] = useState<SalarySettings>({ workingDaysPerMonth: 20, globalWorkedDayBonus: 0, globalPunctualBonus: 0, globalIncomeBonusPct: 0, otCalculationType: "Manual", otGracePeriodMinutes: 30 });
   const [adminPin, setAdminPin] = useState<string>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -668,6 +670,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             globalWorkedDayBonus: clnData.clinic.globalWorkedDayBonus ?? prev.globalWorkedDayBonus,
             globalPunctualBonus: clnData.clinic.globalPunctualBonus ?? prev.globalPunctualBonus,
             globalIncomeBonusPct: clnData.clinic.globalIncomeBonusPct ?? prev.globalIncomeBonusPct,
+            otCalculationType: clnData.clinic.otCalculationType ?? prev.otCalculationType,
+            otGracePeriodMinutes: clnData.clinic.otGracePeriodMinutes ?? prev.otGracePeriodMinutes,
           }));
         }
 

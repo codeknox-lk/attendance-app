@@ -492,13 +492,6 @@ export default function Home() {
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => { const h = requestAnimationFrame(() => setHasMounted(true)); return () => cancelAnimationFrame(h); }, []);
 
-  // ── Authentication Portal state ──
-  const [loginType, setLoginType] = useState<"admin" | "staff">("admin");
-  const [loginUsername, setLoginUsername] = useState("admin");
-  const [loginPassword, setLoginPassword] = useState("admin123");
-  const [loginBiometricId, setLoginBiometricId] = useState("2");
-  const [loginError, setLoginError] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // ── Admin Security state ──
   const [showAdminPinModal, setShowAdminPinModal] = useState(false);
@@ -2030,6 +2023,40 @@ export default function Home() {
                         <label className={labelCls}>Clinic Excess Income Target (LKR) — Current Month: {selectedMonth}</label>
                         <input type="number" className={`${inputCls(isDark)} max-w-xs`} value={monthlyExcessIncome[selectedMonth] || ""} placeholder="e.g. 320000" onChange={e=>updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value)||0)}/>
                         <p className="text-[10px] text-zinc-500 mt-1">Global target for the current selected month. Used to calculate Exceed Income bonuses.</p>
+                      </div>
+                    </div>
+
+                    {/* OVERTIME POLICY */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Overtime Policy</h3>
+                      <p className="text-[10px] text-zinc-500">Determine how the Biometric System handles check-outs that occur after the scheduled Operating Hours.</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Calculation Mode</label>
+                          <select 
+                            className={inputCls(isDark)}
+                            value={salarySettings.otCalculationType}
+                            onChange={e => updateSalarySettings({ otCalculationType: e.target.value as any })}
+                          >
+                            <option value="Manual">Disabled / Manual Only</option>
+                            <option value="Strict">Strict (Minute-by-Minute)</option>
+                            <option value="Grace Period">Grace Period (Forgives small delays)</option>
+                          </select>
+                        </div>
+                        
+                        {salarySettings.otCalculationType === "Grace Period" && (
+                          <div>
+                            <label className={labelCls}>Grace Period (Minutes)</label>
+                            <input 
+                              type="number" 
+                              className={inputCls(isDark)} 
+                              value={salarySettings.otGracePeriodMinutes} 
+                              onChange={e => updateSalarySettings({ otGracePeriodMinutes: parseInt(e.target.value) || 0 })}
+                            />
+                            <p className="text-[10px] text-zinc-500 mt-1">If staff leave within {salarySettings.otGracePeriodMinutes} mins of session end, OT = 0.</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 

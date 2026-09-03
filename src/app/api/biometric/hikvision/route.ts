@@ -331,9 +331,29 @@ export async function POST(req: NextRequest) {
 
     if (isCheckOut && existingLog) {
       let overtimeHours = existingLog.overtimeHours || 0;
-      if (arrivalTimeMinutes > shiftEndMinutes) {
-         const otMinutes = arrivalTimeMinutes - shiftEndMinutes;
-         overtimeHours = Math.round((otMinutes / 60) * 10) / 10;
+      
+      try {
+        const clinicSettings = await db.clinic.findUnique({ where: { id: clinicId } });
+        const otType = clinicSettings?.otCalculationType || "Manual";
+        const otGrace = clinicSettings?.otGracePeriodMinutes ?? 30;
+
+        if (otType === "Manual" || otType === "Disabled") {
+          overtimeHours = 0;
+        } else if (otType === "Strict") {
+          if (arrivalTimeMinutes > shiftEndMinutes) {
+            const otMinutes = arrivalTimeMinutes - shiftEndMinutes;
+            overtimeHours = Math.round((otMinutes / 60) * 10) / 10;
+          }
+        } else if (otType === "Grace Period") {
+          if (arrivalTimeMinutes > shiftEndMinutes + otGrace) {
+            const otMinutes = arrivalTimeMinutes - shiftEndMinutes;
+            overtimeHours = Math.round((otMinutes / 60) * 10) / 10;
+          } else {
+            overtimeHours = 0;
+          }
+        }
+      } catch (err) {
+        console.error("[HIKVISION] Error fetching clinic OT settings:", err);
       }
 
       // SECOND SCAN TODAY -> Record Check-Out
