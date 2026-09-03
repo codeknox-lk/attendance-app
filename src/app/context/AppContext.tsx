@@ -976,12 +976,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
   };
-  const updateEpfSettings = (s: Partial<EpfSettings>) => {
+  const updateEpfSettings = async (s: Partial<EpfSettings>) => {
     setEpfSettings(p => {
       const updated = { ...p, ...s };
       if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_epf_settings", JSON.stringify(updated)); } catch {} }
       return updated;
     });
+    try {
+      await apiFetch("/api/clinics", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          epfEmployeeRate: s.employeeRate,
+          epfEmployerRate: s.employerRate,
+          etfRate: s.etfRate
+        }),
+      });
+    } catch {}
   };
   const updateMonthlyExcessIncome = (month: string, amount: number) => {
     setMonthlyExcessIncome(p => {
@@ -991,12 +1002,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const updateSalarySettings = (s: Partial<SalarySettings>) => {
+  const updateSalarySettings = async (s: Partial<SalarySettings>) => {
     setSalarySettings(p => {
       const next = { ...p, ...s };
       if (typeof window !== "undefined") localStorage.setItem("medicflow_salary_settings", JSON.stringify(next));
       return next;
     });
+    try {
+      await apiFetch("/api/clinics", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(s),
+      });
+    } catch {}
   };
 
   const updatePayrollCycleStartDay = (day: number) => {
