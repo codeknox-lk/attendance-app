@@ -60,6 +60,76 @@ const cardCls = (dark: boolean) => `rounded-2xl border p-5 backdrop-blur-xl tran
 
 const daySuffix = (d: number) => d===1||d===21||d===31?"st":d===2||d===22?"nd":d===3||d===23?"rd":"th";
 
+const formatHoursAndMins = (decimalHours: number, options?: { showZero?: boolean; short?: boolean }): string => {
+  if (!decimalHours || isNaN(decimalHours) || decimalHours <= 0) {
+    return options?.showZero ? (options?.short ? "0m" : "0 min") : (options?.short ? "0h" : "0 h");
+  }
+  const totalMinutes = Math.round(decimalHours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+
+  if (options?.short) {
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  }
+
+  if (h > 0 && m > 0) {
+    return `${h} h and ${m} min`;
+  }
+  if (h > 0) {
+    return `${h} h`;
+  }
+  return `${m} min`;
+};
+
+const calculateWorkedHours = (checkIn?: string | null, checkOut?: string | null): number => {
+  if (!checkIn || !checkOut || checkOut === "–" || checkOut.toLowerCase().includes("active")) return 0;
+  const [inH, inM] = checkIn.split(":").map(Number);
+  const [outH, outM] = checkOut.split(":").map(Number);
+  if (isNaN(inH) || isNaN(inM) || isNaN(outH) || isNaN(outM)) return 0;
+  
+  const inMinutes = inH * 60 + inM;
+  let outMinutes = outH * 60 + outM;
+  if (outMinutes < inMinutes) {
+    outMinutes += 24 * 60;
+  }
+  return Math.max(0, (outMinutes - inMinutes) / 60);
+};
+
+const calculateOvertimeHours = (
+  checkOut: string | null | undefined,
+  date: string,
+  operatingHours: { dayOfWeek: number; isOpen: boolean; startTime: string; endTime: string }[],
+  otCalculationType: string = "Strict",
+  graceMinutes: number = 30
+): number => {
+  if (otCalculationType === "Manual" || otCalculationType === "Disabled") return 0;
+  if (!checkOut || checkOut === "–" || checkOut.toLowerCase().includes("active")) return 0;
+  
+  const logDate = new Date(date + "T00:00:00Z");
+  const dayOfWeek = logDate.getUTCDay();
+  const opHour = operatingHours.find(h => h.dayOfWeek === dayOfWeek);
+  if (!opHour || !opHour.isOpen) return 0;
+
+  const [endH, endM] = opHour.endTime.split(":").map(Number);
+  const shiftEndMinutes = endH * 60 + endM;
+
+  const [outH, outM] = checkOut.split(":").map(Number);
+  const checkOutMinutes = outH * 60 + outM;
+
+  if (otCalculationType === "Strict") {
+    if (checkOutMinutes > shiftEndMinutes) {
+      return (checkOutMinutes - shiftEndMinutes) / 60;
+    }
+  } else if (otCalculationType === "Grace Period") {
+    if (checkOutMinutes > shiftEndMinutes + graceMinutes) {
+      return (checkOutMinutes - shiftEndMinutes) / 60;
+    }
+  }
+  return 0;
+};
+
 const Icons = {
   Users: ({ className = "w-4 h-4" }: { className?: string }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -167,6 +237,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
   ),
+  TrendingUp: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  ),
 };
 
 // ─── Salary Trend Chart (needs own state for hover tooltips) ────────────────
@@ -220,7 +295,7 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
           <p className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-slate-500"}`}>Live worked hours calculated from biometric scans</p>
         </div>
         <span className="text-[10px] font-mono font-bold text-[#38bdf8] bg-[#0ea5e9]/10 border border-[#0ea5e9]/20 px-2.5 py-1 rounded-lg">
-          {totalWeeklyHours.toFixed(1)} hrs Logged
+          {formatHoursAndMins(totalWeeklyHours)} Logged
         </span>
       </div>
 
@@ -230,7 +305,7 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
           return (
             <div key={idx} className="flex flex-col items-center gap-1.5 group">
               <span className={`text-[10px] font-mono font-bold ${d.hours > 0 ? "text-[#38bdf8]" : d.isClosed ? "text-amber-500" : "text-slate-400"}`}>
-                {d.hours > 0 ? `${d.hours}h` : d.isClosed ? "CLOSED" : "0h"}
+                {d.hours > 0 ? formatHoursAndMins(d.hours, { short: true }) : d.isClosed ? "CLOSED" : "0h"}
               </span>
               <div className={`w-full max-w-[32px] rounded-t-xl overflow-hidden h-24 flex items-end p-0.5 border ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
                 <div
@@ -548,6 +623,8 @@ export default function Home() {
   });
   const [attendanceSearch, setAttendanceSearch] = useState("");
   const [attendanceStatusFilter, setAttendanceStatusFilter] = useState("All");
+  const [attendancePage, setAttendancePage] = useState(1);
+  const [attendancePageSize, setAttendancePageSize] = useState(10);
   const [selectedCalMonth, setSelectedCalMonth] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
@@ -660,6 +737,13 @@ export default function Home() {
         (attendanceStatusFilter === "All" || l.status === attendanceStatusFilter);
     }).sort((a,b) => b.date.localeCompare(a.date)), [attendanceLogs, employees, attendanceSearch, attendanceStatusFilter, dateRange]);
 
+  const totalAttendancePages = Math.max(1, Math.ceil(filteredLogs.length / attendancePageSize));
+  const currentPage = Math.min(attendancePage, totalAttendancePages);
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * attendancePageSize;
+    return filteredLogs.slice(start, start + attendancePageSize);
+  }, [filteredLogs, currentPage, attendancePageSize]);
+
   const statusCounts = useMemo(() => {
     const c: Record<string,number> = {All:0,"On-Time":0,Late:0,"Half-Day":0,"On-Leave":0,Absent:0};
     attendanceLogs.forEach(l => { if (l.date>=dateRange.startDate && l.date<=dateRange.endDate) { c.All++; if(c[l.status]!==undefined) c[l.status]++; } });
@@ -686,7 +770,12 @@ export default function Home() {
       const sessionCount = empLogs.filter(l => ["On-Time","Late","Half-Day"].includes(l.status)).length;
       const punctualCount = empLogs.filter(l => l.status==="On-Time").length;
       const absentCount = empLogs.filter(l => l.status==="Absent").length;
-      const totalOtHours = empLogs.reduce((s,l) => s+l.overtimeHours, 0);
+      const totalOtHours = empLogs.reduce((s,l) => {
+        const ot = l.overtimeHours > 0
+          ? l.overtimeHours
+          : calculateOvertimeHours(l.checkOut, l.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+        return s + ot;
+      }, 0);
       const totalWorkHours = empLogs.reduce((s, l) => {
         if (!l.checkIn || !l.checkOut) return s;
         const [hIn, mIn] = l.checkIn.split(':').map(Number);
@@ -757,7 +846,7 @@ export default function Home() {
         attBonusRate, puncBonusRate, incBonusPct
       };
     });
-  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings]);
+  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings, operatingHours]);
 
   const payrollTotals = useMemo(() => payrollCalcs.reduce((t,c) => ({ gross:t.gross+c.grossEarnings, net:t.net+c.netSalary, epfEmp:t.epfEmp+c.employeeEpf, epfEmr:t.epfEmr+c.employerEpf, etf:t.etf+c.employerEtf, apit:t.apit+c.apitMonthly }), {gross:0,net:0,epfEmp:0,epfEmr:0,etf:0,apit:0}), [payrollCalcs]);
 
@@ -769,7 +858,20 @@ export default function Home() {
 
   const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]}); };
 
-  const openDrawer = (log: AttendanceLog) => { setPunchEdit({checkIn:log.checkIn,checkOut:log.checkOut||"",status:log.status,overtimeHours:log.overtimeHours,noPayHours:log.noPayHours}); setDrawerLogId(log.id); };
+  const openDrawer = (log: AttendanceLog) => {
+    const effectiveOt = log.overtimeHours > 0
+      ? log.overtimeHours
+      : calculateOvertimeHours(log.checkOut, log.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+
+    setPunchEdit({
+      checkIn: log.checkIn,
+      checkOut: log.checkOut || "",
+      status: log.status,
+      overtimeHours: Math.round(effectiveOt * 100) / 100,
+      noPayHours: log.noPayHours || 0
+    });
+    setDrawerLogId(log.id);
+  };
 
   const handleFinalizePayroll = () => {
     if (isCurrentMonthFinalized) return;
@@ -780,8 +882,12 @@ export default function Home() {
 
 
   const downloadAttendanceCSV = () => {
-    const rows = [["Date","Employee","Status","Check In","Check Out","OT Hours","No-Pay Hours"]];
-    filteredLogs.forEach(l => { const emp=employees.find(e=>e.id===l.employeeId); rows.push([l.date,emp?`${emp.firstName} ${emp.lastName}`:"Unknown",l.status,l.checkIn,l.checkOut||"--",String(l.overtimeHours),String(l.noPayHours)]); });
+    const rows = [["Date","Employee","Status","Check In","Check Out","Worked Duration","OT Hours","No-Pay Hours"]];
+    filteredLogs.forEach(l => {
+      const emp = employees.find(e => e.id === l.employeeId);
+      const worked = formatHoursAndMins(calculateWorkedHours(l.checkIn, l.checkOut));
+      rows.push([l.date, emp ? `${emp.firstName} ${emp.lastName}` : "Unknown", l.status, l.checkIn, l.checkOut || "--", worked, String(l.overtimeHours), String(l.noPayHours)]);
+    });
     const csv = rows.map(r=>r.join(",")).join("\n");
     const blob = new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`attendance_${selectedMonth}.csv`; a.click(); URL.revokeObjectURL(url);
   };
@@ -1309,75 +1415,332 @@ export default function Home() {
 
           {/* ═══════════════ ATTENDANCE ═══════════════ */}
           {activeTab==="attendance" && (
-            <div className="space-y-4">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <select
-                    value={attendanceSearch}
-                    onChange={e => setAttendanceSearch(e.target.value)}
-                    className={`${inputCls(isDark)} w-56 font-semibold`}
+            <div className="space-y-6">
+              {/* Top Quick Stat Cards - Matching Dashboard style */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                {[
+                  { label: "Total Logs", value: filteredLogs.length, color: "from-[#0ea5e9] to-[#0F85B0]", badge: selectedMonth, icon: <Icons.Clock className="w-4 h-4 text-[#38bdf8]" /> },
+                  { label: "On-Time Rate", value: `${Math.round(((statusCounts["On-Time"] || 0) / (filteredLogs.length || 1)) * 100)}%`, color: "from-emerald-500 to-teal-600", badge: `${statusCounts["On-Time"] || 0} Punches`, icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
+                  { label: "Late Arrivals", value: statusCounts["Late"] || 0, color: "from-amber-500 to-orange-600", badge: "Grace Check", icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
+                  { label: "Overtime Logged", value: formatHoursAndMins(filteredLogs.reduce((s, l) => s + (l.overtimeHours > 0 ? l.overtimeHours : calculateOvertimeHours(l.checkOut, l.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes)), 0)), color: "from-indigo-500 to-purple-600", badge: "Approved OT", icon: <Icons.TrendingUp className="w-4 h-4 text-indigo-400" /> },
+                ].map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-2xl border transition-smooth relative overflow-hidden group backdrop-blur-xl ${
+                      isDark
+                        ? "bg-white/5 border-white/10 hover:border-white/20 shadow-xl"
+                        : "bg-white/80 border-black/5 hover:border-black/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                    }`}
                   >
-                    <option value="">All Staff Members</option>
-                    {activeEmployees.map(emp => (
-                      <option key={emp.id} value={`${emp.firstName} ${emp.lastName}`}>
-                        {emp.firstName} {emp.lastName} ({emp.role} #{emp.biometricId})
-                      </option>
-                    ))}
-                  </select>
-                  {monthSelector(selectedMonth, setSelectedMonth)}
-                </div>
-                <button onClick={downloadAttendanceCSV} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
-                  <Icons.Download className="w-3.5 h-3.5" />
-                  <span>Export CSV</span>
-                </button>
-              </div>
-              {/* Status filters */}
-              <div className="flex gap-1.5 flex-wrap">
-                {Object.entries(statusCounts).map(([status,count])=>(
-                  <button key={status} onClick={()=>setAttendanceStatusFilter(status)} className={`px-3 py-1 text-xs font-bold rounded-full border transition ${attendanceStatusFilter===status?(isDark?"bg-zinc-700 border-zinc-600 text-white":"bg-zinc-800 border-zinc-800 text-white"):(isDark?"border-zinc-800 text-zinc-400 hover:border-zinc-700":"border-zinc-200 text-zinc-500 hover:border-zinc-300")}`}>
-                    {status} <span className="ml-0.5 opacity-60">({count})</span>
-                  </button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{item.label}</span>
+                      <span className="text-base">{item.icon}</span>
+                    </div>
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <span className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</span>
+                      <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${isDark ? "bg-slate-800/40 text-slate-300 border border-slate-700/50" : "bg-slate-100 text-slate-700 border border-slate-200"}`}>
+                        {item.badge}
+                      </span>
+                    </div>
+                    <div className={`h-1 w-full bg-gradient-to-r ${item.color} rounded-full mt-3 opacity-80 group-hover:opacity-100 transition-smooth`} />
+                  </div>
                 ))}
               </div>
-              <p className={`text-[10px] font-mono ${isDark?"text-zinc-500":"text-zinc-400"}`}>Period: {dateRange.startDate} → {dateRange.endDate}</p>
-              {/* Table */}
-              <div className={`rounded-lg border overflow-hidden ${isDark?"border-zinc-800":"border-zinc-200"}`}>
+
+              {/* Toolbar Card */}
+              <div className={`p-4 sm:p-5 rounded-2xl border transition-smooth backdrop-blur-xl ${
+                isDark
+                  ? "bg-white/5 border-white/10 shadow-xl"
+                  : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+              }`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Left: Staff Selector & Month Picker */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <select
+                      value={attendanceSearch}
+                      onChange={e => { setAttendanceSearch(e.target.value); setAttendancePage(1); }}
+                      className={`${inputCls(isDark)} min-w-[200px] font-semibold rounded-xl`}
+                    >
+                      <option value="">All Staff Members</option>
+                      {activeEmployees.map(emp => (
+                        <option key={emp.id} value={`${emp.firstName} ${emp.lastName}`}>
+                          {emp.firstName} {emp.lastName} ({emp.role} #{emp.biometricId})
+                        </option>
+                      ))}
+                    </select>
+                    {monthSelector(selectedMonth, m => { setSelectedMonth(m); setAttendancePage(1); })}
+                    <span className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border ${
+                      isDark ? "bg-slate-800/40 border-slate-700 text-slate-400" : "bg-slate-100 border-slate-200 text-slate-600"
+                    }`}>
+                      {dateRange.startDate} → {dateRange.endDate}
+                    </span>
+                  </div>
+
+                  {/* Right: Export button */}
+                  <button
+                    onClick={downloadAttendanceCSV}
+                    className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition-smooth flex items-center gap-2 shrink-0 ${
+                      isDark
+                        ? "bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-200 shadow-md"
+                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
+                    }`}
+                  >
+                    <Icons.Download className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+
+                {/* Status Pills */}
+                <div className={`flex items-center gap-2 mt-4 pt-3.5 border-t overflow-x-auto ${isDark ? "border-slate-800/60" : "border-slate-200/80"}`}>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 shrink-0">Filter:</span>
+                  {Object.entries(statusCounts).map(([status, count]) => {
+                    const isActive = attendanceStatusFilter === status;
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => { setAttendanceStatusFilter(status); setAttendancePage(1); }}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-smooth flex items-center gap-1.5 shrink-0 ${
+                          isActive
+                            ? isDark
+                              ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-white shadow-sm"
+                              : "bg-[#0F85B0] border-[#0F85B0] text-white shadow-sm"
+                            : isDark
+                              ? "bg-slate-800/40 border-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                              : "bg-slate-100/70 border-slate-200 text-slate-600 hover:bg-slate-200/60"
+                        }`}
+                      >
+                        <span>{status}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${
+                          isActive ? "bg-white/20 text-white" : isDark ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-700"
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Table Card */}
+              <div className={`rounded-2xl border overflow-hidden transition-smooth backdrop-blur-xl ${
+                isDark
+                  ? "bg-white/5 border-white/10 shadow-xl"
+                  : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+              }`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
-                    <thead className={`${isDark?"bg-zinc-900 border-zinc-800":"bg-zinc-50 border-zinc-200"} border-b`}>
+                    <thead className={`border-b ${isDark ? "bg-slate-900/50 border-slate-800/80" : "bg-slate-50/80 border-slate-200/80"}`}>
                       <tr>
-                        {["Date","Employee","Status","Check In","Check Out","OT Hrs","No-Pay Hrs",""].map(h=>(
-                          <th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400 whitespace-nowrap">{h}</th>
+                        {["Date", "Staff Member", "Status", "Check In", "Check Out", "Worked", "Overtime", "No-Pay", "Actions"].map((h, i) => (
+                          <th key={h} className={`px-3 py-3 font-extrabold text-[10px] uppercase tracking-wider text-slate-400 whitespace-nowrap ${
+                            i === 6 || i === 7 ? "text-center" : i === 8 ? "text-right" : "text-left"
+                          }`}>
+                            {h}
+                          </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className={`divide-y ${isDark?"divide-zinc-800/70":"divide-zinc-100"}`}>
-                      {filteredLogs.map(log => {
+                    <tbody className={`divide-y ${isDark ? "divide-slate-800/60" : "divide-slate-100"}`}>
+                      {paginatedLogs.map(log => {
                         const emp = employees.find(e => e.id === log.employeeId || e.biometricId === log.employeeId || (log.employee && e.biometricId === String(log.employee.biometricId)));
                         const empName = emp ? `${emp.firstName} ${emp.lastName}` : (log.employee ? `${log.employee.firstName} ${log.employee.lastName}` : `Staff #${log.employeeId}`);
+                        const empRole = emp?.role || "Staff";
+                        const initial = empName.charAt(0).toUpperCase();
+                        const workedHours = calculateWorkedHours(log.checkIn, log.checkOut);
+                        const otHours = log.overtimeHours > 0
+                          ? log.overtimeHours
+                          : calculateOvertimeHours(log.checkOut, log.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+
                         return (
-                          <tr key={log.id} className={`hover:${isDark?"bg-zinc-900/50":"bg-zinc-50/80"} transition`}>
-                            <td className="px-4 py-3 font-mono text-zinc-400">{log.date}</td>
-                            <td className="px-4 py-3 font-semibold">{empName}</td>
-                            <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap ${statusColor(log.status,isDark)}`}>{log.status}</span></td>
-                            <td className="px-4 py-3 font-mono">{log.checkIn}</td>
-                            <td className="px-4 py-3 font-mono">{log.checkOut||"–"}</td>
-                            <td className="px-4 py-3 text-center">{log.overtimeHours}</td>
-                            <td className="px-4 py-3 text-center">{log.noPayHours}</td>
-                            <td className="px-4 py-3 text-right">
+                          <tr key={log.id} className={`transition ${isDark ? "hover:bg-slate-800/30" : "hover:bg-slate-50/80"}`}>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <span className={`font-mono font-semibold px-2 py-0.5 rounded-md text-[11px] ${isDark ? "bg-slate-800/60 text-slate-300" : "bg-slate-100 text-slate-700"}`}>
+                                {log.date}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#0F85B0] via-purple-600 to-emerald-400 flex items-center justify-center text-white font-black text-xs shadow-sm shrink-0">
+                                  {initial}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-xs leading-tight">{empName}</p>
+                                  <p className="text-[10px] text-slate-400 leading-tight">{empRole}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${statusColor(log.status, isDark)}`}>
+                                {log.status}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${isDark ? "bg-emerald-950/30 text-emerald-400 border border-emerald-800/40" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1.5" />
+                                {log.checkIn}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${log.checkOut ? (isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border border-[#bae6fd]") : (isDark ? "bg-amber-950/30 text-amber-400 border border-amber-800/40" : "bg-amber-50 text-amber-700 border border-amber-200")}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full inline-block mr-1.5 ${log.checkOut ? "bg-[#38bdf8]" : "bg-amber-400"}`} />
+                                {log.checkOut || "Active Shift"}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              {log.checkOut && log.checkOut !== "–" && !log.checkOut.toLowerCase().includes("active") ? (
+                                <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${
+                                  isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border border-[#bae6fd]"
+                                }`}>
+                                  {formatHoursAndMins(workedHours)}
+                                </span>
+                              ) : (
+                                <span className="text-amber-500 font-semibold italic text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                                  Active Shift
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-center font-mono font-bold whitespace-nowrap">
+                              {otHours > 0 ? (
+                                <span className="text-emerald-500 font-bold">+{formatHoursAndMins(otHours)}</span>
+                              ) : (
+                                <span className="text-slate-300 dark:text-slate-700 font-normal select-none">—</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-center font-mono whitespace-nowrap">
+                              {log.noPayHours > 0 ? (
+                                <span className="text-rose-400 font-bold">-{formatHoursAndMins(log.noPayHours)}</span>
+                              ) : (
+                                <span className="text-slate-300 dark:text-slate-700 font-normal select-none">—</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
-                                <button onClick={()=>openDrawer(log)} className={`px-2 py-1 rounded text-[10px] font-bold border transition ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 shadow-sm hover:bg-zinc-50"}`}>Adjust</button>
-                                <button onClick={()=>deleteAttendanceLog(log.id)} className="px-2 py-1 rounded text-[10px] font-bold border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition">Delete</button>
+                                <button
+                                  onClick={() => openDrawer(log)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-smooth ${
+                                    isDark
+                                      ? "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"
+                                      : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
+                                  }`}
+                                >
+                                  Adjust
+                                </button>
+                                <button
+                                  onClick={() => deleteAttendanceLog(log.id)}
+                                  className="px-2 py-1 rounded-lg text-[11px] font-bold border border-rose-500/20 text-rose-400 hover:bg-rose-500/10 transition"
+                                >
+                                  Delete
+                                </button>
                               </div>
                             </td>
                           </tr>
                         );
                       })}
-                      {filteredLogs.length===0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-xs text-zinc-500">No records found for this period.</td></tr>}
+                      {filteredLogs.length === 0 && (
+                        <tr>
+                          <td colSpan={9} className="px-5 py-12 text-center">
+                            <div className="flex flex-col items-center justify-center space-y-2">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                                isDark
+                                  ? "bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20"
+                                  : "bg-[#f0f9ff] text-[#0F85B0] border border-[#bae6fd] shadow-sm"
+                              }`}>
+                                <Icons.Clock className="w-6 h-6" />
+                              </div>
+                              <p className={`text-xs font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>No attendance records found</p>
+                              <p className={`text-[11px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>Try changing the date filter or staff selection above.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {filteredLogs.length > 0 && (
+                  <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t text-xs ${
+                    isDark ? "border-slate-800/80 bg-slate-900/30" : "border-slate-200/80 bg-slate-50/50"
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-400 text-[11px]">
+                        Showing <strong className={isDark ? "text-slate-200" : "text-slate-700"}>{(currentPage - 1) * attendancePageSize + 1}</strong> to <strong className={isDark ? "text-slate-200" : "text-slate-700"}>{Math.min(currentPage * attendancePageSize, filteredLogs.length)}</strong> of <strong className={isDark ? "text-slate-200" : "text-slate-700"}>{filteredLogs.length}</strong> records
+                      </span>
+                      <div className="flex items-center gap-1.5 ml-2">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Rows:</span>
+                        <select
+                          value={attendancePageSize}
+                          onChange={e => { setAttendancePageSize(Number(e.target.value)); setAttendancePage(1); }}
+                          className={`text-xs py-0.5 px-2 rounded-lg border font-semibold ${
+                            isDark ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-700 shadow-sm"
+                          }`}
+                        >
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={30}>30</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        disabled={currentPage <= 1}
+                        onClick={() => setAttendancePage(p => Math.max(1, p - 1))}
+                        className={`px-2.5 py-1 rounded-lg font-bold border transition-smooth text-[11px] ${
+                          currentPage <= 1
+                            ? "opacity-30 cursor-not-allowed border-transparent text-slate-500"
+                            : isDark ? "border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-sm"
+                        }`}
+                      >
+                        Prev
+                      </button>
+                      {Array.from({ length: totalAttendancePages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === totalAttendancePages || Math.abs(p - currentPage) <= 1)
+                        .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                          if (idx > 0 && typeof arr[idx - 1] === "number" && (p as number) - (arr[idx - 1] as number) > 1) {
+                            acc.push("...");
+                          }
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((p, idx) => {
+                          if (p === "...") {
+                            return <span key={`dots-${idx}`} className="px-1 text-slate-400 select-none">…</span>;
+                          }
+                          const isCurrent = currentPage === p;
+                          return (
+                            <button
+                              key={p}
+                              onClick={() => setAttendancePage(Number(p))}
+                              className={`min-w-[28px] h-7 px-2 rounded-lg text-xs font-bold transition-smooth ${
+                                isCurrent
+                                  ? isDark
+                                    ? "bg-[#0ea5e9] text-white shadow-md shadow-sky-500/20"
+                                    : "bg-[#0F85B0] text-white shadow-sm"
+                                  : isDark
+                                    ? "border border-slate-700/60 bg-slate-800/40 text-slate-400 hover:text-white hover:bg-slate-800"
+                                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-sm"
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          );
+                        })}
+                      <button
+                        disabled={currentPage >= totalAttendancePages}
+                        onClick={() => setAttendancePage(p => Math.min(totalAttendancePages, p + 1))}
+                        className={`px-2.5 py-1 rounded-lg font-bold border transition-smooth text-[11px] ${
+                          currentPage >= totalAttendancePages
+                            ? "opacity-30 cursor-not-allowed border-transparent text-slate-500"
+                            : isDark ? "border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-sm"
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2583,37 +2946,195 @@ export default function Home() {
       </main>
 
       {/* ═══════════════ SLIDE DRAWER (Attendance Edit) ═══════════════ */}
-      <div className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ${drawerLogId?"opacity-100 pointer-events-auto":"opacity-0 pointer-events-none"}`}>
-        <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm" onClick={()=>setDrawerLogId(null)}/>
-        <div className={`absolute right-0 top-0 h-full w-96 shadow-2xl transition-transform duration-300 ${drawerLogId?"translate-x-0":"translate-x-full"} ${isDark?"bg-zinc-900 border-l border-zinc-800":"bg-white border-l border-zinc-200"}`}>
-          <div className="p-6 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-sm">Adjust Punch Record</h3>
-              <button onClick={()=>setDrawerLogId(null)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <div className="space-y-4 flex-1">
-              {[["Check In","checkIn"],["Check Out","checkOut"]].map(([label,field])=>(
-                <div key={field}><label className={labelCls}>{label}</label><input className={inputCls(isDark)} value={(punchEdit as Record<string,string|number>)[field] as string} onChange={e=>setPunchEdit(p=>({...p,[field]:e.target.value}))}/></div>
-              ))}
-              <div><label className={labelCls}>Status</label>
-                <select className={inputCls(isDark)} value={punchEdit.status} onChange={e=>setPunchEdit(p=>({...p,status:e.target.value as AttendanceLog["status"]}))}>  
-                  {["On-Time","Late","Half-Day","On-Leave","Absent"].map(s=><option key={s}>{s}</option>)}
-                </select>
+      {(() => {
+        const activeDrawerLog = drawerLogId ? attendanceLogs.find(l => l.id === drawerLogId) : null;
+        const activeDrawerEmp = activeDrawerLog
+          ? employees.find(e => e.id === activeDrawerLog.employeeId || e.biometricId === activeDrawerLog.employeeId || (activeDrawerLog.employee && e.biometricId === String(activeDrawerLog.employee.biometricId)))
+          : null;
+        const drawerEmpName = activeDrawerEmp
+          ? `${activeDrawerEmp.firstName} ${activeDrawerEmp.lastName}`
+          : (activeDrawerLog?.employee ? `${activeDrawerLog.employee.firstName} ${activeDrawerLog.employee.lastName}` : `Staff #${activeDrawerLog?.employeeId || ""}`);
+        const drawerEmpRole = activeDrawerEmp?.role || "Staff Member";
+        const drawerInitial = drawerEmpName.charAt(0).toUpperCase();
+        const drawerWorkedHours = calculateWorkedHours(punchEdit.checkIn, punchEdit.checkOut);
+
+        return (
+          <div className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ${drawerLogId ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+            <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setDrawerLogId(null)} />
+            <div className={`absolute right-0 top-0 h-full w-full max-w-md shadow-2xl transition-transform duration-300 flex flex-col ${drawerLogId ? "translate-x-0" : "translate-x-full"} ${isDark ? "bg-slate-900 border-l border-slate-800" : "bg-white border-l border-slate-200"}`}>
+              
+              {/* Drawer Header */}
+              <div className={`px-6 py-5 border-b flex items-center justify-between ${isDark ? "border-slate-800 bg-slate-900/50" : "border-slate-100 bg-slate-50/50"}`}>
+                <div>
+                  <h3 className={`font-extrabold text-base tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>Adjust Punch Record</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Manual attendance correction &amp; shift adjustment</p>
+                </div>
+                <button
+                  onClick={() => setDrawerLogId(null)}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-smooth ${
+                    isDark ? "border-slate-700 bg-slate-800 text-slate-400 hover:text-white" : "border-slate-200 bg-white text-slate-500 hover:text-slate-900 shadow-sm"
+                  }`}
+                >
+                  <Icons.X className="w-4 h-4" />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>OT Hours</label><input type="number" step="0.5" className={inputCls(isDark)} value={punchEdit.overtimeHours} onChange={e=>setPunchEdit(p=>({...p,overtimeHours:parseFloat(e.target.value)||0}))}/></div>
-                <div><label className={labelCls}>No-Pay Hours</label><input type="number" step="0.5" className={inputCls(isDark)} value={punchEdit.noPayHours} onChange={e=>setPunchEdit(p=>({...p,noPayHours:parseFloat(e.target.value)||0}))}/></div>
+
+              {/* Drawer Body */}
+              <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+                {/* Staff Context Card */}
+                {activeDrawerLog && (
+                  <div className={`p-4 rounded-2xl border transition-smooth ${
+                    isDark ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50/80 border-slate-200/80"
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F85B0] via-purple-600 to-emerald-400 flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0">
+                        {drawerInitial}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-extrabold text-sm leading-tight ${isDark ? "text-white" : "text-slate-900"}`}>{drawerEmpName}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${
+                            isDark ? "bg-[#042633]/60 border border-[#09526e]/50 text-[#7dd3fc]" : "bg-[#f0f9ff] border border-[#bae6fd] text-[#0c6c8f]"
+                          }`}>
+                            {drawerEmpRole}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono">Date: {activeDrawerLog.date}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-dashed flex items-center justify-between text-xs border-slate-200 dark:border-slate-700/60">
+                      <span className="text-slate-400 text-[11px]">Calculated Duration:</span>
+                      <span className={`font-mono font-bold px-2 py-0.5 rounded-lg ${
+                        drawerWorkedHours > 0
+                          ? isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border border-[#bae6fd]"
+                          : "text-slate-400"
+                      }`}>
+                        {formatHoursAndMins(drawerWorkedHours)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      Check In Time
+                    </label>
+                    <input
+                      type="text"
+                      className={`${inputCls(isDark)} font-mono font-semibold rounded-xl text-sm`}
+                      value={punchEdit.checkIn}
+                      onChange={e => setPunchEdit(p => ({ ...p, checkIn: e.target.value }))}
+                      placeholder="HH:MM:SS (e.g. 08:30:00)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
+                      Check Out Time
+                    </label>
+                    <input
+                      type="text"
+                      className={`${inputCls(isDark)} font-mono font-semibold rounded-xl text-sm`}
+                      value={punchEdit.checkOut}
+                      onChange={e => {
+                        const newOut = e.target.value;
+                        const autoOt = activeDrawerLog
+                          ? calculateOvertimeHours(newOut, activeDrawerLog.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes)
+                          : 0;
+                        setPunchEdit(p => ({
+                          ...p,
+                          checkOut: newOut,
+                          overtimeHours: (salarySettings.otCalculationType !== "Manual" && autoOt > 0) ? Math.round(autoOt * 100) / 100 : p.overtimeHours
+                        }));
+                      }}
+                      placeholder="HH:MM:SS (e.g. 17:30:00)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Shift Attendance Status
+                    </label>
+                    <select
+                      className={`${inputCls(isDark)} font-semibold rounded-xl text-xs`}
+                      value={punchEdit.status}
+                      onChange={e => setPunchEdit(p => ({ ...p, status: e.target.value as AttendanceLog["status"] }))}
+                    >  
+                      {["On-Time", "Late", "Half-Day", "On-Leave", "Absent"].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Overtime (Hours)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="0"
+                        className={`${inputCls(isDark)} font-mono font-bold rounded-xl text-sm text-emerald-500`}
+                        value={punchEdit.overtimeHours}
+                        onChange={e => setPunchEdit(p => ({ ...p, overtimeHours: parseFloat(e.target.value) || 0 }))}
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-1">
+                        ≈ {formatHoursAndMins(punchEdit.overtimeHours)}
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                        No-Pay (Hours)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="0"
+                        className={`${inputCls(isDark)} font-mono font-bold rounded-xl text-sm text-rose-400`}
+                        value={punchEdit.noPayHours}
+                        onChange={e => setPunchEdit(p => ({ ...p, noPayHours: parseFloat(e.target.value) || 0 }))}
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-1">
+                        ≈ {formatHoursAndMins(punchEdit.noPayHours)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-zinc-800">
-              <button onClick={()=>setDrawerLogId(null)} className={`flex-1 py-2 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400 hover:bg-zinc-800":"border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}>Cancel</button>
-              <button onClick={()=>{if(drawerLogId){updateAttendanceLog(drawerLogId,punchEdit);setDrawerLogId(null);}}} className="flex-1 py-2 text-xs font-bold rounded bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow">Save Changes</button>
+
+              {/* Drawer Footer Actions */}
+              <div className={`p-5 border-t flex items-center gap-3 ${isDark ? "border-slate-800 bg-slate-900/60" : "border-slate-100 bg-slate-50/60"}`}>
+                <button
+                  onClick={() => setDrawerLogId(null)}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl border transition-smooth ${
+                    isDark ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (drawerLogId) {
+                      updateAttendanceLog(drawerLogId, punchEdit);
+                      setDrawerLogId(null);
+                    }
+                  }}
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white shadow-lg shadow-sky-500/25 transition-smooth"
+                >
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ═══════════════ MODAL: ADD/EDIT EMPLOYEE ═══════════════ */}
       {showAddEmpModal && (
@@ -2801,7 +3322,7 @@ export default function Home() {
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
                     <span className="text-zinc-500">Total Worked Hours</span>
-                    <span className="font-mono font-semibold">{calc.totalWorkHours ? calc.totalWorkHours.toFixed(1) : "0"}h</span>
+                    <span className="font-mono font-semibold">{formatHoursAndMins(calc.totalWorkHours || 0)}</span>
                   </div>
                   
                   {empAllowances.map((a, i) => (
@@ -2822,7 +3343,7 @@ export default function Home() {
                   </div>
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
-                    <span className="text-zinc-500 flex items-center gap-1">Overtime Pay <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.totalOtHours}h × {Math.round(calc.otPay / (calc.totalOtHours || 1))})</span></span>
+                    <span className="text-zinc-500 flex items-center gap-1">Overtime Pay <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({formatHoursAndMins(calc.totalOtHours)} × {Math.round(calc.otPay / (calc.totalOtHours || 1))})</span></span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {calc.otPay.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
