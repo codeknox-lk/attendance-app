@@ -2037,7 +2037,7 @@ export default function Home() {
                           <select 
                             className={inputCls(isDark)}
                             value={salarySettings.otCalculationType}
-                            onChange={e => updateSalarySettings({ otCalculationType: e.target.value as any })}
+                            onChange={e => updateSalarySettings({ otCalculationType: e.target.value as "Manual" | "Strict" | "Grace Period" })}
                           >
                             <option value="Manual">Disabled / Manual Only</option>
                             <option value="Strict">Strict (Minute-by-Minute)</option>
