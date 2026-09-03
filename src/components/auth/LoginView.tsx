@@ -122,11 +122,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <div className="w-full max-w-[340px]">
             {/* Logo & Headline */}
             <div className="flex flex-col items-center mb-10 text-center">
-              <div className="flex items-center gap-2 mb-4">
-                <svg className={`w-6 h-6 ${isDark ? "text-white" : "text-black"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 20V5l8 8 8-8v15" />
-                  <path d="M12 10v6M9 13h6" className="text-[#0F85B0]" />
-                </svg>
+              <div className="flex items-center gap-2.5 mb-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="MedSync" className="w-8 h-8 object-contain" />
                 <span className={`text-xl font-bold tracking-tight ${isDark ? "text-white" : "text-black"}`}>MedSync</span>
               </div>
               <h1 className={`text-3xl font-bold tracking-tight mb-2 ${isDark ? "text-white" : "text-slate-900"}`}>

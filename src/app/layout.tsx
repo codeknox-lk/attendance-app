@@ -5,6 +5,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "MedSync Cloud | Biometric Attendance & Payroll Platform",
   description: "Enterprise Face Recognition & Biometric Attendance Syncing with Sri Lankan statutory EPF/ETF/APIT payroll engine.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

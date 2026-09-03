@@ -816,8 +816,9 @@ export default function Home() {
       <aside className={`w-52 border-r flex flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
         <div className="p-4">
           <div className="flex items-center gap-2.5 mb-7 px-1">
-            <div className="h-8 w-8 bg-gradient-to-tr from-[#0F85B0] via-indigo-500 to-emerald-400 rounded-lg flex items-center justify-center text-white font-extrabold text-xs shadow-lg glow-indigo">
-              MF
+            <div className={`h-9 w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md transition-all shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60 shadow-black/40" : "bg-white border border-slate-200 shadow-slate-200"}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="MedSync" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className={`font-extrabold text-sm tracking-tight bg-gradient-to-r ${isDark ? "from-white via-slate-200 to-[#7dd3fc]" : "from-slate-900 via-indigo-950 to-[#0F85B0]"} bg-clip-text text-transparent`}>MedSync</h1>
