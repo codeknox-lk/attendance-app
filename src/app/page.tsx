@@ -224,7 +224,7 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
         </span>
       </div>
 
-      <div className={`grid grid-cols-7 gap-3 items-end h-36 pt-2 pb-6 px-3 border-b ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
+      <div className={`grid grid-cols-7 gap-3 items-end h-36 pt-2 pb-2 px-3 border-b ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
         {daysData.map((d, idx) => {
           const heightPct = d.hours > 0 ? Math.max(18, (d.hours / 10) * 100) : 6;
           return (
@@ -250,7 +250,7 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
         })}
       </div>
 
-      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-3 mt-1">
+      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2.5">
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#0F85B0] animate-pulse"/>Weekly Attendance Overview</span>
         <span className="font-mono font-bold text-[#38bdf8]">
           {operatingHours.find(h => h.dayOfWeek === new Date().getDay())?.isOpen 
