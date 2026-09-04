@@ -793,6 +793,34 @@ export default function Home() {
   useEffect(() => { setCycleStartDayForm(payrollCycleStartDay); }, [payrollCycleStartDay]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const [isSavingSalary, setIsSavingSalary] = useState(false);
+  const [salarySaveFeedback, setSalarySaveFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const handleSaveAllSalarySettings = async (customSuccessMsg?: string) => {
+    setIsSavingSalary(true);
+    setSalarySaveFeedback(null);
+    try {
+      await updateSalarySettings(salarySettings);
+      await updateEpfSettings(epfForm);
+      updatePayrollCycleStartDay(cycleStartDayForm);
+
+      const msg = customSuccessMsg || "All salary policies, dynamic bonus rates, statutory parameters & payroll cycle saved successfully!";
+      setSalarySaveFeedback({ type: "success", msg });
+      setSettingsSaveMsg(msg);
+    } catch (err: any) {
+      setSalarySaveFeedback({
+        type: "error",
+        msg: err?.message || "Failed to save salary settings. Please check your connection and try again.",
+      });
+    } finally {
+      setIsSavingSalary(false);
+      setTimeout(() => {
+        setSalarySaveFeedback(null);
+        setSettingsSaveMsg("");
+      }, 5000);
+    }
+  };
+
   // ── Computed ──
   const activeEmployees = useMemo(() => employees.filter(e => e.active), [employees]);
 
@@ -4275,7 +4303,94 @@ export default function Home() {
                 {/* SALARY & DYNAMIC BONUS SETTINGS */}
                 {settingsTab==="epf" && (
                   <div className="space-y-8 w-full pb-10">
-                    
+
+                    {/* Top Overview & Master Action Header Bar */}
+                    <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
+                      isDark 
+                        ? "bg-gradient-to-r from-sky-950/40 via-slate-900/60 to-zinc-950/50 border-sky-900/40 shadow-xl shadow-black/20" 
+                        : "bg-gradient-to-r from-sky-50 via-white to-sky-50/50 border-sky-200/80 shadow-sm"
+                    } flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-[#0F85B0] text-white flex items-center justify-center shadow-md shadow-[#0F85B0]/25">
+                            <Icons.Wallet className="w-4 h-4" />
+                          </div>
+                          <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                            Salary, Incentives &amp; Statutory Policies
+                          </h2>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+                          Configure biometric worked &amp; punctuality bonus rates, arrival tolerance policies, overtime thresholds, and EPF/ETF statutory contributions in one unified view.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          type="button"
+                          disabled={isSavingSalary}
+                          onClick={() => handleSaveAllSalarySettings("All salary policies, dynamic bonuses & statutory settings saved successfully!")}
+                          className="px-5 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-black rounded-xl shadow-lg shadow-[#0F85B0]/25 transition active:scale-95 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                        >
+                          {isSavingSalary ? (
+                            <>
+                              <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                              <span>Saving Settings...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Icons.Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>Save All Salary Settings</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Interactive Confirmation Alert Banner */}
+                    {salarySaveFeedback && (
+                      <div
+                        className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200 ${
+                          salarySaveFeedback.type === "success"
+                            ? isDark
+                              ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
+                              : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : isDark
+                            ? "bg-rose-950/40 border-rose-500/40 text-rose-300"
+                            : "bg-rose-50 border-rose-200 text-rose-800"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                              salarySaveFeedback.type === "success"
+                                ? "bg-emerald-500/20 text-emerald-500"
+                                : "bg-rose-500/20 text-rose-500"
+                            }`}
+                          >
+                            {salarySaveFeedback.type === "success" ? (
+                              <Icons.Check className="w-4 h-4 stroke-[3]" />
+                            ) : (
+                              <Icons.AlertTriangle className="w-4 h-4 stroke-[3]" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black tracking-tight">
+                              {salarySaveFeedback.type === "success" ? "Saved Successfully" : "Save Operation Failed"}
+                            </p>
+                            <p className="text-xs opacity-90">{salarySaveFeedback.msg}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSalarySaveFeedback(null)}
+                          className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition opacity-70 hover:opacity-100"
+                          title="Dismiss"
+                        >
+                          <Icons.X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+
                     {/* DYNAMIC BONUSES & ATTENDANCE INCENTIVES ENGINE */}
                     <div className={`p-6 rounded-2xl border transition-smooth ${
                       isDark ? "bg-zinc-950/40 border-zinc-800 shadow-xl shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"
@@ -4303,17 +4418,18 @@ export default function Home() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
-                            onClick={() => {
-                              updateSalarySettings(salarySettings);
-                              setSettingsSaveMsg("Dynamic Bonus rates saved successfully!");
-                              setTimeout(() => setSettingsSaveMsg(""), 3000);
-                            }}
-                            className="px-3.5 py-1.5 bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-95"
+                            disabled={isSavingSalary}
+                            onClick={() => handleSaveAllSalarySettings("Dynamic bonus rates saved successfully!")}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
                           >
-                            <Icons.Check className="w-3.5 h-3.5" />
+                            {isSavingSalary ? (
+                              <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Icons.Check className="w-3.5 h-3.5" />
+                            )}
                             <span>Save Dynamic Rates</span>
                           </button>
                         </div>
@@ -4687,6 +4803,22 @@ export default function Home() {
                             </p>
                           </div>
                         </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            disabled={isSavingSalary}
+                            onClick={() => handleSaveAllSalarySettings("Punctuality policy saved successfully!")}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
+                          >
+                            {isSavingSalary ? (
+                              <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Icons.Check className="w-3.5 h-3.5" />
+                            )}
+                            <span>Save Punctuality Policy</span>
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -4788,6 +4920,22 @@ export default function Home() {
                             </p>
                           </div>
                         </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            disabled={isSavingSalary}
+                            onClick={() => handleSaveAllSalarySettings("Overtime policy saved successfully!")}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
+                          >
+                            {isSavingSalary ? (
+                              <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Icons.Check className="w-3.5 h-3.5" />
+                            )}
+                            <span>Save Overtime Policy</span>
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -4886,25 +5034,18 @@ export default function Home() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          {settingsSaveMsg && settingsTab === "epf" ? (
-                            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                              <Icons.Check className="w-3.5 h-3.5" />
-                              <span>{settingsSaveMsg}</span>
-                            </span>
-                          ) : null}
+                        <div className="flex items-center gap-2 shrink-0">
                           <button 
                             type="button" 
-                            onClick={() => { 
-                              updateEpfSettings(epfForm); 
-                              updatePayrollCycleStartDay(cycleStartDayForm); 
-                              updateSalarySettings(salarySettings); 
-                              setSettingsSaveMsg("Salary & Statutory Settings saved successfully!"); 
-                              setTimeout(() => setSettingsSaveMsg(""), 3000); 
-                            }} 
-                            className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                            disabled={isSavingSalary}
+                            onClick={() => handleSaveAllSalarySettings("Statutory contributions & payroll cycle saved successfully!")}
+                            className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                           >
-                            <Icons.Check className="w-3.5 h-3.5" />
+                            {isSavingSalary ? (
+                              <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Icons.Check className="w-3.5 h-3.5" />
+                            )}
                             <span>Save Statutory Settings</span>
                           </button>
                         </div>
@@ -5031,6 +5172,38 @@ export default function Home() {
                           })}
                         </select>
                       </div>
+                    </div>
+
+                    {/* BOTTOM MASTER SAVE ACTION BAR */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                      isDark 
+                        ? "bg-slate-900/70 border-slate-800 shadow-lg" 
+                        : "bg-slate-50 border-slate-200/90 shadow-sm"
+                    } flex flex-col sm:flex-row items-center justify-between gap-3`}>
+                      <div className="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                          <Icons.Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                        <span>All modified bonus rates, arrival tolerance, overtime rules &amp; statutory rates will be committed.</span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isSavingSalary}
+                        onClick={() => handleSaveAllSalarySettings("All salary policies, dynamic bonuses & statutory settings saved successfully!")}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-black rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                      >
+                        {isSavingSalary ? (
+                          <>
+                            <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving Settings...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Icons.Check className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>Save All Salary &amp; Dynamic Settings</span>
+                          </>
+                        )}
+                      </button>
                     </div>
 
                     {/* ALLOWANCES */}
