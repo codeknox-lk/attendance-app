@@ -5087,6 +5087,7 @@ export default function Home() {
                           </div>
                           <div className="flex items-center gap-1.5 flex-wrap pt-1">
                             {[
+                              { label: "1.0× Flat/Direct", val: 1.0 },
                               { label: "1.25× Normal", val: 1.25 },
                               { label: "1.5× Statutory", val: 1.5 },
                               { label: "1.75× Extended", val: 1.75 },
