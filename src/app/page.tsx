@@ -3753,7 +3753,7 @@ export default function Home() {
 
                 {/* BIOMETRIC & HIKVISION CLOUD SETTINGS */}
                 {settingsTab==="biometric" && (
-                  <div className="space-y-6 max-w-3xl">
+                  <div className="space-y-6 w-full">
                     {/* Featured Device Card */}
                     <div className={`p-6 rounded-3xl border relative overflow-hidden backdrop-blur-xl ${
                       isDark
@@ -3967,7 +3967,7 @@ export default function Home() {
 
                 {/* CLINIC COMPANY PROFILE */}
                 {settingsTab === "company" && (
-                  <div className="space-y-6 max-w-3xl">
+                  <div className="space-y-6 w-full">
                     <div className="border-b border-slate-200/80 dark:border-slate-800/80 pb-4">
                       <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
                         Clinic Identity &amp; Organization Profile
@@ -4149,7 +4149,7 @@ export default function Home() {
 
                 {/* SECURITY & ADMIN PIN */}
                 {settingsTab === "security" && (
-                  <div className="space-y-6 max-w-lg">
+                  <div className="space-y-6 w-full">
                     <div className="border-b border-slate-200/80 dark:border-slate-800/80 pb-4">
                       <div className="flex items-center gap-2">
                         <Icons.Shield className="w-5 h-5 text-[#0ea5e9]" />
@@ -4162,74 +4162,119 @@ export default function Home() {
                       </p>
                     </div>
 
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        if (updateAdminPin(newPinInput)) {
-                          setPinChangeMsg("Admin PIN updated successfully!");
-                          setNewPinInput("");
-                        } else {
-                          setPinChangeMsg("PIN must be exactly 4 digits");
-                        }
-                      }}
-                      className={`p-6 rounded-3xl border space-y-4 ${
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                      {/* Security Policy Information Card */}
+                      <div className={`p-6 rounded-3xl border space-y-4 ${
                         isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"
-                      }`}
-                    >
-                      <div>
-                        <label className={labelCls}>Current Active PIN</label>
-                        <input
-                          disabled
-                          readOnly
-                          className={`${inputCls(isDark)} font-mono tracking-widest text-center text-sm ${
-                            isDark ? "bg-slate-900 text-slate-400" : "bg-slate-100 text-slate-600"
-                          }`}
-                          value={`•••• (Active: ${adminPin})`}
-                        />
-                      </div>
-                      <div>
-                        <label className={labelCls}>New 4-Digit Security PIN</label>
-                        <input
-                          type="password"
-                          maxLength={4}
-                          placeholder="e.g. 5678"
-                          className={`${inputCls(isDark)} font-mono text-center tracking-[0.5em] text-lg font-bold`}
-                          value={newPinInput}
-                          onChange={e => {
-                            setNewPinInput(e.target.value);
-                            setPinChangeMsg("");
-                          }}
-                        />
-                      </div>
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                            isDark ? "bg-sky-500/10 border-sky-500/20 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                          }`}>
+                            <Icons.LockClosed className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white">Master Security Authorization</h4>
+                            <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              Active Security Protection
+                            </span>
+                          </div>
+                        </div>
 
-                      {pinChangeMsg && (
-                        <p className={`text-xs font-bold text-center flex items-center justify-center gap-1.5 ${
-                          pinChangeMsg.includes("successfully") ? "text-emerald-400" : "text-rose-500"
-                        }`}>
-                          {pinChangeMsg.includes("successfully") ? (
-                            <Icons.Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          ) : (
-                            <Icons.AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                          )}
-                          <span>{pinChangeMsg}</span>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Your 4-digit Administrator PIN acts as the physical cryptographic authorization key across MedSync Cloud. This prevents unauthorized personnel from altering statutory parameters.
                         </p>
-                      )}
 
-                      <button
-                        type="submit"
-                        disabled={newPinInput.length !== 4}
-                        className="w-full py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 text-xs flex items-center justify-center gap-1.5"
+                        <div className="space-y-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Protected Operations:</p>
+                          <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                            <li className="flex items-center gap-2">
+                              <Icons.Check className="w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8] shrink-0" />
+                              <span>Monthly payroll approval &amp; EPF/ETF disbursement generation</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <Icons.Check className="w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8] shrink-0" />
+                              <span>Modifying employee basic salaries, hourly, and session rates</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <Icons.Check className="w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8] shrink-0" />
+                              <span>Hikvision terminal network configuration and push endpoints</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* PIN Update Form Card */}
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (updateAdminPin(newPinInput)) {
+                            setPinChangeMsg("Admin PIN updated successfully!");
+                            setNewPinInput("");
+                          } else {
+                            setPinChangeMsg("PIN must be exactly 4 digits");
+                          }
+                        }}
+                        className={`p-6 rounded-3xl border space-y-4 ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"
+                        }`}
                       >
-                        <Icons.LockClosed className="w-3.5 h-3.5" />
-                        <span>Update Security PIN</span>
-                      </button>
-                    </form>
+                        <div>
+                          <label className={labelCls}>Current Active PIN</label>
+                          <input
+                            disabled
+                            readOnly
+                            className={`${inputCls(isDark)} font-mono tracking-widest text-center text-sm ${
+                              isDark ? "bg-slate-900 text-slate-400" : "bg-slate-100 text-slate-600"
+                            }`}
+                            value={`•••• (Active: ${adminPin})`}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>New 4-Digit Security PIN</label>
+                          <input
+                            type="password"
+                            maxLength={4}
+                            placeholder="e.g. 5678"
+                            className={`${inputCls(isDark)} font-mono text-center tracking-[0.5em] text-lg font-bold`}
+                            value={newPinInput}
+                            onChange={e => {
+                              setNewPinInput(e.target.value);
+                              setPinChangeMsg("");
+                            }}
+                          />
+                        </div>
+
+                        {pinChangeMsg && (
+                          <p className={`text-xs font-bold text-center flex items-center justify-center gap-1.5 ${
+                            pinChangeMsg.includes("successfully") ? "text-emerald-400" : "text-rose-500"
+                          }`}>
+                            {pinChangeMsg.includes("successfully") ? (
+                              <Icons.Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            ) : (
+                              <Icons.AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                            )}
+                            <span>{pinChangeMsg}</span>
+                          </p>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={newPinInput.length !== 4}
+                          className="w-full py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 text-xs flex items-center justify-center gap-1.5"
+                        >
+                          <Icons.LockClosed className="w-3.5 h-3.5" />
+                          <span>Update Security PIN</span>
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 )}
 
                 {/* SALARY & DYNAMIC BONUS SETTINGS */}
                 {settingsTab==="epf" && (
-                  <div className="space-y-8 max-w-4xl pb-10">
+                  <div className="space-y-8 w-full pb-10">
                     
                     {/* DYNAMIC BONUSES & ATTENDANCE INCENTIVES ENGINE */}
                     <div className={`p-6 rounded-2xl border transition-smooth ${
@@ -5084,7 +5129,7 @@ export default function Home() {
 
                 {/* STAFF DIRECTORY */}
                 {settingsTab==="staff" && (
-                  <div className="space-y-6 max-w-4xl">
+                  <div className="space-y-6 w-full">
                     {/* Header Banner */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
                       <div>
@@ -5462,7 +5507,7 @@ export default function Home() {
 
                 {/* OPERATING HOURS */}
                 {settingsTab==="operating-hours" && (
-                  <div className="space-y-6 max-w-4xl">
+                  <div className="space-y-6 w-full">
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
                       <div>
@@ -5493,7 +5538,7 @@ export default function Home() {
                     </div>
 
                     {/* Day Cards Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {operatingHours.map(h => {
                         const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
                         const dayName = dayNames[h.dayOfWeek];
@@ -5619,7 +5664,7 @@ export default function Home() {
 
                 {/* HOLIDAYS */}
                 {settingsTab==="holidays" && (
-                  <div className="space-y-6 max-w-3xl">
+                  <div className="space-y-6 w-full">
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
                       <div>
