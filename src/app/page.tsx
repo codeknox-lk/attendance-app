@@ -807,10 +807,11 @@ export default function Home() {
       const msg = customSuccessMsg || "All salary policies, dynamic bonus rates, statutory parameters & payroll cycle saved successfully!";
       setSalarySaveFeedback({ type: "success", msg });
       setSettingsSaveMsg(msg);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save salary settings. Please check your connection and try again.";
       setSalarySaveFeedback({
         type: "error",
-        msg: err?.message || "Failed to save salary settings. Please check your connection and try again.",
+        msg,
       });
     } finally {
       setIsSavingSalary(false);

@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest) {
         address: body.address,
         phone: body.phone,
         email: body.email,
-        logoUrl: body.logoUrl !== undefined ? body.logoUrl : undefined,
+        logoUrl: body.logoUrl !== undefined ? (body.logoUrl as string | null) : undefined,
         epfRegNo: body.epfRegNo,
         etfRegNo: body.etfRegNo,
         epfEmployeeRate: body.epfEmployeeRate !== undefined ? Number(body.epfEmployeeRate) : undefined,
