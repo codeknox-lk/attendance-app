@@ -4658,48 +4658,67 @@ export default function Home() {
                     </div>
 
                     {/* PUNCTUALITY & ARRIVAL GRACE POLICY */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between border-b pb-2 dark:border-zinc-800">
-                        <div className="flex items-center gap-2">
-                          <Icons.Clock className="w-4 h-4 text-[#0F85B0] dark:text-[#38bdf8]" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Punctuality &amp; Arrival Grace Policy</h3>
+                    <div className={`p-6 sm:p-7 rounded-3xl border transition-smooth backdrop-blur-xl ${
+                      isDark ? "bg-slate-900/60 border-slate-800 shadow-xl" : "bg-white border-slate-200/90 shadow-sm"
+                    } space-y-5`}>
+                      {/* Card Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                            isDark ? "bg-sky-500/10 border-sky-500/20 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                          }`}>
+                            <Icons.Clock className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                                Punctuality &amp; Arrival Grace Policy
+                              </h3>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                                salarySettings.punctualGraceType === "Strict"
+                                  ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                                  : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              }`}>
+                                {salarySettings.punctualGraceType === "Strict" ? "Strict Mode (0 min Cutoff)" : `Grace Period (+${salarySettings.punctualGraceMinutes || 15} mins)`}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Controls whether check-in events past the scheduled shift start qualify as <strong>On-Time</strong> (awarding the Punctual Days Bonus) or <strong>Late</strong>.
+                            </p>
+                          </div>
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          salarySettings.punctualGraceType === "Strict"
-                            ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                            : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                        }`}>
-                          {salarySettings.punctualGraceType === "Strict" ? "Strict Mode (0 min)" : `Grace Window (${salarySettings.punctualGraceMinutes || 15} mins)`}
-                        </span>
                       </div>
-                      <p className="text-[10px] text-zinc-500">
-                        Controls whether check-in events past the scheduled shift start time qualify as <strong>On-Time</strong> (awarding the Punctual Days Bonus) or <strong>Late</strong>.
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* Policy Mode Selector Card */}
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2`}>
                           <label className={labelCls}>Policy Mode</label>
                           <select 
                             className={inputCls(isDark)}
                             value={salarySettings.punctualGraceType || "Grace Period"}
                             onChange={e => updateSalarySettings({ punctualGraceType: e.target.value as "Strict" | "Grace Period" })}
                           >
-                            <option value="Grace Period">Grace Period (Forgives minor delays)</option>
+                            <option value="Grace Period">Grace Period (Forgives minor travel delays)</option>
                             <option value="Strict">Strict (Minute-by-Minute Cutoff)</option>
                           </select>
-                          <p className="text-[10px] text-zinc-400 mt-1">
+                          <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
                             {salarySettings.punctualGraceType === "Strict"
-                              ? "Any check-in after the exact shift start (e.g. 08:31 AM for 08:30) is marked Late."
-                              : `Arriving within ${salarySettings.punctualGraceMinutes || 15} mins of shift start awards the full Punctual Bonus.`
+                              ? "Strict mode: Any check-in even 1 minute after exact shift start (e.g. 08:31 AM for 08:30 AM) is marked Late and does not award the bonus."
+                              : `Grace mode: Arriving within ${salarySettings.punctualGraceMinutes || 15} minutes of shift start still awards the full Punctual Bonus.`
                             }
                           </p>
                         </div>
-                        
-                        {salarySettings.punctualGraceType !== "Strict" && (
-                          <div>
+
+                        {/* Grace Period Configuration Card */}
+                        {salarySettings.punctualGraceType !== "Strict" ? (
+                          <div className={`p-4 sm:p-5 rounded-2xl border ${
+                            isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                          } space-y-2.5`}>
                             <div className="flex items-center justify-between">
-                              <label className={labelCls}>Grace Period (Minutes)</label>
-                              <span className="text-[10px] font-mono text-[#0F85B0] dark:text-[#38bdf8] font-bold">
+                              <label className={labelCls}>Grace Period Window</label>
+                              <span className="text-xs font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]">
                                 +{salarySettings.punctualGraceMinutes || 15} mins tolerance
                               </span>
                             </div>
@@ -4712,88 +4731,326 @@ export default function Home() {
                               value={salarySettings.punctualGraceMinutes || 15} 
                               onChange={e => updateSalarySettings({ punctualGraceMinutes: parseInt(e.target.value) || 0 })}
                             />
-                            {/* Quick Presets */}
-                            <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap pt-1">
                               {[5, 10, 15, 20, 30].map(mins => (
                                 <button
                                   key={mins}
                                   type="button"
                                   onClick={() => updateSalarySettings({ punctualGraceMinutes: mins })}
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition ${
                                     (salarySettings.punctualGraceMinutes || 15) === mins
-                                      ? "bg-[#0F85B0] text-white border-[#0F85B0]"
-                                      : isDark ? "border-zinc-700 hover:bg-zinc-800 text-zinc-400" : "border-zinc-200 hover:bg-white text-zinc-600"
+                                      ? "bg-[#0F85B0] text-white border-[#0F85B0] shadow-xs"
+                                      : isDark ? "border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-300" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs"
                                   }`}
                                 >
-                                  {mins} min
+                                  {mins} mins
                                 </button>
                               ))}
                             </div>
+                          </div>
+                        ) : (
+                          <div className={`p-4 sm:p-5 rounded-2xl border flex items-center justify-center text-center ${
+                            isDark ? "bg-slate-950/20 border-slate-800/60 text-slate-500" : "bg-slate-50/50 border-slate-200/60 text-slate-400"
+                          }`}>
+                            <p className="text-xs font-medium">Strict Mode active: 0 minutes tolerance. Immediate cutoff applied.</p>
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* OVERTIME POLICY */}
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Overtime Policy</h3>
-                      <p className="text-[10px] text-zinc-500">Determine how the Biometric System handles check-outs that occur after the scheduled Operating Hours.</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className={labelCls}>Calculation Mode</label>
+                    <div className={`p-6 sm:p-7 rounded-3xl border transition-smooth backdrop-blur-xl ${
+                      isDark ? "bg-slate-900/60 border-slate-800 shadow-xl" : "bg-white border-slate-200/90 shadow-sm"
+                    } space-y-5`}>
+                      {/* Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                            isDark ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-600"
+                          }`}>
+                            <Icons.TrendingUp className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                                Overtime &amp; Post-Shift Policy
+                              </h3>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                                salarySettings.otCalculationType === "Manual"
+                                  ? "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                                  : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              }`}>
+                                {salarySettings.otCalculationType || "Manual"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Determines how biometric check-outs past standard clinic operating hours accumulate payable OT hours.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2`}>
+                          <label className={labelCls}>OT Calculation Mode</label>
                           <select 
                             className={inputCls(isDark)}
                             value={salarySettings.otCalculationType}
                             onChange={e => updateSalarySettings({ otCalculationType: e.target.value as "Manual" | "Strict" | "Grace Period" })}
                           >
-                            <option value="Manual">Disabled / Manual Only</option>
-                            <option value="Strict">Strict (Minute-by-Minute)</option>
-                            <option value="Grace Period">Grace Period (Forgives small delays)</option>
+                            <option value="Manual">Manual Approval Only (Admin adjusts via slide drawer)</option>
+                            <option value="Strict">Strict (Minute-by-Minute auto accumulation)</option>
+                            <option value="Grace Period">Grace Threshold (Forgives small handover delays)</option>
                           </select>
+                          <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
+                            {salarySettings.otCalculationType === "Strict"
+                              ? "All extra minutes beyond shift closing automatically tally toward monthly overtime."
+                              : salarySettings.otCalculationType === "Grace Period"
+                                ? `Staff leaving within ${salarySettings.otGracePeriodMinutes || 15} mins of shift closing will not trigger OT.`
+                                : "Automatic OT is disabled. Overtime is only credited when manually entered by an admin."}
+                          </p>
                         </div>
-                        
-                        {salarySettings.otCalculationType === "Grace Period" && (
-                          <div>
-                            <label className={labelCls}>Grace Period (Minutes)</label>
+
+                        {salarySettings.otCalculationType === "Grace Period" ? (
+                          <div className={`p-4 sm:p-5 rounded-2xl border ${
+                            isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                          } space-y-2.5`}>
+                            <div className="flex items-center justify-between">
+                              <label className={labelCls}>Post-Shift Handover Grace (Minutes)</label>
+                              <span className="text-xs font-mono font-bold text-emerald-500">
+                                {salarySettings.otGracePeriodMinutes || 15} mins cutoff
+                              </span>
+                            </div>
                             <input 
                               type="number" 
+                              min="5"
+                              max="60"
+                              step="5"
                               className={inputCls(isDark)} 
-                              value={salarySettings.otGracePeriodMinutes} 
+                              value={salarySettings.otGracePeriodMinutes || 15} 
                               onChange={e => updateSalarySettings({ otGracePeriodMinutes: parseInt(e.target.value) || 0 })}
                             />
-                            <p className="text-[10px] text-zinc-500 mt-1">If staff leave within {salarySettings.otGracePeriodMinutes} mins of session end, OT = 0.</p>
+                            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                              {[10, 15, 20, 30].map(mins => (
+                                <button
+                                  key={mins}
+                                  type="button"
+                                  onClick={() => updateSalarySettings({ otGracePeriodMinutes: mins })}
+                                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition ${
+                                    (salarySettings.otGracePeriodMinutes || 15) === mins
+                                      ? "bg-emerald-500 text-white border-emerald-500 shadow-xs"
+                                      : isDark ? "border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-300" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs"
+                                  }`}
+                                >
+                                  {mins} mins
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className={`p-4 sm:p-5 rounded-2xl border flex items-center justify-center text-center ${
+                            isDark ? "bg-slate-950/20 border-slate-800/60 text-slate-500" : "bg-slate-50/50 border-slate-200/60 text-slate-400"
+                          }`}>
+                            <p className="text-xs font-medium">Standard OT rate: 1.5× hourly rate on normal days, 2.0× on public holidays.</p>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* EPF / ETF */}
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Statutory Rates (EPF/ETF)</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div><label className={labelCls}>Employee EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employeeRate} onChange={e=>setEpfForm(p=>({...p, employeeRate: parseFloat(e.target.value)||0}))}/></div>
-                        <div><label className={labelCls}>Employer EPF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.employerRate} onChange={e=>setEpfForm(p=>({...p, employerRate: parseFloat(e.target.value)||0}))}/></div>
-                        <div><label className={labelCls}>ETF (%)</label><input type="number" className={inputCls(isDark)} value={epfForm.etfRate} onChange={e=>setEpfForm(p=>({...p, etfRate: parseFloat(e.target.value)||0}))}/></div>
-                      </div>
-                      <div><label className={labelCls}>Working Days / Month</label><input type="number" className={`${inputCls(isDark)} max-w-[120px]`} value={salarySettings.workingDaysPerMonth} onChange={e=>updateSalarySettings({workingDaysPerMonth: parseInt(e.target.value)||20})}/><p className="text-[10px] text-zinc-500 mt-1">Used to calculate daily no-pay rate.</p></div>
-                      
-                      <div className="pt-2 border-t border-zinc-800">
-                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Salary Period Cycle</h4>
-                        <select className={inputCls(isDark)} value={cycleStartDayForm} onChange={e=>setCycleStartDayForm(parseInt(e.target.value)||1)}>
-                          {Array.from({length:31},(_,i)=>i+1).map(day=>{const s=daySuffix(day);const pd=day-1;const ps=daySuffix(pd);return(<option key={day} value={day}>{day}{s} of month {day===1?"(Standard calendar month)":`(${day}${s} to ${pd}${ps} of next month)`}</option>);})}
-                        </select>
+                    {/* EPF / ETF & PAYROLL SCHEDULE */}
+                    <div className={`p-6 sm:p-7 rounded-3xl border transition-smooth backdrop-blur-xl ${
+                      isDark ? "bg-slate-900/60 border-slate-800 shadow-xl" : "bg-white border-slate-200/90 shadow-sm"
+                    } space-y-6`}>
+                      {/* Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                            isDark ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/20 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                          }`}>
+                            <Icons.Shield className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                                Statutory Contributions &amp; Payroll Cycle
+                              </h3>
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#0ea5e9]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0ea5e9]/20">
+                                Sri Lanka Act No. 15 of 1958
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Government-mandated EPF &amp; ETF contribution percentages and clinic standard monthly working cycle.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {settingsSaveMsg && settingsTab === "epf" ? (
+                            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                              <Icons.Check className="w-3.5 h-3.5" />
+                              <span>{settingsSaveMsg}</span>
+                            </span>
+                          ) : null}
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              updateEpfSettings(epfForm); 
+                              updatePayrollCycleStartDay(cycleStartDayForm); 
+                              updateSalarySettings(salarySettings); 
+                              setSettingsSaveMsg("Salary & Statutory Settings saved successfully!"); 
+                              setTimeout(() => setSettingsSaveMsg(""), 3000); 
+                            }} 
+                            className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                          >
+                            <Icons.Check className="w-3.5 h-3.5" />
+                            <span>Save Statutory Settings</span>
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="pt-2 flex items-center justify-between">
-                        {settingsSaveMsg && settingsTab === "epf" ? <span className="text-xs font-bold text-emerald-400">{settingsSaveMsg}</span> : <span />}
-                        <button type="button" onClick={() => { updateEpfSettings(epfForm); updatePayrollCycleStartDay(cycleStartDayForm); updateSalarySettings(salarySettings); setSettingsSaveMsg("Salary & Bonus Settings updated successfully!"); setTimeout(() => setSettingsSaveMsg(""), 3000); }} className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded-xl shadow transition">Save Salary Settings</button>
+                      {/* Rates Cards Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Employee EPF */}
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2`}>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee EPF</label>
+                            <span className="text-[10px] font-bold text-sky-500">Deducted</span>
+                          </div>
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              step="0.5"
+                              className={`${inputCls(isDark)} pr-8 font-mono font-bold text-sm text-[#0F85B0] dark:text-[#38bdf8]`} 
+                              value={epfForm.employeeRate} 
+                              onChange={e=>setEpfForm(p=>({...p, employeeRate: parseFloat(e.target.value)||0}))}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400">Standard statutory rate is 8.0%</p>
+                        </div>
+
+                        {/* Employer EPF */}
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2`}>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Employer EPF</label>
+                            <span className="text-[10px] font-bold text-emerald-500">Clinic Contribution</span>
+                          </div>
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              step="0.5"
+                              className={`${inputCls(isDark)} pr-8 font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400`} 
+                              value={epfForm.employerRate} 
+                              onChange={e=>setEpfForm(p=>({...p, employerRate: parseFloat(e.target.value)||0}))}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400">Standard statutory rate is 12.0%</p>
+                        </div>
+
+                        {/* ETF */}
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2`}>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">ETF (Trust Fund)</label>
+                            <span className="text-[10px] font-bold text-purple-500">Clinic Contribution</span>
+                          </div>
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              step="0.5"
+                              className={`${inputCls(isDark)} pr-8 font-mono font-bold text-sm text-purple-600 dark:text-purple-400`} 
+                              value={epfForm.etfRate} 
+                              onChange={e=>setEpfForm(p=>({...p, etfRate: parseFloat(e.target.value)||0}))}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400">Standard statutory rate is 3.0%</p>
+                        </div>
+
+                        {/* Working Days / Month */}
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2`}>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Working Days / Month</label>
+                            <span className="text-[10px] font-bold text-amber-500">Baseline</span>
+                          </div>
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              className={`${inputCls(isDark)} pr-14 font-mono font-bold text-sm text-slate-900 dark:text-white`} 
+                              value={salarySettings.workingDaysPerMonth} 
+                              onChange={e=>updateSalarySettings({workingDaysPerMonth: parseInt(e.target.value)||20})}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">days</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400">Used to compute daily no-pay deduction rate.</p>
+                        </div>
+                      </div>
+
+                      {/* Salary Period Cycle Section */}
+                      <div className={`p-5 rounded-2xl border ${
+                        isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                      } space-y-3`}>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                              Monthly Salary Cycle &amp; Cutoff Day
+                            </h4>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Choose the starting day of your monthly payroll cycle.
+                            </p>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]">
+                            Cycle Day #{cycleStartDayForm}
+                          </span>
+                        </div>
+                        
+                        <select 
+                          className={inputCls(isDark)} 
+                          value={cycleStartDayForm} 
+                          onChange={e=>setCycleStartDayForm(parseInt(e.target.value)||1)}
+                        >
+                          {Array.from({length:31},(_,i)=>i+1).map(day=>{
+                            const s=daySuffix(day);
+                            const pd=day-1;
+                            const ps=daySuffix(pd);
+                            return(
+                              <option key={day} value={day}>
+                                {day}{s} of month {day===1?"(Standard calendar month: 1st to end of month)":`(${day}${s} of current month to ${pd}${ps} of next month)`}
+                              </option>
+                            );
+                          })}
+                        </select>
                       </div>
                     </div>
 
                     {/* ALLOWANCES */}
                     <div className="space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Global Allowance Categories</h3>
+                      <div className="border-b border-slate-200/80 dark:border-slate-800/80 pb-3 flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Icons.Wallet className="w-4 h-4 text-[#0ea5e9]" />
+                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                              Global Clinic Allowances &amp; Stipends
+                            </h3>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Reusable allowances applicable to employee payslips with configurable EPF and tax treatments.
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#0ea5e9]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0ea5e9]/20">
+                          {allowances.length} Active Allowances
+                        </span>
+                      </div>
                       <div className="space-y-2.5">
                         {allowances.map(al => {
                           const isEditing = editingAllowanceId === al.id;
