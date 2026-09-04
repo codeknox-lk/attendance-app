@@ -102,7 +102,8 @@ const calculateOvertimeHours = (
   date: string,
   operatingHours: { dayOfWeek: number; isOpen: boolean; startTime: string; endTime: string }[],
   otCalculationType: string = "Strict",
-  graceMinutes: number = 30
+  graceMinutes: number = 30,
+  checkIn?: string | null | undefined
 ): number => {
   if (otCalculationType === "Manual" || otCalculationType === "Disabled") return 0;
   if (!checkOut || checkOut === "–" || checkOut.toLowerCase().includes("active")) return 0;
@@ -110,21 +111,36 @@ const calculateOvertimeHours = (
   const logDate = new Date(date + "T00:00:00Z");
   const dayOfWeek = logDate.getUTCDay();
   const opHour = operatingHours.find(h => h.dayOfWeek === dayOfWeek);
-  if (!opHour || !opHour.isOpen) return 0;
-
-  const [endH, endM] = opHour.endTime.split(":").map(Number);
-  const shiftEndMinutes = endH * 60 + endM;
 
   const [outH, outM] = checkOut.split(":").map(Number);
+  if (isNaN(outH) || isNaN(outM)) return 0;
   const checkOutMinutes = outH * 60 + outM;
+
+  // Case 1: Clinic is CLOSED on this day (e.g. Monday off-day) -> all hours worked count as Overtime!
+  if (!opHour || !opHour.isOpen) {
+    if (checkIn && checkIn !== "–" && !checkIn.toLowerCase().includes("active")) {
+      const [inH, inM] = checkIn.split(":").map(Number);
+      if (!isNaN(inH) && !isNaN(inM)) {
+        let workedMin = checkOutMinutes - (inH * 60 + inM);
+        if (workedMin < 0) workedMin += 24 * 60;
+        return Math.round((workedMin / 60) * 100) / 100;
+      }
+    }
+    return 0;
+  }
+
+  // Case 2: Clinic is OPEN on this day -> hours worked past shift closing time
+  const [endH, endM] = opHour.endTime.split(":").map(Number);
+  if (isNaN(endH) || isNaN(endM)) return 0;
+  const shiftEndMinutes = endH * 60 + endM;
 
   if (otCalculationType === "Strict") {
     if (checkOutMinutes > shiftEndMinutes) {
-      return (checkOutMinutes - shiftEndMinutes) / 60;
+      return Math.round(((checkOutMinutes - shiftEndMinutes) / 60) * 100) / 100;
     }
   } else if (otCalculationType === "Grace Period") {
     if (checkOutMinutes > shiftEndMinutes + graceMinutes) {
-      return (checkOutMinutes - shiftEndMinutes) / 60;
+      return Math.round(((checkOutMinutes - shiftEndMinutes) / 60) * 100) / 100;
     }
   }
   return 0;
@@ -793,6 +809,30 @@ export default function Home() {
     }
   };
 
+  const [isSavingOperatingHours, setIsSavingOperatingHours] = useState(false);
+  const [operatingHoursSaveFeedback, setOperatingHoursSaveFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const handleSaveOperatingHours = async () => {
+    setIsSavingOperatingHours(true);
+    setOperatingHoursSaveFeedback(null);
+    try {
+      await updateOperatingHours(operatingHours);
+      setOperatingHoursSaveFeedback({
+        type: "success",
+        message: "Operating schedule saved successfully! All attendance logs and overtime hours have been dynamically synchronized.",
+      });
+      setTimeout(() => setOperatingHoursSaveFeedback(null), 5000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save operating schedule. Please try again.";
+      setOperatingHoursSaveFeedback({
+        type: "error",
+        message: msg,
+      });
+    } finally {
+      setIsSavingOperatingHours(false);
+    }
+  };
+
   const [selfServicePin, setSelfServicePin] = useState("");
   const [selfServiceEmp, setSelfServiceEmp] = useState<Employee|null>(null);
   const [selfServiceError, setSelfServiceError] = useState("");
@@ -965,12 +1005,27 @@ export default function Home() {
         );
       }).length;
       const absentCount = empLogs.filter(l => l.status==="Absent").length;
-      const totalOtHours = empLogs.reduce((s,l) => {
-        const ot = l.overtimeHours > 0
-          ? l.overtimeHours
-          : calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
-        return s + ot;
-      }, 0);
+      
+      // Split into regular overtime and double overtime (for public holidays marked isDoubleOT)
+      let regularOtHours = 0;
+      let doubleOtHours = 0;
+
+      empLogs.forEach(l => {
+        const ot = (salarySettings.otCalculationType !== "Manual")
+          ? calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn)
+          : (l.overtimeHours || 0);
+
+        if (ot > 0) {
+          const isHolidayDouble = publicHolidays.some(h => h.date === l.date && h.isDoubleOT);
+          if (isHolidayDouble) {
+            doubleOtHours += ot;
+          } else {
+            regularOtHours += ot;
+          }
+        }
+      });
+      const totalOtHours = regularOtHours + doubleOtHours;
+
       const totalWorkHours = empLogs.reduce((s, l) => {
         if (!l.checkIn || !l.checkOut) return s;
         const [hIn, mIn] = l.checkIn.split(':').map(Number);
@@ -1009,7 +1064,8 @@ export default function Home() {
           baseRate = emp.basicSalary / 200;
         }
         const mult = salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5;
-        otPay = totalOtHours * baseRate * mult;
+        // Regular OT at standard rate + Holiday OT at statutory Double Rate (2.0x)
+        otPay = (regularOtHours * baseRate * mult) + (doubleOtHours * baseRate * 2.0);
         epfBase += basicEarnings;
       } else if (emp.payType==="Session-based") {
         sessionPay = sessionCount * emp.sessionRate;
@@ -1017,7 +1073,7 @@ export default function Home() {
         if (emp.epfEligible) epfBase += basicEarnings;
       } else {
         basicEarnings = sessionCount * 8 * emp.hourlyRate;
-        otPay = totalOtHours * emp.hourlyRate;
+        otPay = (regularOtHours * emp.hourlyRate * 1.5) + (doubleOtHours * emp.hourlyRate * 2.0);
         if (emp.epfEligible) epfBase += basicEarnings;
       }
 
@@ -1049,6 +1105,7 @@ export default function Home() {
 
       return { 
         employee:emp, sessionCount, punctualCount, absentCount, totalOtHours, totalWorkHours,
+        regularOtHours, doubleOtHours,
         basicEarnings, otPay, sessionPay, totalAllowances:totalAllowancesVal, 
         noPayDeduction, manualBonus, manualDeduction, payslipNote: adj.note, 
         employeeEpf, employerEpf, employerEtf, grossEarnings, apitMonthly, netSalary,
@@ -1056,7 +1113,7 @@ export default function Home() {
         attBonusRate, puncBonusRate, incBonusPct
       };
     });
-  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings, operatingHours]);
+  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings, operatingHours, publicHolidays]);
 
   const payrollTotals = useMemo(() => payrollCalcs.reduce((t,c) => ({ gross:t.gross+c.grossEarnings, net:t.net+c.netSalary, epfEmp:t.epfEmp+c.employeeEpf, epfEmr:t.epfEmr+c.employerEpf, etf:t.etf+c.employerEtf, apit:t.apit+c.apitMonthly }), {gross:0,net:0,epfEmp:0,epfEmr:0,etf:0,apit:0}), [payrollCalcs]);
 
@@ -1069,9 +1126,9 @@ export default function Home() {
   const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]}); };
 
   const openDrawer = (log: AttendanceLog) => {
-    const effectiveOt = log.overtimeHours > 0
-      ? log.overtimeHours
-      : calculateOvertimeHours(log.checkOut, log.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+    const effectiveOt = (salarySettings.otCalculationType !== "Manual")
+      ? calculateOvertimeHours(log.checkOut, log.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, log.checkIn)
+      : (log.overtimeHours || 0);
 
     setPunchEdit({
       checkIn: log.checkIn,
@@ -1657,7 +1714,7 @@ export default function Home() {
                   { label: "Total Logs", value: statusCounts.All, color: "from-[#0ea5e9] to-[#0F85B0]", badge: selectedMonth, icon: <Icons.Clock className="w-4 h-4 text-[#38bdf8]" /> },
                   { label: "On-Time Rate", value: `${Math.min(100, Math.round(((statusCounts["On-Time"] || 0) / (statusCounts.All || 1)) * 100))}%`, color: "from-emerald-500 to-teal-600", badge: `${statusCounts["On-Time"] || 0} Punches`, icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
                   { label: "Late Arrivals", value: statusCounts["Late"] || 0, color: "from-amber-500 to-orange-600", badge: "Grace Check", icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
-                  { label: "Overtime Logged", value: formatHoursAndMins(filteredLogs.reduce((s, l) => s + (l.overtimeHours > 0 ? l.overtimeHours : calculateOvertimeHours(l.checkOut, l.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes)), 0)), color: "from-indigo-500 to-purple-600", badge: "Approved OT", icon: <Icons.TrendingUp className="w-4 h-4 text-indigo-400" /> },
+                  { label: "Overtime Logged", value: formatHoursAndMins(filteredLogs.reduce((s, l) => s + ((salarySettings.otCalculationType !== "Manual") ? calculateOvertimeHours(l.checkOut, l.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn) : (l.overtimeHours || 0)), 0)), color: "from-indigo-500 to-purple-600", badge: "Approved OT", icon: <Icons.TrendingUp className="w-4 h-4 text-indigo-400" /> },
                 ].map((item, idx) => (
                   <div
                     key={idx}
@@ -1783,9 +1840,9 @@ export default function Home() {
                         const initial = empName.charAt(0).toUpperCase();
                         const effectiveHours = emp?.customOperatingHours?.length ? emp.customOperatingHours : operatingHours;
                         const workedHours = calculateWorkedHours(log.checkIn, log.checkOut);
-                        const otHours = log.overtimeHours > 0
-                          ? log.overtimeHours
-                          : calculateOvertimeHours(log.checkOut, log.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+                        const otHours = (salarySettings.otCalculationType !== "Manual")
+                          ? calculateOvertimeHours(log.checkOut, log.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, log.checkIn)
+                          : (log.overtimeHours || 0);
 
                         const isPunctual = ["On-Time", "Late"].includes(log.status)
                           ? calculateIsPunctual(log.checkIn, log.date, effectiveHours, salarySettings.punctualGraceType, salarySettings.punctualGraceMinutes)
@@ -1844,7 +1901,14 @@ export default function Home() {
                             </td>
                             <td className="px-3 py-2.5 text-center font-mono font-bold whitespace-nowrap">
                               {otHours > 0 ? (
-                                <span className="text-emerald-500 font-bold">+{formatHoursAndMins(otHours)}</span>
+                                <div className="flex flex-col items-center">
+                                  <span className="text-emerald-500 font-bold">+{formatHoursAndMins(otHours)}</span>
+                                  {publicHolidays.some(h => h.date === log.date && h.isDoubleOT) && (
+                                    <span className="text-[9px] font-black text-amber-500 bg-amber-500/10 px-1 rounded border border-amber-500/20 leading-none mt-0.5">
+                                      2× Holiday
+                                    </span>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-slate-300 dark:text-slate-700 font-normal select-none">—</span>
                               )}
@@ -3695,9 +3759,9 @@ export default function Home() {
                             if (diff > 0) delayMinutes = diff;
                           }
 
-                          const ot = l.overtimeHours > 0
-                            ? l.overtimeHours
-                            : calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+                          const ot = (salarySettings.otCalculationType !== "Manual")
+                            ? calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn)
+                            : (l.overtimeHours || 0);
 
                           return (
                             <div
@@ -6168,17 +6232,43 @@ export default function Home() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          updateOperatingHours(operatingHours);
-                          setSettingsSaveMsg("Operating hours updated successfully!");
-                          setTimeout(() => setSettingsSaveMsg(""), 3000);
-                        }}
-                        className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                        disabled={isSavingOperatingHours}
+                        onClick={handleSaveOperatingHours}
+                        className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
                       >
-                        <Icons.Check className="w-3.5 h-3.5" />
-                        <span>Save Operating Schedule</span>
+                        <Icons.Check className={`w-3.5 h-3.5 ${isSavingOperatingHours ? "animate-spin" : ""}`} />
+                        <span>{isSavingOperatingHours ? "Saving Schedule..." : "Save Operating Schedule"}</span>
                       </button>
                     </div>
+
+                    {/* Operating Hours Feedback Alert Banner */}
+                    {operatingHoursSaveFeedback && (
+                      <div className={`p-3.5 rounded-2xl border text-xs font-semibold flex items-center justify-between gap-3 animate-in fade-in transition-all ${
+                        operatingHoursSaveFeedback.type === "success"
+                          ? isDark
+                            ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-300"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                          : isDark
+                            ? "bg-rose-950/40 border-rose-800/60 text-rose-300"
+                            : "bg-rose-50 border-rose-200 text-rose-800"
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          {operatingHoursSaveFeedback.type === "success" ? (
+                            <Icons.Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Icons.X className="w-4 h-4 text-rose-500 shrink-0" />
+                          )}
+                          <span>{operatingHoursSaveFeedback.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setOperatingHoursSaveFeedback(null)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+                        >
+                          <Icons.X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
 
                     {/* Day Cards Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -6685,7 +6775,7 @@ export default function Home() {
                       onChange={e => {
                         const newOut = e.target.value;
                         const autoOt = activeDrawerLog
-                          ? calculateOvertimeHours(newOut, activeDrawerLog.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes)
+                          ? calculateOvertimeHours(newOut, activeDrawerLog.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, activeDrawerLog.checkIn)
                           : 0;
                         setPunchEdit(p => ({
                           ...p,

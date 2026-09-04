@@ -933,11 +933,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateOperatingHours = async (hours: ClinicOperatingHours[]) => {
     setOperatingHours(hours);
     try {
-      await apiFetch("/api/operating-hours", {
+      const res = await apiFetch("/api/operating-hours", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ operatingHours: hours }),
       });
+      const data = await res.json();
+      if (data.success) {
+        // Re-fetch attendance logs to pull newly recalculated OT values from the database
+        try {
+          const attRes = await apiFetch("/api/attendance");
+          const attData = await attRes.json();
+          if (attData.success && attData.logs) {
+            setAttendanceLogs(attData.logs.map((l: Record<string, unknown>) => ({
+              id: String(l.id),
+              employeeId: String(l.employeeId),
+              date: String(l.date),
+              checkIn: l.checkIn ? String(l.checkIn) : "",
+              checkOut: l.checkOut ? String(l.checkOut) : "",
+              status: (l.status as AttendanceLog["status"]) || "On-Time",
+              overtimeHours: Number(l.overtimeHours) || 0,
+              noPayHours: Number(l.noPayHours) || 0,
+              authMethod: l.authMethod ? String(l.authMethod) : undefined,
+            })));
+          }
+        } catch {}
+      }
       pushAudit({ action: "UPDATE", entity: "ClinicOperatingHours", entityId: "all", details: "Updated clinic operating hours" });
     } catch {}
   };
