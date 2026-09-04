@@ -6519,17 +6519,20 @@ export default function Home() {
                                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                       <span className="font-mono text-[10px] text-slate-400">{h.date}</span>
                                       {isPoya && (
-                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/20">
-                                          🌕 Full Moon Poya
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/20 flex items-center gap-1">
+                                          <Icons.Moon className="w-2.5 h-2.5 text-purple-500 shrink-0" />
+                                          <span>Full Moon Poya</span>
                                         </span>
                                       )}
                                       {isMercantile && (
-                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/20">
-                                          Mercantile
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/20 flex items-center gap-1">
+                                          <Icons.Check className="w-2.5 h-2.5 text-sky-500 shrink-0" />
+                                          <span>Mercantile</span>
                                         </span>
                                       )}
-                                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
-                                        Gazetted
+                                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20 flex items-center gap-1">
+                                        <Icons.FileText className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                                        <span>Gazetted</span>
                                       </span>
                                     </div>
                                   </div>
