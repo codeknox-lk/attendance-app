@@ -782,10 +782,11 @@ export default function Home() {
       if (typeof selectedHolidayYear === "number" && selectedHolidayYear !== yr) {
         setSelectedHolidayYear(yr);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to synchronize holidays. Please try again.";
       setHolidaySyncFeedback({
         type: "error",
-        message: err?.message || "Failed to synchronize holidays. Please try again.",
+        message: msg,
       });
     } finally {
       setIsSyncingHolidays(false);
@@ -6468,7 +6469,7 @@ export default function Home() {
                             let monthStr = "CAL";
                             let dayStr = "--";
                             let weekdayStr = "";
-                            let yearStr = h.date.split("-")[0];
+                            const yearStr = h.date.split("-")[0];
                             try {
                               const d = new Date(h.date + "T00:00:00");
                               monthStr = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
