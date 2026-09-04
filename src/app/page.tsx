@@ -1052,7 +1052,24 @@ export default function Home() {
   };
 
 
-  const handleSelfServicePin = () => { setSelfServiceError(""); const emp=activeEmployees.find(e=>e.biometricId===selfServicePin); if(emp){setSelfServiceEmp(emp);}else{setSelfServiceError("Biometric ID not found. Please try again.");} };
+  const handleSelfServicePin = () => {
+    setSelfServiceError("");
+    const trimmed = selfServicePin.trim().toLowerCase();
+    if (!trimmed) {
+      setSelfServiceError("Please enter your Biometric ID or select your profile.");
+      return;
+    }
+    const emp = activeEmployees.find(e => 
+      e.biometricId?.toLowerCase() === trimmed ||
+      e.id?.toLowerCase() === trimmed ||
+      `${e.firstName} ${e.lastName}`.toLowerCase().includes(trimmed)
+    );
+    if (emp) {
+      setSelfServiceEmp(emp);
+    } else {
+      setSelfServiceError("Staff profile not found. Please verify your Biometric ID or select from the directory.");
+    }
+  };
 
   // ── Shared UI pieces ──
   const monthSelector = (value: string, onChange: (v:string)=>void) => {
@@ -3166,77 +3183,495 @@ export default function Home() {
 
           {/* ═══════════════ SELF-SERVICE ═══════════════ */}
           {activeTab==="selfservice" && (
-            <div className="space-y-5 max-w-xl mx-auto">
+            <div className="space-y-6">
               {!selfServiceEmp ? (
-                <div className={`${cardCls(isDark)} text-center py-12`}>
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-[#e0f2fe] text-[#0c6c8f]"}`}>
-                    <Icons.User className="w-7 h-7" />
+                <div className="max-w-4xl mx-auto space-y-8">
+                  {/* Hero Header Card */}
+                  <div className={`relative overflow-hidden rounded-3xl p-8 sm:p-10 border transition-smooth backdrop-blur-xl ${
+                    isDark
+                      ? "bg-gradient-to-b from-slate-900/90 via-slate-900/60 to-slate-950/90 border-slate-800 shadow-2xl"
+                      : "bg-gradient-to-b from-white via-sky-50/30 to-white border-slate-200/80 shadow-[0_20px_60px_-15px_rgba(15,133,176,0.07)]"
+                  }`}>
+                    <div className="absolute top-0 right-1/4 w-72 h-72 bg-[#0F85B0]/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-10 left-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                    <div className="relative z-10 flex flex-col items-center text-center max-w-xl mx-auto">
+                      <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wide mb-5 border transition ${
+                        isDark
+                          ? "bg-[#042633]/70 border-[#09526e] text-[#38bdf8]"
+                          : "bg-sky-50 border-sky-200 text-[#0c6c8f] shadow-xs"
+                      }`}>
+                        <Icons.Shield className="w-3.5 h-3.5 text-[#0ea5e9]" />
+                        <span>Smile Hub Portal · Biometric Staff Self-Service</span>
+                      </div>
+
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#0F85B0] via-sky-500 to-teal-400 p-0.5 shadow-lg shadow-[#0F85B0]/20 mb-4">
+                        <div className={`w-full h-full rounded-[14px] flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-white"}`}>
+                          <Icons.User className="w-8 h-8 text-[#0ea5e9]" />
+                        </div>
+                      </div>
+
+                      <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">Staff Portal Access</h2>
+                      <p className={`text-xs sm:text-sm max-w-md ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                        Enter your assigned Biometric ID or select your profile below to view your real-time verified attendance, leave balances, and live payroll statements.
+                      </p>
+
+                      {/* Input Group */}
+                      <div className="w-full max-w-md mt-6">
+                        <div className={`relative flex items-center rounded-2xl border p-1.5 transition-all shadow-inner ${
+                          isDark
+                            ? "bg-slate-950/80 border-slate-800 focus-within:border-[#38bdf8] focus-within:ring-2 focus-within:ring-[#0ea5e9]/20"
+                            : "bg-slate-50 border-slate-300/80 focus-within:bg-white focus-within:border-[#0F85B0] focus-within:ring-3 focus-within:ring-[#0F85B0]/10"
+                        }`}>
+                          <div className="pl-3 text-slate-400">
+                            <Icons.Search className="w-5 h-5" />
+                          </div>
+                          <input
+                            value={selfServicePin}
+                            onChange={e => { setSelfServicePin(e.target.value); setSelfServiceError(""); }}
+                            onKeyDown={e => { if (e.key === "Enter") handleSelfServicePin(); }}
+                            placeholder="Enter Biometric ID (e.g. SH001, SH002)..."
+                            className="w-full px-3 py-2 text-sm font-semibold bg-transparent focus:outline-none placeholder:text-slate-400"
+                          />
+                          <button
+                            onClick={handleSelfServicePin}
+                            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white shadow-md shadow-[#0F85B0]/20 transition shrink-0 active:scale-95"
+                          >
+                            Access Portal
+                          </button>
+                        </div>
+                        {selfServiceError && (
+                          <div className="flex items-center justify-center gap-1.5 text-xs text-rose-500 font-semibold mt-3 animate-fade-in">
+                            <Icons.AlertTriangle className="w-4 h-4 shrink-0" />
+                            <span>{selfServiceError}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Security note */}
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-6">
+                        <Icons.LockClosed className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Hardware sync active with Hikvision Face Terminal DS-K1T320MFWX</span>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="font-bold text-lg mb-1">Employee Self-Service</h2>
-                  <p className="text-xs text-zinc-500 mb-6">Enter your Biometric ID to view your payslip and attendance summary</p>
-                  <div className="flex gap-2 max-w-xs mx-auto">
-                    <input value={selfServicePin} onChange={e=>setSelfServicePin(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")handleSelfServicePin();}} placeholder="Biometric ID (e.g. 101)" className={`${inputCls(isDark)} text-center font-mono text-lg`}/>
-                    <button onClick={handleSelfServicePin} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>Go</button>
+
+                  {/* Quick Profile Selector Cards */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Staff Profile Directory</h3>
+                      <span className="text-[11px] font-bold text-slate-400">{activeEmployees.length} Active Staff</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {activeEmployees.map(emp => (
+                        <button
+                          key={emp.id}
+                          onClick={() => { setSelfServiceEmp(emp); setSelfServicePin(emp.biometricId); setSelfServiceError(""); }}
+                          className={`p-4 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all group ${
+                            isDark
+                              ? "bg-slate-900/60 border-slate-800/80 hover:bg-slate-850 hover:border-[#38bdf8]/50 hover:shadow-lg hover:shadow-sky-500/5"
+                              : "bg-white border-slate-200/90 hover:border-[#0F85B0]/50 hover:bg-sky-50/30 hover:shadow-md"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+                              {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-xs truncate group-hover:text-[#0F85B0] dark:group-hover:text-[#38bdf8] transition-colors">
+                                {emp.firstName} {emp.lastName}
+                              </h4>
+                              <p className="text-[11px] text-slate-400 truncate">{emp.role}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end shrink-0">
+                            <span className={`font-mono text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${
+                              isDark ? "bg-slate-800 border-slate-700 text-slate-300" : "bg-slate-100 border-slate-200 text-slate-700"
+                            }`}>
+                              {emp.biometricId}
+                            </span>
+                            <span className="text-[9px] text-[#0ea5e9] font-bold mt-1 group-hover:translate-x-0.5 transition-transform">
+                              Open →
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  {selfServiceError&&<p className="text-xs text-rose-500 mt-3">{selfServiceError}</p>}
-                  <p className="text-[10px] text-zinc-600 mt-6">Try: 101, 102, 103, 104, or 105</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
-                        {selfServiceEmp.firstName[0]}{selfServiceEmp.lastName[0]}
-                      </div>
-                      <div>
-                        <h2 className="font-bold text-lg">{selfServiceEmp.firstName} {selfServiceEmp.lastName}</h2>
-                        <p className="text-xs text-zinc-500">{selfServiceEmp.role} · {selfServiceEmp.payType}</p>
-                      </div>
+                <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+                  {/* Top Navigation & Actions Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <button
+                      onClick={() => { setSelfServiceEmp(null); setSelfServicePin(""); }}
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition shadow-xs ${
+                        isDark
+                          ? "bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white"
+                          : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>←</span>
+                      <span>Back to Staff Directory</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${
+                        isDark ? "bg-slate-900 border-slate-800 text-slate-300" : "bg-slate-100 border-slate-200 text-slate-700"
+                      }`}>
+                        Period: <strong className="text-[#0ea5e9]">{selectedMonth}</strong>
+                      </span>
+                      <button
+                        onClick={() => setSelectedPaySlip(selfServiceEmp.id)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#0F85B0] hover:bg-[#0c6c8f] text-white shadow-md shadow-[#0F85B0]/20 transition active:scale-95"
+                      >
+                        <Icons.Printer className="w-3.5 h-3.5" />
+                        <span>Print Payslip</span>
+                      </button>
                     </div>
-                    <button onClick={()=>{setSelfServiceEmp(null);setSelfServicePin("");}} className={`px-3 py-1.5 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400 hover:bg-zinc-800":"border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}>← Back</button>
                   </div>
-                  {/* Leave balances */}
-                  <div className={cardCls(isDark)}>
-                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Leave Balances</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      {(["annual","sick","casual"] as const).map(k=>(
-                        <div key={k} className={`p-3 rounded border text-center ${isDark?"bg-zinc-950/40 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                          <p className="text-[10px] text-zinc-500 capitalize mb-1">{k}</p>
-                          <p className="text-2xl font-extrabold">{selfServiceEmp.leaveBalances[k]}</p>
-                          <p className="text-[10px] text-zinc-500">days left</p>
+
+                  {/* Staff Profile Hero Card */}
+                  <div className={`p-6 sm:p-7 rounded-3xl border transition-smooth backdrop-blur-xl relative overflow-hidden ${
+                    isDark
+                      ? "bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950 border-slate-800 shadow-xl"
+                      : "bg-gradient-to-br from-white via-sky-50/20 to-white border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)]"
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#0F85B0] via-sky-500 to-teal-400 p-0.5 shadow-md shadow-[#0F85B0]/20 shrink-0">
+                          <div className={`w-full h-full rounded-[14px] flex items-center justify-center font-black text-xl text-white ${isDark ? "bg-slate-900" : "bg-[#0F85B0]"}`}>
+                            {selfServiceEmp.firstName.charAt(0)}{selfServiceEmp.lastName.charAt(0)}
+                          </div>
                         </div>
-                      ))}
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-xl font-black tracking-tight">{selfServiceEmp.firstName} {selfServiceEmp.lastName}</h2>
+                            <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border ${
+                              isDark ? "bg-[#042633] text-[#38bdf8] border-[#09526e]" : "bg-sky-50 text-[#0c6c8f] border-sky-200"
+                            }`}>
+                              {selfServiceEmp.role}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-1">
+                            <span className="font-mono font-bold text-emerald-500">Biometric ID: {selfServiceEmp.biometricId}</span>
+                            <span>•</span>
+                            <span>{selfServiceEmp.payType}</span>
+                            <span>•</span>
+                            <span>{selfServiceEmp.epfEligible ? "EPF Contributor" : "EPF Exempt"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Status Tag */}
+                      <div className={`p-3 rounded-2xl border text-right sm:text-left flex sm:flex-col justify-between items-center sm:items-start ${
+                        isDark ? "bg-slate-950/60 border-slate-800" : "bg-slate-50 border-slate-200/80"
+                      }`}>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Policy</span>
+                        <span className="text-xs font-black text-[#0ea5e9]">{salarySettings.punctualGraceType} Mode</span>
+                      </div>
                     </div>
+
+                    {/* Metric Highlights Ribbon */}
+                    {(() => {
+                      const calc = payrollCalcs.find(c => c.employee.id === selfServiceEmp.id);
+                      if (!calc) return null;
+                      return (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-200/80 dark:border-slate-800/80">
+                          <div className={`p-3.5 rounded-xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-slate-50/70 border-slate-200/70"}`}>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Worked Sessions</span>
+                            <span className="text-lg font-black text-slate-900 dark:text-white">{calc.sessionCount} Days</span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">{formatHoursAndMins(calc.totalWorkHours)} logged</span>
+                          </div>
+                          <div className={`p-3.5 rounded-xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-slate-50/70 border-slate-200/70"}`}>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Punctual Days</span>
+                            <span className="text-lg font-black text-emerald-500">{calc.punctualCount} / {calc.sessionCount}</span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              {calc.sessionCount > 0 ? `${Math.round((calc.punctualCount / calc.sessionCount) * 100)}% on-time` : "No sessions"}
+                            </span>
+                          </div>
+                          <div className={`p-3.5 rounded-xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-slate-50/70 border-slate-200/70"}`}>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Overtime Hours</span>
+                            <span className="text-lg font-black text-[#0ea5e9]">{formatHoursAndMins(calc.totalOtHours)}</span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">LKR {calc.otPay.toLocaleString()}</span>
+                          </div>
+                          <div className={`p-3.5 rounded-xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-slate-50/70 border-slate-200/70"}`}>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Net Take-Home</span>
+                            <span className="text-lg font-black text-emerald-500">LKR {Math.round(calc.netSalary).toLocaleString()}</span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">Estimated</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
-                  {/* My payslip */}
-                  {(() => {
-                    const calc = payrollCalcs.find(c=>c.employee.id===selfServiceEmp.id);
-                    if (!calc) return null;
-                    return (
-                      <div className={cardCls(isDark)}>
-                        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">My Payslip — {selectedMonth}</h3>
-                        <div className="space-y-2 text-xs">
-                          {[["Basic Earnings",`LKR ${calc.basicEarnings.toLocaleString()}`],["OT Pay",`LKR ${calc.otPay.toLocaleString()}`],["Allowances",`+LKR ${calc.totalAllowances.toLocaleString()}`],["No-Pay Deduction",calc.noPayDeduction>0?`-LKR ${Math.round(calc.noPayDeduction).toLocaleString()}`:"LKR 0"],["EPF (8%)",calc.employee.epfEligible?`-LKR ${Math.round(calc.employeeEpf).toLocaleString()}`:"Exempt"],["APIT Tax",calc.apitMonthly>0?`-LKR ${Math.round(calc.apitMonthly).toLocaleString()}`:"—"]].map(([lbl,val])=>(
-                            <div key={lbl} className={`flex justify-between pb-2 border-b ${isDark?"border-zinc-800":"border-zinc-100"}`}>
-                              <span className="text-zinc-500">{lbl}</span><span className="font-mono font-semibold">{val}</span>
+
+                  {/* 2-Column Grid: Leave Balances & Detailed Payslip */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left Column: Leave Balances & Policy (4 cols) */}
+                    <div className="lg:col-span-4 space-y-6">
+                      {/* Leave Balances Card */}
+                      <div className={`p-5 rounded-3xl border transition-smooth backdrop-blur-xl ${
+                        isDark ? "bg-slate-900/60 border-slate-800 shadow-xl" : "bg-white border-slate-200/80 shadow-sm"
+                      }`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Leave Quotas</h3>
+                          <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Year 2026</span>
+                        </div>
+                        <div className="space-y-3">
+                          {[
+                            { label: "Annual Leave", key: "annual" as const, color: "text-blue-500" },
+                            { label: "Sick Leave", key: "sick" as const, color: "text-amber-500" },
+                            { label: "Casual Leave", key: "casual" as const, color: "text-emerald-500" },
+                          ].map(item => (
+                            <div key={item.key} className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                              isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50 border-slate-200/60"
+                            }`}>
+                              <div>
+                                <p className="text-xs font-bold text-slate-900 dark:text-white">{item.label}</p>
+                                <p className="text-[10px] text-slate-400">Available balance</p>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-xl font-black ${item.color}`}>{selfServiceEmp.leaveBalances[item.key]}</span>
+                                <span className="text-[10px] text-slate-400 ml-1 font-semibold">days</span>
+                              </div>
                             </div>
                           ))}
-                          <div className="flex justify-between pt-1"><span className="font-bold">Net Salary</span><span className="font-extrabold text-[#0ea5e9] text-base">LKR {Math.round(calc.netSalary).toLocaleString()}</span></div>
                         </div>
                       </div>
-                    );
-                  })()}
-                  {/* My attendance */}
-                  <div className={cardCls(isDark)}>
-                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">My Attendance — {selectedMonth}</h3>
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                      {attendanceLogs.filter(l=>l.employeeId===selfServiceEmp.id&&l.date>=dateRange.startDate&&l.date<=dateRange.endDate).sort((a,b)=>b.date.localeCompare(a.date)).map(l=>(
-                        <div key={l.id} className={`flex justify-between items-center px-3 py-2 rounded border text-xs ${isDark?"bg-zinc-900/40 border-zinc-800":"bg-zinc-50 border-zinc-100"}`}>
-                          <span className="font-mono text-zinc-500">{l.date}</span>
-                          <span>{l.checkIn} → {l.checkOut||"–"}</span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor(l.status,isDark)}`}>{l.status}</span>
-                        </div>
-                      ))}
+
+                      {/* Policy reference */}
+                      <div className={`p-5 rounded-3xl border ${
+                        isDark ? "bg-slate-900/40 border-slate-800/80" : "bg-slate-50/80 border-slate-200/70"
+                      }`}>
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Shift Policy</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Clinic shifts commence at <strong>15:30</strong> (Tue-Fri), <strong>13:00</strong> (Sat), and <strong>07:30</strong> (Sun). Punctual bonuses evaluate under <strong>{salarySettings.punctualGraceType}</strong> policy ({salarySettings.punctualGraceType === "Strict" ? "0m grace" : `${salarySettings.punctualGraceMinutes}m grace`}).
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Live Payslip Summary (8 cols) */}
+                    <div className="lg:col-span-8">
+                      {(() => {
+                        const calc = payrollCalcs.find(c => c.employee.id === selfServiceEmp.id);
+                        if (!calc) return null;
+                        return (
+                          <div className={`p-6 rounded-3xl border transition-smooth backdrop-blur-xl ${
+                            isDark ? "bg-slate-900/60 border-slate-800 shadow-xl" : "bg-white border-slate-200/80 shadow-sm"
+                          }`}>
+                            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                              <div>
+                                <h3 className="text-base font-black text-slate-900 dark:text-white">Earnings &amp; Deductions Breakdown</h3>
+                                <p className="text-xs text-slate-400">Statement for {selectedMonth}</p>
+                              </div>
+                              <button
+                                onClick={() => setSelectedPaySlip(selfServiceEmp.id)}
+                                className="px-3 py-1.5 text-xs font-bold text-[#0ea5e9] hover:text-[#0F85B0] dark:hover:text-[#38bdf8] flex items-center gap-1.5 transition"
+                              >
+                                <Icons.Printer className="w-3.5 h-3.5" />
+                                <span>Full Payslip</span>
+                              </button>
+                            </div>
+
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs mt-3">
+                              <div className="py-2.5 flex justify-between items-center">
+                                <span className="text-slate-500 font-medium">Basic / Session Pay</span>
+                                <span className="font-mono font-bold text-slate-900 dark:text-white">LKR {calc.basicEarnings.toLocaleString()}</span>
+                              </div>
+                              {calc.totalAllowances > 0 && (
+                                <div className="py-2.5 flex justify-between items-center">
+                                  <span className="text-slate-500 font-medium">Fixed / Qualification Allowances</span>
+                                  <span className="font-mono font-bold text-emerald-500">+LKR {calc.totalAllowances.toLocaleString()}</span>
+                                </div>
+                              )}
+                              {calc.workedDaysBonus > 0 && (
+                                <div className="py-2.5 flex justify-between items-center">
+                                  <span className="text-slate-500 font-medium">
+                                    Worked Days Bonus <span className="text-[10px] text-slate-400 font-normal">({calc.sessionCount} × {calc.attBonusRate})</span>
+                                  </span>
+                                  <span className="font-mono font-bold text-emerald-500">+LKR {calc.workedDaysBonus.toLocaleString()}</span>
+                                </div>
+                              )}
+                              {calc.punctualDaysBonus > 0 && (
+                                <div className="py-2.5 flex justify-between items-center">
+                                  <span className="text-slate-500 font-medium">
+                                    Punctual Days Bonus <span className="text-[10px] text-emerald-500 font-bold">({calc.punctualCount} × {calc.puncBonusRate})</span>
+                                  </span>
+                                  <span className="font-mono font-bold text-emerald-500">+LKR {calc.punctualDaysBonus.toLocaleString()}</span>
+                                </div>
+                              )}
+                              {calc.otPay > 0 && (
+                                <div className="py-2.5 flex justify-between items-center">
+                                  <span className="text-slate-500 font-medium">
+                                    Overtime Pay <span className="text-[10px] text-slate-400 font-normal">({formatHoursAndMins(calc.totalOtHours)})</span>
+                                  </span>
+                                  <span className="font-mono font-bold text-emerald-500">+LKR {calc.otPay.toLocaleString()}</span>
+                                </div>
+                              )}
+                              {calc.exceedIncomeBonus > 0 && (
+                                <div className="py-2.5 flex justify-between items-center">
+                                  <span className="text-slate-500 font-medium">Target Excess Income Bonus</span>
+                                  <span className="font-mono font-bold text-emerald-500">+LKR {calc.exceedIncomeBonus.toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              <div className="py-2.5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/30 px-3 rounded-lg -mx-3 font-bold">
+                                <span className="text-slate-700 dark:text-slate-200">Gross Remuneration</span>
+                                <span className="font-mono text-slate-900 dark:text-white">LKR {calc.grossEarnings.toLocaleString()}</span>
+                              </div>
+
+                              {calc.noPayDeduction > 0 && (
+                                <div className="py-2.5 flex justify-between items-center">
+                                  <span className="text-slate-500 font-medium">No-Pay Absence Deduction ({calc.absentCount}d)</span>
+                                  <span className="font-mono font-bold text-rose-500">-LKR {Math.round(calc.noPayDeduction).toLocaleString()}</span>
+                                </div>
+                              )}
+                              <div className="py-2.5 flex justify-between items-center">
+                                <span className="text-slate-500 font-medium">EPF Employee Share (8%)</span>
+                                <span className="font-mono font-bold text-rose-500">
+                                  {calc.employee.epfEligible ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString()}` : "Exempt"}
+                                </span>
+                              </div>
+                              {calc.apitMonthly > 0 && (
+                                <div className="py-2.5 flex justify-between items-center">
+                                  <span className="text-slate-500 font-medium">APIT Income Tax</span>
+                                  <span className="font-mono font-bold text-rose-500">-LKR {Math.round(calc.apitMonthly).toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              <div className="pt-4 flex justify-between items-center">
+                                <div>
+                                  <span className="text-sm font-black text-slate-900 dark:text-white block">Net Payable Salary</span>
+                                  <span className="text-[10px] text-slate-400">Direct transfer remittance</span>
+                                </div>
+                                <span className="font-mono text-xl sm:text-2xl font-black text-[#0ea5e9]">
+                                  LKR {Math.round(calc.netSalary).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Bottom Full-Width Attendance History Feed */}
+                  <div className={`p-6 rounded-3xl border transition-smooth backdrop-blur-xl ${
+                    isDark ? "bg-slate-900/60 border-slate-800 shadow-xl" : "bg-white border-slate-200/80 shadow-sm"
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                      <div>
+                        <h3 className="text-base font-black text-slate-900 dark:text-white">Attendance Verification Logs</h3>
+                        <p className="text-xs text-slate-400">Daily punch timestamps evaluated with live {salarySettings.punctualGraceType} policy</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                          Hardware Verified
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Log items feed */}
+                    <div className="space-y-2 mt-4 max-h-96 overflow-y-auto pr-1">
+                      {(() => {
+                        const empLogs = attendanceLogs
+                          .filter(l => l.employeeId === selfServiceEmp.id && l.date >= dateRange.startDate && l.date <= dateRange.endDate)
+                          .sort((a, b) => b.date.localeCompare(a.date));
+
+                        if (empLogs.length === 0) {
+                          return (
+                            <div className="py-12 text-center text-xs text-slate-400">
+                              No attendance logs recorded for this period.
+                            </div>
+                          );
+                        }
+
+                        const effectiveHours = selfServiceEmp.customOperatingHours?.length
+                          ? selfServiceEmp.customOperatingHours
+                          : operatingHours;
+
+                        return empLogs.map(l => {
+                          const isPunc = ["On-Time", "Late"].includes(l.status)
+                            ? calculateIsPunctual(l.checkIn, l.date, effectiveHours, salarySettings.punctualGraceType, salarySettings.punctualGraceMinutes)
+                            : (l.status === "On-Time");
+                          const effStatus = (l.status === "On-Time" || l.status === "Late")
+                            ? (isPunc ? "On-Time" : "Late")
+                            : l.status;
+
+                          const logDate = new Date(l.date + "T00:00:00Z");
+                          const dayOfWeek = logDate.getUTCDay();
+                          const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                          const opHour = effectiveHours.find(h => h.dayOfWeek === dayOfWeek);
+
+                          let delayMinutes = 0;
+                          if (opHour && opHour.isOpen && l.checkIn) {
+                            const [startH, startM] = opHour.startTime.split(":").map(Number);
+                            const [inH, inM] = l.checkIn.split(":").map(Number);
+                            const diff = (inH * 60 + inM) - (startH * 60 + startM);
+                            if (diff > 0) delayMinutes = diff;
+                          }
+
+                          const ot = l.overtimeHours > 0
+                            ? l.overtimeHours
+                            : calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+
+                          return (
+                            <div
+                              key={l.id}
+                              className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition ${
+                                isDark ? "bg-slate-950/40 border-slate-800/80 hover:bg-slate-900" : "bg-slate-50/60 border-slate-200/60 hover:bg-white hover:shadow-xs"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex flex-col items-center justify-center text-center shrink-0">
+                                  <span className="text-[9px] font-black uppercase text-slate-400">{dayNames[dayOfWeek]}</span>
+                                  <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 font-mono leading-none">
+                                    {l.date.split("-")[2]}
+                                  </span>
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{l.date}</span>
+                                    {opHour && opHour.isOpen ? (
+                                      <span className="text-[10px] text-slate-400">Shift: {opHour.startTime} → {opHour.endTime}</span>
+                                    ) : (
+                                      <span className="text-[10px] text-amber-500">Off-Day / Special</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                                    <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">In: {l.checkIn}</span>
+                                    <span>→</span>
+                                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">Out: {l.checkOut || "Active Shift"}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 self-end sm:self-auto">
+                                {ot > 0 && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold border bg-indigo-500/10 border-indigo-500/20 text-indigo-400">
+                                    +{formatHoursAndMins(ot)} OT
+                                  </span>
+                                )}
+                                {effStatus === "Late" ? (
+                                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-black border bg-amber-500/10 border-amber-500/30 text-amber-400 flex items-center gap-1">
+                                    <Icons.AlertTriangle className="w-3 h-3" />
+                                    <span>Late {delayMinutes > 0 ? `(+${delayMinutes}m)` : ""}</span>
+                                  </span>
+                                ) : effStatus === "On-Time" ? (
+                                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-black border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 flex items-center gap-1">
+                                    <Icons.CheckCircle className="w-3 h-3" />
+                                    <span>On-Time</span>
+                                  </span>
+                                ) : (
+                                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${statusColor(effStatus, isDark)}`}>
+                                    {effStatus}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 </div>
