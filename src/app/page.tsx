@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings
+  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings, SalarySettings
 } from "./context/AppContext";
 import { LoginView } from "@/components/auth/LoginView";
 
@@ -963,8 +963,20 @@ export default function Home() {
 
       if (emp.payType==="Fixed Monthly") {
         basicEarnings = emp.basicSalary;
-        const otRate = emp.hourlyRate || (emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9));
-        otPay = totalOtHours * otRate * 1.5;
+        let baseRate = 0;
+        const basis = salarySettings.otRateBasis || "Basic_200";
+        if (basis === "Profile_Hourly_Rate" && emp.hourlyRate) {
+          baseRate = emp.hourlyRate;
+        } else if (basis === "Basic_WorkingDays_8h") {
+          baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 8);
+        } else if (basis === "Basic_WorkingDays_9h") {
+          baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9);
+        } else {
+          // Default: Basic_200 (Sri Lanka Shop & Office Act standard: Basic / 200)
+          baseRate = emp.basicSalary / 200;
+        }
+        const mult = salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5;
+        otPay = totalOtHours * baseRate * mult;
         epfBase += basicEarnings;
       } else if (emp.payType==="Session-based") {
         sessionPay = sessionCount * emp.sessionRate;
@@ -4939,10 +4951,11 @@ export default function Home() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* OT Accumulation Mode */}
                         <div className={`p-4 sm:p-5 rounded-2xl border ${
                           isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
                         } space-y-2`}>
-                          <label className={labelCls}>OT Calculation Mode</label>
+                          <label className={labelCls}>OT Accumulation Trigger</label>
                           <select 
                             className={inputCls(isDark)}
                             value={salarySettings.otCalculationType}
@@ -4961,6 +4974,7 @@ export default function Home() {
                           </p>
                         </div>
 
+                        {/* Handover Grace Window or Explainer */}
                         {salarySettings.otCalculationType === "Grace Period" ? (
                           <div className={`p-4 sm:p-5 rounded-2xl border ${
                             isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
@@ -5001,9 +5015,164 @@ export default function Home() {
                           <div className={`p-4 sm:p-5 rounded-2xl border flex items-center justify-center text-center ${
                             isDark ? "bg-slate-950/20 border-slate-800/60 text-slate-500" : "bg-slate-50/50 border-slate-200/60 text-slate-400"
                           }`}>
-                            <p className="text-xs font-medium">Standard OT rate: 1.5× hourly rate on normal days, 2.0× on public holidays.</p>
+                            <p className="text-xs font-medium">
+                              {salarySettings.otCalculationType === "Strict"
+                                ? "Strict mode active: Every minute beyond closing time is recorded as payable OT."
+                                : "Manual mode: Overtime hours must be approved directly in staff attendance logs."}
+                            </p>
                           </div>
                         )}
+                      </div>
+
+                      {/* DYNAMIC OT HOURLY RATE BASIS & MULTIPLIER CONFIGURATION */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+                        {/* Rate Calculation Basis Selector */}
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2`}>
+                          <div className="flex items-center justify-between">
+                            <label className={labelCls}>OT Hourly Rate Calculation Basis</label>
+                            <span className="text-[10px] font-bold text-[#0F85B0] dark:text-[#38bdf8] uppercase tracking-wider">
+                              Dynamic Formula
+                            </span>
+                          </div>
+                          <select 
+                            className={inputCls(isDark)}
+                            value={salarySettings.otRateBasis || "Basic_200"}
+                            onChange={e => updateSalarySettings({ otRateBasis: e.target.value as SalarySettings["otRateBasis"] })}
+                          >
+                            <option value="Basic_200">Shop &amp; Office Act Standard (Basic Salary ÷ 200 hrs)</option>
+                            <option value="Basic_WorkingDays_9h">Working Days × 9 Hours: Basic ÷ ({salarySettings.workingDaysPerMonth || 20} × 9 = {(salarySettings.workingDaysPerMonth || 20) * 9} hrs)</option>
+                            <option value="Basic_WorkingDays_8h">Working Days × 8 Hours: Basic ÷ ({salarySettings.workingDaysPerMonth || 20} × 8 = {(salarySettings.workingDaysPerMonth || 20) * 8} hrs)</option>
+                            <option value="Profile_Hourly_Rate">Employee Profile Fixed Hourly Rate (Manual)</option>
+                          </select>
+                          <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
+                            {(!salarySettings.otRateBasis || salarySettings.otRateBasis === "Basic_200") && (
+                              <span><strong>Sri Lankan Statutory Standard</strong>: Divides monthly Basic Salary by 200 standard working hours, then applies the OT multiplier.</span>
+                            )}
+                            {salarySettings.otRateBasis === "Basic_WorkingDays_9h" && (
+                              <span>Computes normal hourly rate using <strong>{salarySettings.workingDaysPerMonth || 20} working days × 9 scheduled hours</strong> (180h divisor).</span>
+                            )}
+                            {salarySettings.otRateBasis === "Basic_WorkingDays_8h" && (
+                              <span>Computes normal hourly rate using <strong>{salarySettings.workingDaysPerMonth || 20} working days × 8 net working hours</strong> (160h divisor).</span>
+                            )}
+                            {salarySettings.otRateBasis === "Profile_Hourly_Rate" && (
+                              <span>Uses the static <strong>Hourly Rate</strong> assigned on each employee&apos;s individual profile (e.g. LKR 250/hr).</span>
+                            )}
+                          </p>
+                        </div>
+
+                        {/* Overtime Multiplier */}
+                        <div className={`p-4 sm:p-5 rounded-2xl border ${
+                          isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                        } space-y-2.5`}>
+                          <div className="flex items-center justify-between">
+                            <label className={labelCls}>Overtime Rate Multiplier</label>
+                            <span className="text-xs font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]">
+                              {salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5}× Pay Multiplier
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              min="1"
+                              max="3"
+                              step="0.25"
+                              className={`${inputCls(isDark)} pr-10 font-mono font-bold text-sm text-[#0F85B0] dark:text-[#38bdf8]`} 
+                              value={salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5} 
+                              onChange={e => updateSalarySettings({ otMultiplier: parseFloat(e.target.value) || 1.5 })}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">×</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                            {[
+                              { label: "1.25× Normal", val: 1.25 },
+                              { label: "1.5× Statutory", val: 1.5 },
+                              { label: "1.75× Extended", val: 1.75 },
+                              { label: "2.0× Double/Holiday", val: 2.0 },
+                            ].map(item => (
+                              <button
+                                key={item.val}
+                                type="button"
+                                onClick={() => updateSalarySettings({ otMultiplier: item.val })}
+                                className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition ${
+                                  (salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5) === item.val
+                                    ? "bg-[#0F85B0] text-white border-[#0F85B0] shadow-xs"
+                                    : isDark ? "border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-300" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs"
+                                }`}
+                              >
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* LIVE FORMULA EVALUATION DEMO CARD */}
+                      <div className={`p-4 sm:p-5 rounded-2xl border ${
+                        isDark ? "bg-zinc-950/60 border-zinc-800/80" : "bg-sky-50/60 border-sky-200/70"
+                      } space-y-3`}>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#0F85B0] animate-ping" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                              Live OT Rate Preview Under Current Settings
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                            Active Formula: {
+                              (!salarySettings.otRateBasis || salarySettings.otRateBasis === "Basic_200")
+                                ? `(Basic ÷ 200) × ${salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5}`
+                                : salarySettings.otRateBasis === "Basic_WorkingDays_9h"
+                                ? `(Basic ÷ ${(salarySettings.workingDaysPerMonth || 20) * 9}) × ${salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5}`
+                                : salarySettings.otRateBasis === "Basic_WorkingDays_8h"
+                                ? `(Basic ÷ ${(salarySettings.workingDaysPerMonth || 20) * 8}) × ${salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5}`
+                                : `Profile Hourly Rate × ${salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5}`
+                            }
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                          {activeEmployees.filter(e => e.payType === "Fixed Monthly").map(emp => {
+                            let baseRate = 0;
+                            const basis = salarySettings.otRateBasis || "Basic_200";
+                            if (basis === "Profile_Hourly_Rate" && emp.hourlyRate) {
+                              baseRate = emp.hourlyRate;
+                            } else if (basis === "Basic_WorkingDays_8h") {
+                              baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 8);
+                            } else if (basis === "Basic_WorkingDays_9h") {
+                              baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9);
+                            } else {
+                              baseRate = emp.basicSalary / 200;
+                            }
+                            const mult = salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5;
+                            const effectiveOtRate = baseRate * mult;
+
+                            return (
+                              <div
+                                key={emp.id}
+                                className={`p-3 rounded-xl border ${
+                                  isDark ? "bg-slate-900/80 border-slate-800" : "bg-white border-slate-200/80"
+                                } flex items-center justify-between gap-3`}
+                              >
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                    {emp.firstName} {emp.lastName}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400">
+                                    Basic: LKR {emp.basicSalary.toLocaleString()} {emp.hourlyRate ? `• Profile: LKR ${emp.hourlyRate}/h` : ""}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm font-mono font-black text-[#0F85B0] dark:text-[#38bdf8]">
+                                    LKR {effectiveOtRate.toFixed(2)}
+                                  </p>
+                                  <span className="text-[9px] font-bold text-emerald-500">per OT hour</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 

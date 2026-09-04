@@ -29,6 +29,8 @@ model Clinic {
   // Overtime Policy
   otCalculationType     String   @default("Manual") // Manual, Strict, Grace Period
   otGracePeriodMinutes  Int      @default(30)
+  otRateBasis           String   @default("Basic_200") // Basic_200, Basic_WorkingDays_9h, Basic_WorkingDays_8h, Profile_Hourly_Rate
+  otMultiplier          Float    @default(1.5)
 
   // Punctuality Policy
   punctualGraceType     String   @default("Grace Period") // Strict, Grace Period

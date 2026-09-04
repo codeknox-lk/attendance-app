@@ -188,6 +188,8 @@ export interface SalarySettings {
   globalIncomeBonusPct: number;
   otCalculationType: "Manual" | "Strict" | "Grace Period";
   otGracePeriodMinutes: number;
+  otRateBasis?: "Basic_200" | "Basic_WorkingDays_9h" | "Basic_WorkingDays_8h" | "Profile_Hourly_Rate";
+  otMultiplier?: number;
   punctualGraceType: "Strict" | "Grace Period";
   punctualGraceMinutes: number;
 }
@@ -447,6 +449,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       globalIncomeBonusPct: 0,
       otCalculationType: "Manual",
       otGracePeriodMinutes: 30,
+      otRateBasis: "Basic_200",
+      otMultiplier: 1.5,
       punctualGraceType: "Grace Period",
       punctualGraceMinutes: 15,
     };
@@ -706,6 +710,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             globalIncomeBonusPct: clnData.clinic.globalIncomeBonusPct ?? prev.globalIncomeBonusPct,
             otCalculationType: clnData.clinic.otCalculationType ?? prev.otCalculationType,
             otGracePeriodMinutes: clnData.clinic.otGracePeriodMinutes ?? prev.otGracePeriodMinutes,
+            otRateBasis: (clnData.clinic.otRateBasis as SalarySettings["otRateBasis"]) ?? prev.otRateBasis ?? "Basic_200",
+            otMultiplier: clnData.clinic.otMultiplier ?? prev.otMultiplier ?? 1.5,
             punctualGraceType: (clnData.clinic.punctualGraceType as "Strict" | "Grace Period") ?? prev.punctualGraceType ?? "Grace Period",
             punctualGraceMinutes: clnData.clinic.punctualGraceMinutes ?? prev.punctualGraceMinutes ?? 15,
           }));
