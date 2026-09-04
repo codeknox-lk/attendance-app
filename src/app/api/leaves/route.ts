@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { employeeId, type, startDate, endDate, reason } = body;
+    const { employeeId, type, startDate, endDate, reason, note, status } = body;
 
     const inputEmpId = String(employeeId);
     const clinicId = req.headers.get("x-clinic-id");
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
         type: type || "Annual",
         startDate: startDate || new Date().toISOString().split("T")[0],
         endDate: endDate || new Date().toISOString().split("T")[0],
-        reason: reason || "",
-        status: "Pending",
+        reason: reason || note || "",
+        status: status || "Pending",
       },
       include: { employee: true },
     });

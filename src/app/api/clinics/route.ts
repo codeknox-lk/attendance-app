@@ -45,6 +45,8 @@ export async function PUT(req: NextRequest) {
         globalIncomeBonusPct: body.globalIncomeBonusPct !== undefined ? Number(body.globalIncomeBonusPct) : undefined,
         otCalculationType: body.otCalculationType !== undefined ? body.otCalculationType : undefined,
         otGracePeriodMinutes: body.otGracePeriodMinutes !== undefined ? Number(body.otGracePeriodMinutes) : undefined,
+        punctualGraceType: body.punctualGraceType !== undefined ? body.punctualGraceType : undefined,
+        punctualGraceMinutes: body.punctualGraceMinutes !== undefined ? Number(body.punctualGraceMinutes) : undefined,
       },
     });
 

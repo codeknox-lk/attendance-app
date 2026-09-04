@@ -300,7 +300,19 @@ export async function POST(req: NextRequest) {
     
     let shiftStartMinutes = 8 * 60 + 30; // Default 08:30 AM
     let shiftEndMinutes = 17 * 60 + 0;   // Default 05:00 PM
-    const gracePeriodMinutes = 15;
+    let gracePeriodMinutes = 15;
+
+    let clinicSettings: { otCalculationType?: string | null; otGracePeriodMinutes?: number | null; punctualGraceType?: string | null; punctualGraceMinutes?: number | null } | null = null;
+    try {
+      clinicSettings = await db.clinic.findUnique({ where: { id: clinicId } });
+      if (clinicSettings?.punctualGraceType === "Strict") {
+        gracePeriodMinutes = 0;
+      } else if (clinicSettings?.punctualGraceMinutes !== undefined && clinicSettings?.punctualGraceMinutes !== null) {
+        gracePeriodMinutes = clinicSettings.punctualGraceMinutes;
+      }
+    } catch (err) {
+      console.error("[HIKVISION] Error fetching clinic settings:", err);
+    }
 
     try {
       const currentDayOfWeek = new Date(Date.UTC(slYear, slMonth - 1, slDay, 12)).getUTCDay();
@@ -333,7 +345,6 @@ export async function POST(req: NextRequest) {
       let overtimeHours = existingLog.overtimeHours || 0;
       
       try {
-        const clinicSettings = await db.clinic.findUnique({ where: { id: clinicId } });
         const otType = clinicSettings?.otCalculationType || "Manual";
         const otGrace = clinicSettings?.otGracePeriodMinutes ?? 30;
 
@@ -353,7 +364,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (err) {
-        console.error("[HIKVISION] Error fetching clinic OT settings:", err);
+        console.error("[HIKVISION] Error calculating clinic OT:", err);
       }
 
       // SECOND SCAN TODAY -> Record Check-Out

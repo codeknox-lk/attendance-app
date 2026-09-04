@@ -25,8 +25,8 @@ const SETTINGS_TABS = [
   { id: "biometric", label: "Biometric" },
   { id: "company", label: "Clinic Profile" },
   { id: "security", label: "Security & PIN" },
-  { id: "epf", label: "Salary Settings" },
-  { id: "staff", label: "Staff" },
+  { id: "epf", label: "Salary & Dynamic Bonuses" },
+  { id: "staff", label: "Staff Directory" },
   { id: "operating-hours", label: "Operating Hours" },
   { id: "holidays", label: "Holidays" },
 ] as const;
@@ -128,6 +128,30 @@ const calculateOvertimeHours = (
     }
   }
   return 0;
+};
+
+const calculateIsPunctual = (
+  checkIn: string | null | undefined,
+  date: string,
+  operatingHours: { dayOfWeek: number; isOpen: boolean; startTime: string; endTime: string }[],
+  punctualGraceType: string = "Strict",
+  punctualGraceMinutes: number = 15
+): boolean => {
+  if (!checkIn || checkIn === "–" || checkIn.toLowerCase().includes("active")) return false;
+  
+  const logDate = new Date(date + "T00:00:00Z");
+  const dayOfWeek = logDate.getUTCDay();
+  const opHour = operatingHours.find(h => h.dayOfWeek === dayOfWeek);
+  if (!opHour || !opHour.isOpen) return true;
+
+  const [startH, startM] = opHour.startTime.split(":").map(Number);
+  const shiftStartMinutes = startH * 60 + startM;
+
+  const [inH, inM] = checkIn.split(":").map(Number);
+  const checkInMinutes = inH * 60 + inM;
+
+  const allowedLateMinutes = punctualGraceType === "Strict" ? 0 : punctualGraceMinutes;
+  return checkInMinutes <= (shiftStartMinutes + allowedLateMinutes);
 };
 
 const Icons = {
@@ -242,6 +266,61 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
   ),
+  Calendar: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
+  ChevronLeft: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+  ),
+  ChevronRight: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  ),
+  Plus: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+  ),
+  Star: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+    </svg>
+  ),
+  HeartPulse: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  ),
+  Coffee: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3" />
+    </svg>
+  ),
+  Plane: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+    </svg>
+  ),
+  Home: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  ),
+  Briefcase: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  ),
+  Wallet: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    </svg>
+  ),
 };
 
 // ─── Salary Trend Chart (needs own state for hover tooltips) ────────────────
@@ -311,7 +390,7 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
                 <div
                   className={`w-full rounded-t-lg transition-all duration-500 ${
                     d.hours > 0
-                      ? "bg-gradient-to-t from-[#0F85B0] via-purple-600 to-emerald-400 shadow-md glow-indigo"
+                      ? "bg-gradient-to-t from-[#0F85B0] via-[#0ea5e9] to-teal-400 shadow-md shadow-[#0F85B0]/20"
                       : d.isClosed
                         ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(245,158,11,0.2)_4px,rgba(245,158,11,0.2)_8px)] border border-amber-500/30"
                         : isDark ? "bg-slate-800/20" : "bg-slate-200/50"
@@ -661,6 +740,10 @@ export default function Home() {
 
   const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
   const [newLeave, setNewLeave] = useState<Omit<LeaveRequest,"id"|"appliedAt">>({ employeeId:"", type:"Annual", startDate:"", endDate:"", status:"Pending", note:"" });
+  const [leaveSearchQuery, setLeaveSearchQuery] = useState("");
+  const [leaveStatusFilter, setLeaveStatusFilter] = useState<"All" | "Pending" | "Approved" | "Rejected">("All");
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState<"All" | "Annual" | "Sick" | "Casual" | "Unpaid">("All");
+  const [leaveDurationMode, setLeaveDurationMode] = useState<"single" | "range">("single");
 
 
 
@@ -742,17 +825,35 @@ export default function Home() {
     const c: Record<string, number> = { All: 0, "On-Time": 0, Late: 0, "Half-Day": 0, "On-Leave": 0, Absent: 0 };
     searchedLogs.forEach(l => {
       c.All++;
-      if (c[l.status] !== undefined) c[l.status]++;
+      const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId);
+      const effectiveHours = emp?.customOperatingHours?.length ? emp.customOperatingHours : operatingHours;
+      const isPunctual = ["On-Time", "Late"].includes(l.status)
+        ? calculateIsPunctual(l.checkIn, l.date, effectiveHours, salarySettings.punctualGraceType, salarySettings.punctualGraceMinutes)
+        : (l.status === "On-Time");
+      const effectiveStatus = (l.status === "On-Time" || l.status === "Late")
+        ? (isPunctual ? "On-Time" : "Late")
+        : l.status;
+      if (c[effectiveStatus] !== undefined) c[effectiveStatus]++;
     });
     return c;
-  }, [searchedLogs]);
+  }, [searchedLogs, employees, operatingHours, salarySettings]);
 
   const filteredLogs = useMemo(() => {
     return (attendanceStatusFilter === "All"
       ? searchedLogs
-      : searchedLogs.filter(l => l.status === attendanceStatusFilter)
+      : searchedLogs.filter(l => {
+          const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId);
+          const effectiveHours = emp?.customOperatingHours?.length ? emp.customOperatingHours : operatingHours;
+          const isPunctual = ["On-Time", "Late"].includes(l.status)
+            ? calculateIsPunctual(l.checkIn, l.date, effectiveHours, salarySettings.punctualGraceType, salarySettings.punctualGraceMinutes)
+            : (l.status === "On-Time");
+          const effectiveStatus = (l.status === "On-Time" || l.status === "Late")
+            ? (isPunctual ? "On-Time" : "Late")
+            : l.status;
+          return effectiveStatus === attendanceStatusFilter;
+        })
     ).sort((a, b) => b.date.localeCompare(a.date));
-  }, [searchedLogs, attendanceStatusFilter]);
+  }, [searchedLogs, attendanceStatusFilter, employees, operatingHours, salarySettings]);
 
   const totalAttendancePages = Math.max(1, Math.ceil(filteredLogs.length / attendancePageSize));
   const currentPage = Math.min(attendancePage, totalAttendancePages);
@@ -779,12 +880,24 @@ export default function Home() {
     return activeEmployees.map(emp => {
       const empLogs = attendanceLogs.filter(l => l.employeeId===emp.id && l.date>=dateRange.startDate && l.date<=dateRange.endDate);
       const sessionCount = empLogs.filter(l => ["On-Time","Late","Half-Day"].includes(l.status)).length;
-      const punctualCount = empLogs.filter(l => l.status==="On-Time").length;
+      const effectiveHours = (emp.customOperatingHours && emp.customOperatingHours.length > 0)
+        ? emp.customOperatingHours
+        : operatingHours;
+      const punctualCount = empLogs.filter(l => {
+        if (l.status === "Absent" || l.status === "On-Leave") return false;
+        return calculateIsPunctual(
+          l.checkIn,
+          l.date,
+          effectiveHours,
+          salarySettings.punctualGraceType,
+          salarySettings.punctualGraceMinutes
+        );
+      }).length;
       const absentCount = empLogs.filter(l => l.status==="Absent").length;
       const totalOtHours = empLogs.reduce((s,l) => {
         const ot = l.overtimeHours > 0
           ? l.overtimeHours
-          : calculateOvertimeHours(l.checkOut, l.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+          : calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
         return s + ot;
       }, 0);
       const totalWorkHours = empLogs.reduce((s, l) => {
@@ -955,7 +1068,7 @@ export default function Home() {
     }
 
     return (
-      <select value={value} onChange={e=>onChange(e.target.value)} className={`border rounded-md px-3 py-1.5 text-xs font-semibold focus:outline-none ${isDark?"bg-zinc-900 border-zinc-800 text-white":"bg-white border-zinc-200 text-zinc-800"}`}>
+      <select value={value} onChange={e=>onChange(e.target.value)} className={`border rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none transition-smooth shadow-2xs cursor-pointer ${isDark?"bg-zinc-850 border-zinc-750 text-white hover:border-zinc-600":"bg-white border-zinc-200 text-zinc-800 hover:border-zinc-300"}`}>
         {months.map(m => {
           const [y,mo]=m.split("-"); const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleString("default",{month:"long",year:"numeric"});
           return <option key={m} value={m}>{label}</option>;
@@ -1196,18 +1309,26 @@ export default function Home() {
               </svg>
             </button>
 
-            <div className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full border text-xs font-semibold ${
-              biometricSettings.status === "Connected"
-                ? isDark ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald" : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                : biometricSettings.status === "Syncing"
-                ? isDark ? "bg-amber-950/40 border-amber-800/50 text-amber-400 glow-amber" : "bg-amber-50 border-amber-200 text-amber-700"
-                : isDark ? "bg-rose-950/40 border-rose-800/50 text-rose-400" : "bg-rose-50 border-rose-200 text-rose-700"
-            }`}>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("settings");
+                setSettingsTab("biometric");
+              }}
+              title="Click to view Biometric Terminal Settings & Hardware Diagnostics"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer hover:opacity-90 active:scale-95 ${
+                biometricSettings.status === "Connected"
+                  ? isDark ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : biometricSettings.status === "Syncing"
+                  ? isDark ? "bg-amber-950/40 border-amber-800/50 text-amber-400 glow-amber" : "bg-amber-50 border-amber-200 text-amber-700"
+                  : isDark ? "bg-rose-950/40 border-rose-800/50 text-rose-400" : "bg-rose-50 border-rose-200 text-rose-700"
+              }`}
+            >
               <span className={`w-2 h-2 shrink-0 rounded-full ${biometricSettings.status === "Connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-ping"}`}/>
               <span className="hidden xl:inline">Hikvision DS-K1T320MFWX (HTTP Real-time Push - Connected)</span>
               <span className="hidden sm:inline xl:hidden">DS-K1T320MFWX · Connected</span>
               <span className="inline sm:hidden">Online</span>
-            </div>
+            </button>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -1226,7 +1347,7 @@ export default function Home() {
             </button>
 
             <div className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
-              <div className="w-6 h-6 shrink-0 rounded-lg bg-gradient-to-tr from-[#0ea5e9] via-purple-500 to-emerald-400 flex items-center justify-center text-white text-[11px] font-black shadow glow-indigo">
+              <div className="w-7 h-7 shrink-0 rounded-lg bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0F85B0]/30 font-extrabold flex items-center justify-center text-xs shadow-xs">
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
               </div>
               <div className="hidden sm:flex flex-col text-left">
@@ -1387,7 +1508,7 @@ export default function Home() {
                     return (
                       <div key={log.id} className={`flex items-center justify-between p-3.5 rounded-xl border text-xs transition-all ${isDark ? "bg-slate-900/60 border-slate-800/80 hover:border-slate-700" : "bg-white border-slate-200 shadow-sm"}`}>
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0F85B0] via-purple-600 to-emerald-400 flex items-center justify-center text-white font-black text-sm shadow glow-indigo">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
                             {initial}
                           </div>
                           <div>
@@ -1560,10 +1681,18 @@ export default function Home() {
                         const empName = emp ? `${emp.firstName} ${emp.lastName}` : (log.employee ? `${log.employee.firstName} ${log.employee.lastName}` : `Staff #${log.employeeId}`);
                         const empRole = emp?.role || "Staff";
                         const initial = empName.charAt(0).toUpperCase();
+                        const effectiveHours = emp?.customOperatingHours?.length ? emp.customOperatingHours : operatingHours;
                         const workedHours = calculateWorkedHours(log.checkIn, log.checkOut);
                         const otHours = log.overtimeHours > 0
                           ? log.overtimeHours
-                          : calculateOvertimeHours(log.checkOut, log.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+                          : calculateOvertimeHours(log.checkOut, log.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes);
+
+                        const isPunctual = ["On-Time", "Late"].includes(log.status)
+                          ? calculateIsPunctual(log.checkIn, log.date, effectiveHours, salarySettings.punctualGraceType, salarySettings.punctualGraceMinutes)
+                          : (log.status === "On-Time");
+                        const displayStatus = (log.status === "On-Time" || log.status === "Late")
+                          ? (isPunctual ? "On-Time" : "Late")
+                          : log.status;
 
                         return (
                           <tr key={log.id} className={`transition ${isDark ? "hover:bg-slate-800/30" : "hover:bg-slate-50/80"}`}>
@@ -1574,7 +1703,7 @@ export default function Home() {
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap">
                               <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#0F85B0] via-purple-600 to-emerald-400 flex items-center justify-center text-white font-black text-xs shadow-sm shrink-0">
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-xs flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
                                   {initial}
                                 </div>
                                 <div>
@@ -1584,8 +1713,8 @@ export default function Home() {
                               </div>
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap">
-                              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${statusColor(log.status, isDark)}`}>
-                                {log.status}
+                              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${statusColor(displayStatus, isDark)}`}>
+                                {displayStatus}
                               </span>
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap">
@@ -1760,214 +1889,911 @@ export default function Home() {
           )}
 
           {/* ═══════════════ LEAVE MANAGER ═══════════════ */}
-          {activeTab==="leave" && (
-            <div className="space-y-5">
-              {/* Leave summary cards */}
-              <div className="flex items-center justify-between">
-                <h2 className={`text-sm font-bold ${isDark?"text-white":"text-zinc-900"}`}>Leave Management</h2>
-                <button onClick={()=>{setNewLeave({employeeId: activeEmployees[0]?.id || "",type:"Annual",startDate:"",endDate:"",status:"Pending",note:""});setShowAddLeaveModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>+ New Leave Request</button>
-              </div>
+          {activeTab==="leave" && (() => {
+            // Metrics computations
+            const approvedLeavesThisMonth = leaveRequests.filter(r => {
+              if (r.status !== "Approved") return false;
+              return r.startDate.startsWith(selectedCalMonth) || r.endDate.startsWith(selectedCalMonth);
+            }).length;
 
-              {/* Leave balances */}
-              <div className={cardCls(isDark)}>
-                <h3 className={`text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3`}>Leave Balances</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead><tr className={`text-[10px] uppercase tracking-wider text-zinc-400 border-b ${isDark?"border-zinc-800":"border-zinc-200"}`}>
-                      <th className="text-left pb-2 pr-4">Employee</th>
-                      <th className="text-center pb-2 px-4">Annual</th>
-                      <th className="text-center pb-2 px-4">Sick</th>
-                      <th className="text-center pb-2 px-4">Casual</th>
-                    </tr></thead>
-                    <tbody className={`divide-y ${isDark?"divide-zinc-800":"divide-zinc-100"}`}>
-                      {activeEmployees.map(emp=>(
-                        <tr key={emp.id}>
-                          <td className="py-2.5 pr-4 font-semibold">{emp.firstName} {emp.lastName}</td>
-                          {(["annual","sick","casual"] as const).map(k=>(
-                            <td key={k} className="py-2.5 px-4 text-center">
-                              <span className={`text-sm font-bold ${emp.leaveBalances[k]===0?"text-rose-500":isDark?"text-white":"text-zinc-900"}`}>{emp.leaveBalances[k]}</span>
-                              <span className="text-zinc-500 text-[10px] ml-0.5">days</span>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            const pendingLeaveCount = leaveRequests.filter(r => r.status === "Pending").length;
 
-              {/* Leave Calendar */}
-              <div className={cardCls(isDark)}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Attendance Calendar</h3>
-                  {monthSelector(selectedCalMonth, setSelectedCalMonth)}
+            const totalAvailableQuota = activeEmployees.reduce((sum, e) => 
+              sum + (e.leaveBalances?.annual || 0) + (e.leaveBalances?.sick || 0) + (e.leaveBalances?.casual || 0), 0);
+            const totalMaxQuota = activeEmployees.length * (14 + 7 + 3);
+            const quotaPct = totalMaxQuota > 0 ? Math.round((totalAvailableQuota / totalMaxQuota) * 100) : 100;
+
+            const currentMonthHolidays = publicHolidays.filter(h => h.date.startsWith(selectedCalMonth));
+            const todayStr = new Date().toISOString().split("T")[0];
+            const nextHoliday = publicHolidays
+              .filter(h => h.date >= todayStr)
+              .sort((a, b) => a.date.localeCompare(b.date))[0];
+
+            // Filtered Leave Requests
+            const filteredLeaveRequests = leaveRequests.filter(req => {
+              const emp = employees.find(e => e.id === req.employeeId);
+              const empName = emp ? `${emp.firstName} ${emp.lastName}`.toLowerCase() : "";
+              const note = (req.note || "").toLowerCase();
+              const query = leaveSearchQuery.toLowerCase();
+              if (query && !empName.includes(query) && !note.includes(query)) return false;
+              if (leaveStatusFilter !== "All" && req.status !== leaveStatusFilter) return false;
+              if (leaveTypeFilter !== "All" && req.type !== leaveTypeFilter) return false;
+              return true;
+            });
+
+            // Month navigation helpers
+            const changeCalMonth = (delta: number) => {
+              const [yStr, mStr] = selectedCalMonth.split("-");
+              const d = new Date(parseInt(yStr), parseInt(mStr) - 1 + delta, 1);
+              setSelectedCalMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+            };
+
+            const goToCurrentCalMonth = () => {
+              const now = new Date();
+              setSelectedCalMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+            };
+
+            const calcLeaveDays = (startDate: string, endDate: string) => {
+              if (!startDate || !endDate) return 1;
+              const start = new Date(startDate);
+              const end = new Date(endDate);
+              const diffTime = Math.abs(end.getTime() - start.getTime());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+              return isNaN(diffDays) ? 1 : diffDays;
+            };
+
+            return (
+              <div className="space-y-6">
+                {/* Header with Title and Action */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className={`text-lg font-extrabold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                      Leave & Absence Management
+                    </h2>
+                    <p className={`text-xs ${isDark ? "text-zinc-400" : "text-zinc-500"} mt-0.5`}>
+                      Track staff statutory quotas, manage monthly schedule absences, and review approval pipelines
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = new Date().toISOString().split("T")[0];
+                      setNewLeave({
+                        employeeId: activeEmployees[0]?.id || "",
+                        type: "Annual",
+                        startDate: today,
+                        endDate: today,
+                        status: "Pending",
+                        note: "",
+                      });
+                      setLeaveDurationMode("single");
+                      setShowAddLeaveModal(true);
+                    }}
+                    className={`px-3.5 py-2 text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition ${
+                      isDark
+                        ? "bg-white text-zinc-900 hover:bg-zinc-100 shadow-black/30"
+                        : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f] shadow-[#0F85B0]/20"
+                    }`}
+                  >
+                    <Icons.Plus className="w-4 h-4" />
+                    <span>New Leave Request</span>
+                  </button>
                 </div>
-                {(() => {
-                  const [y,m] = selectedCalMonth.split("-").map(Number);
-                  const firstDay = new Date(y,m-1,1).getDay();
-                  const daysInMonth = new Date(y,m,0).getDate();
-                  const cells: (number|null)[] = [...Array(firstDay).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
-                  const dayLabels = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-                  return (
-                    <div>
-                      <div className="grid grid-cols-7 gap-1 mb-1">
-                        {dayLabels.map(d=><div key={d} className="text-[10px] font-bold text-center text-zinc-500 py-1">{d}</div>)}
+
+                {/* 4 Executive Metric Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  {/* Card 1: Approved leaves this month */}
+                  <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDark ? "bg-purple-500/15 text-purple-400 border border-purple-500/20" : "bg-purple-50 text-purple-600 border border-purple-100"}`}>
+                        <Icons.Calendar className="w-4 h-4" />
                       </div>
-                      <div className="grid grid-cols-7 gap-1">
-                        {cells.map((day,idx)=>{
-                          if (!day) return <div key={`empty-${idx}`}/>;
-                          const dateStr = `${y}-${String(m).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-                          const dayLogs = attendanceLogs.filter(l=>l.date===dateStr);
-                          const holiday = publicHolidays.find(h=>h.date===dateStr);
-                          const presentCount = dayLogs.filter(l=>["On-Time","Late","Half-Day"].includes(l.status)).length;
-                          const leaveCount = dayLogs.filter(l=>l.status==="On-Leave").length;
-                          const absentCount = dayLogs.filter(l=>l.status==="Absent").length;
-                          const lateCount = dayLogs.filter(l=>l.status==="Late").length;
-                          return (
-                            <div key={`day-${day}`} className={`rounded p-1.5 text-center text-[10px] min-h-[52px] border ${holiday?(isDark?"border-amber-800/50 bg-amber-950/20":"border-amber-200 bg-amber-50"):(isDark?"border-zinc-800 bg-zinc-900/30":"border-zinc-100 bg-white")}`}>
-                              <p className={`font-bold mb-1 ${holiday?"text-amber-500":isDark?"text-zinc-400":"text-zinc-600"}`}>{day}</p>
-                              {holiday && <p className="text-[8px] text-amber-500 leading-tight mb-0.5 truncate">{holiday.name.split(" ").slice(0,2).join(" ")}</p>}
-                              <div className="flex flex-wrap justify-center gap-0.5">
-                                {presentCount>0&&<span className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center text-[7px] text-white font-bold">{presentCount}</span>}
-                                {lateCount>0&&<span className="w-3 h-3 rounded-full bg-amber-500 flex items-center justify-center text-[7px] text-white font-bold">{lateCount}</span>}
-                                {leaveCount>0&&<span className="w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center text-[7px] text-white font-bold">{leaveCount}</span>}
-                                {absentCount>0&&<span className="w-3 h-3 rounded-full bg-rose-500 flex items-center justify-center text-[7px] text-white font-bold">{absentCount}</span>}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${approvedLeavesThisMonth > 0 ? (isDark ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-emerald-50 text-emerald-700 border border-emerald-200") : (isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-500")}`}>
+                        {approvedLeavesThisMonth} Scheduled
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-3">Leaves This Month</p>
+                    <p className={`text-2xl font-extrabold tracking-tight mt-0.5 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                      {approvedLeavesThisMonth} <span className="text-xs font-semibold text-zinc-400">day(s)</span>
+                    </p>
+                    <p className={`text-[11px] ${isDark ? "text-zinc-400" : "text-zinc-500"} mt-1 flex items-center gap-1`}>
+                      In {selectedCalMonth}
+                    </p>
+                  </div>
+
+                  {/* Card 2: Pending Approvals */}
+                  <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/20" : "bg-amber-50 text-amber-600 border border-amber-100"}`}>
+                        <Icons.AlertTriangle className="w-4 h-4" />
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pendingLeaveCount > 0 ? "bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse" : (isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-500")}`}>
+                        {pendingLeaveCount > 0 ? "Review Required" : "All Clear"}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-3">Pending Requests</p>
+                    <p className={`text-2xl font-extrabold tracking-tight mt-0.5 ${pendingLeaveCount > 0 ? "text-amber-500" : (isDark ? "text-white" : "text-zinc-900")}`}>
+                      {pendingLeaveCount} <span className="text-xs font-semibold text-zinc-400">request(s)</span>
+                    </p>
+                    <p className={`text-[11px] ${isDark ? "text-zinc-400" : "text-zinc-500"} mt-1`}>
+                      Awaiting clinic review
+                    </p>
+                  </div>
+
+                  {/* Card 3: Team Quota Availability */}
+                  <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDark ? "bg-[#0F85B0]/20 text-[#38bdf8] border border-[#0F85B0]/30" : "bg-sky-50 text-[#0F85B0] border border-sky-100"}`}>
+                        <Icons.CheckCircle className="w-4 h-4" />
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isDark ? "bg-sky-500/15 text-sky-400 border border-sky-500/20" : "bg-sky-50 text-sky-700 border border-sky-200"}`}>
+                        {totalAvailableQuota} Days Left
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-3">Team Quota Balance</p>
+                    <p className={`text-2xl font-extrabold tracking-tight mt-0.5 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                      {quotaPct}% <span className="text-xs font-semibold text-zinc-400">available</span>
+                    </p>
+                    <p className={`text-[11px] ${isDark ? "text-zinc-400" : "text-zinc-500"} mt-1`}>
+                      Across {activeEmployees.length} registered staff
+                    </p>
+                  </div>
+
+                  {/* Card 4: Upcoming Public Holiday */}
+                  <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/20" : "bg-amber-50 text-amber-600 border border-amber-100"}`}>
+                        <Icons.Sun className="w-4 h-4" />
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isDark ? "bg-amber-500/15 text-amber-400 border border-amber-500/20" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                        {nextHoliday ? nextHoliday.date : "Standard Schedule"}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-3">Next Holiday</p>
+                    <p className={`text-lg font-extrabold tracking-tight mt-0.5 truncate ${isDark ? "text-white" : "text-zinc-900"}`}>
+                      {nextHoliday ? nextHoliday.name : "No Upcoming Holidays"}
+                    </p>
+                    <p className={`text-[11px] ${isDark ? "text-zinc-400" : "text-zinc-500"} mt-1`}>
+                      {currentMonthHolidays.length} holiday(s) in {selectedCalMonth}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Staff Leave Balances Roster */}
+                <div className={`p-5 rounded-2xl border ${isDark ? "bg-zinc-900/60 border-zinc-800/80" : "bg-white border-zinc-200 shadow-sm"}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+                    <div>
+                      <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                        Staff Leave Allocations & Balances
+                      </h3>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        Statutory annual, medical, and casual entitlement quotas per employee
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full w-fit ${isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-600"}`}>
+                      {activeEmployees.length} Registered Staff
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {activeEmployees.map(emp => {
+                      const initials = `${emp.firstName[0] || ""}${emp.lastName[0] || ""}`.toUpperCase();
+                      return (
+                        <div
+                          key={emp.id}
+                          className={`p-4 rounded-xl border transition-all ${
+                            isDark
+                              ? "bg-zinc-950/40 border-zinc-800/80 hover:border-zinc-700"
+                              : "bg-zinc-50/70 border-zinc-200/90 hover:border-zinc-300 shadow-xs"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F85B0]/30 via-sky-500/20 to-indigo-500/30 text-[#0F85B0] font-extrabold text-xs flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                                {initials}
+                              </div>
+                              <div>
+                                <p className={`font-bold text-xs ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>
+                                  {emp.firstName} {emp.lastName}
+                                </p>
+                                <p className="text-[10px] text-zinc-400 truncate max-w-[200px]">
+                                  {emp.role} · ID: {emp.biometricId || emp.id.slice(-4)}
+                                </p>
                               </div>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const today = new Date().toISOString().split("T")[0];
+                                setNewLeave({
+                                  employeeId: emp.id,
+                                  type: "Annual",
+                                  startDate: today,
+                                  endDate: today,
+                                  status: "Pending",
+                                  note: "",
+                                });
+                                setLeaveDurationMode("single");
+                                setShowAddLeaveModal(true);
+                              }}
+                              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition flex items-center gap-1 ${
+                                isDark
+                                  ? "border-zinc-700 text-sky-400 hover:bg-zinc-800"
+                                  : "border-zinc-300 text-[#0F85B0] hover:bg-white bg-white/60 shadow-2xs"
+                              }`}
+                            >
+                              <Icons.Plus className="w-3 h-3" />
+                              <span>Request</span>
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className={`p-2 rounded-lg text-center border ${isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-white border-zinc-200/80 shadow-2xs"}`}>
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Annual</p>
+                              <p className={`text-base font-extrabold mt-0.5 ${emp.leaveBalances?.annual === 0 ? "text-rose-500" : (isDark ? "text-sky-400" : "text-[#0F85B0]")}`}>
+                                {emp.leaveBalances?.annual ?? 0}
+                                <span className="text-[10px] font-normal text-zinc-400 ml-0.5">/14</span>
+                              </p>
+                              <p className="text-[9px] text-zinc-400">days left</p>
+                            </div>
+
+                            <div className={`p-2 rounded-lg text-center border ${isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-white border-zinc-200/80 shadow-2xs"}`}>
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Sick</p>
+                              <p className={`text-base font-extrabold mt-0.5 ${emp.leaveBalances?.sick === 0 ? "text-rose-500" : "text-amber-500"}`}>
+                                {emp.leaveBalances?.sick ?? 0}
+                                <span className="text-[10px] font-normal text-zinc-400 ml-0.5">/7</span>
+                              </p>
+                              <p className="text-[9px] text-zinc-400">days left</p>
+                            </div>
+
+                            <div className={`p-2 rounded-lg text-center border ${isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-white border-zinc-200/80 shadow-2xs"}`}>
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Casual</p>
+                              <p className={`text-base font-extrabold mt-0.5 ${emp.leaveBalances?.casual === 0 ? "text-rose-500" : "text-purple-500"}`}>
+                                {emp.leaveBalances?.casual ?? 0}
+                                <span className="text-[10px] font-normal text-zinc-400 ml-0.5">/3</span>
+                              </p>
+                              <p className="text-[9px] text-zinc-400">days left</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Attendance & Leave Calendar */}
+                <div className={`p-5 rounded-2xl border ${isDark ? "bg-zinc-900/60 border-zinc-800/80" : "bg-white border-zinc-200 shadow-sm"}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? "bg-[#0F85B0]/20 text-[#38bdf8]" : "bg-sky-50 text-[#0F85B0]"}`}>
+                        <Icons.Calendar className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                          Clinic Attendance & Leave Schedule
+                        </h3>
+                        <p className="text-[11px] text-zinc-400">
+                          Monthly visual overview of rostered shifts, leaves, and holidays
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Navigation controls */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-2xs overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => changeCalMonth(-1)}
+                          className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition"
+                          title="Previous Month"
+                        >
+                          <Icons.ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={goToCurrentCalMonth}
+                          className="px-2.5 py-1 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 border-x border-zinc-200 dark:border-zinc-700 transition"
+                        >
+                          Today
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => changeCalMonth(1)}
+                          className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition"
+                          title="Next Month"
+                        >
+                          <Icons.ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {monthSelector(selectedCalMonth, setSelectedCalMonth)}
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const [y, m] = selectedCalMonth.split("-").map(Number);
+                    const firstDay = new Date(y, m - 1, 1).getDay();
+                    const daysInMonth = new Date(y, m, 0).getDate();
+                    const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+                    const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+                    return (
+                      <div>
+                        {/* Weekday headers */}
+                        <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                          {dayLabels.map(d => (
+                            <div key={d} className={`text-[11px] font-bold text-center py-1.5 uppercase tracking-wider ${d === "Sun" ? "text-rose-500" : (isDark ? "text-zinc-400" : "text-zinc-500")}`}>
+                              {d}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Day cells */}
+                        <div className="grid grid-cols-7 gap-1.5">
+                          {cells.map((day, idx) => {
+                            if (!day) return <div key={`empty-${idx}`} className={`rounded-xl border border-transparent ${isDark ? "bg-zinc-950/20" : "bg-zinc-100/30"} min-h-[68px]`} />;
+
+                            const dateStr = `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                            const isToday = dateStr === todayStr;
+                            const cellDate = new Date(y, m - 1, day);
+                            const dayOfWeek = cellDate.getDay();
+                            const opHour = operatingHours.find(h => h.dayOfWeek === dayOfWeek);
+                            const isClinicClosed = opHour ? !opHour.isOpen : (dayOfWeek === 0);
+
+                            const dayLogs = attendanceLogs.filter(l => l.date === dateStr);
+                            const holiday = publicHolidays.find(h => h.date === dateStr);
+                            const presentCount = dayLogs.filter(l => ["On-Time", "Late", "Half-Day"].includes(l.status)).length;
+                            
+                            // Include approved leave requests for this day
+                            const approvedLeavesOnDay = leaveRequests.filter(req => {
+                              if (req.status !== "Approved") return false;
+                              return req.startDate <= dateStr && dateStr <= req.endDate;
+                            });
+                            const leaveCount = Math.max(dayLogs.filter(l => l.status === "On-Leave").length, approvedLeavesOnDay.length);
+                            const absentCount = dayLogs.filter(l => l.status === "Absent").length;
+                            const lateCount = dayLogs.filter(l => l.status === "Late").length;
+
+                            return (
+                              <div
+                                key={`day-${day}`}
+                                className={`rounded-xl p-2 text-center text-[10px] min-h-[68px] sm:min-h-[76px] flex flex-col justify-between border transition-all ${
+                                  isToday
+                                    ? "ring-2 ring-[#0F85B0] border-[#0F85B0]"
+                                    : ""
+                                } ${
+                                  holiday
+                                    ? (isDark ? "border-amber-700/60 bg-amber-950/25 shadow-xs" : "border-amber-200 bg-amber-50/80 shadow-xs")
+                                    : isClinicClosed
+                                    ? (isDark ? "border-zinc-800/80 bg-zinc-950/60 border-dashed" : "border-slate-200/90 bg-slate-50/80 border-dashed")
+                                    : (isDark ? "border-zinc-800 bg-zinc-950/50 hover:border-zinc-700" : "border-zinc-200/90 bg-white hover:border-zinc-300 shadow-xs")
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full font-bold text-[11px] ${
+                                    isToday
+                                      ? "bg-[#0F85B0] text-white"
+                                      : holiday
+                                      ? "text-amber-500 font-extrabold"
+                                      : isClinicClosed
+                                      ? "text-rose-500 font-bold"
+                                      : (isDark ? "text-zinc-300" : "text-zinc-700")
+                                  }`}>
+                                    {day}
+                                  </span>
+                                  {holiday ? (
+                                    <span className="text-amber-500 flex items-center" title={holiday.name}>
+                                      <Icons.Star className="w-2.5 h-2.5" />
+                                    </span>
+                                  ) : isClinicClosed ? (
+                                    <span className="text-rose-500/70 dark:text-rose-400/70 flex items-center" title="Clinic Closed">
+                                      <Icons.LockClosed className="w-2.5 h-2.5" />
+                                    </span>
+                                  ) : null}
+                                </div>
+
+                                {holiday && (
+                                  <p className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 leading-tight my-1 truncate px-1 py-0.5 rounded bg-amber-100/50 dark:bg-amber-900/30">
+                                    {holiday.name}
+                                  </p>
+                                )}
+
+                                {isClinicClosed && !holiday && (
+                                  <div className="my-auto py-0.5">
+                                    <span className="inline-flex items-center justify-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                      <Icons.LockClosed className="w-2 h-2 shrink-0" />
+                                      Closed
+                                    </span>
+                                  </div>
+                                )}
+
+                                <div className="flex flex-wrap items-center justify-center gap-1 mt-auto pt-1">
+                                  {leaveCount > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center gap-0.5" title={`${leaveCount} on leave`}>
+                                      <Icons.Calendar className="w-2.5 h-2.5 shrink-0" />
+                                      <span>{leaveCount}L</span>
+                                    </span>
+                                  )}
+                                  {presentCount > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-0.5" title={`${presentCount} present`}>
+                                      <Icons.Check className="w-2.5 h-2.5 shrink-0" />
+                                      <span>{presentCount}</span>
+                                    </span>
+                                  )}
+                                  {lateCount > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-0.5" title={`${lateCount} late`}>
+                                      <Icons.Clock className="w-2.5 h-2.5 shrink-0" />
+                                      <span>{lateCount}</span>
+                                    </span>
+                                  )}
+                                  {absentCount > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-0.5" title={`${absentCount} absent`}>
+                                      <Icons.X className="w-2.5 h-2.5 shrink-0" />
+                                      <span>{absentCount}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Legend */}
+                        <div className={`flex flex-wrap items-center justify-center gap-4 mt-4 pt-3 border-t text-[11px] font-medium ${isDark ? "border-zinc-800 text-zinc-400" : "border-zinc-200 text-zinc-600"}`}>
+                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Present</span>
+                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" />Late Arrival</span>
+                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" />On Leave</span>
+                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" />Absent</span>
+                          <span className="flex items-center gap-1.5"><Icons.LockClosed className="w-3 h-3 text-rose-500" />Closed Day</span>
+                          <span className="flex items-center gap-1.5"><Icons.Star className="w-3.5 h-3.5 text-amber-500" />Public Holiday</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Leave Requests Management Section */}
+                <div className={`p-5 rounded-2xl border ${isDark ? "bg-zinc-900/60 border-zinc-800/80" : "bg-white border-zinc-200 shadow-sm"}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+                    <div>
+                      <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                        Leave Requests & Approval Pipeline
+                      </h3>
+                      <p className="text-[11px] text-zinc-400">
+                        Review, approve, or reject employee leave applications
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full w-fit ${isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-600"}`}>
+                      {filteredLeaveRequests.length} of {leaveRequests.length} Requests
+                    </span>
+                  </div>
+
+                  {/* Filter Toolbar */}
+                  <div className={`p-3 rounded-xl border mb-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 ${isDark ? "bg-zinc-950/40 border-zinc-800" : "bg-zinc-50/70 border-zinc-200"}`}>
+                    <div className="relative flex-1 max-w-sm">
+                      <Icons.Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        value={leaveSearchQuery}
+                        onChange={e => setLeaveSearchQuery(e.target.value)}
+                        placeholder="Search employee or reason..."
+                        className={`w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border transition outline-none ${
+                          isDark
+                            ? "bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500 focus:border-[#38bdf8]"
+                            : "bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-[#0F85B0] shadow-2xs"
+                        }`}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* Status filter pills */}
+                      <div className="flex items-center p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs">
+                        {(["All", "Pending", "Approved", "Rejected"] as const).map(st => {
+                          const count = st === "All" ? leaveRequests.length : leaveRequests.filter(r => r.status === st).length;
+                          const isSel = leaveStatusFilter === st;
+                          return (
+                            <button
+                              key={st}
+                              type="button"
+                              onClick={() => setLeaveStatusFilter(st)}
+                              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition flex items-center gap-1.5 ${
+                                isSel
+                                  ? (isDark ? "bg-zinc-800 text-white shadow-xs" : "bg-[#0F85B0] text-white shadow-xs")
+                                  : (isDark ? "text-zinc-400 hover:text-white" : "text-zinc-600 hover:text-zinc-900")
+                              }`}
+                            >
+                              <span>{st}</span>
+                              <span className={`text-[10px] px-1 rounded-full ${
+                                isSel
+                                  ? (isDark ? "bg-zinc-700 text-white" : "bg-white/25 text-white")
+                                  : (isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-500")
+                              }`}>
+                                {count}
+                              </span>
+                            </button>
                           );
                         })}
                       </div>
-                      <div className="flex gap-4 mt-3 text-[10px]">
-                        {[["bg-emerald-500","Present"],["bg-amber-500","Late"],["bg-purple-500","Leave"],["bg-rose-500","Absent"],["bg-amber-400 border border-amber-600","Holiday"]].map(([cls,lbl])=>(
-                          <span key={lbl} className="flex items-center gap-1"><span className={`w-2.5 h-2.5 rounded-full ${cls} inline-block`}/>{lbl}</span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
 
-              {/* Leave requests table */}
-              <div className={`rounded-lg border overflow-hidden ${isDark?"border-zinc-800":"border-zinc-200"}`}>
-                <table className="w-full text-xs">
-                  <thead className={`border-b ${isDark?"bg-zinc-900 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                    <tr>{["Employee","Type","Period","Status","Note","Actions"].map(h=><th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400">{h}</th>)}</tr>
-                  </thead>
-                  <tbody className={`divide-y ${isDark?"divide-zinc-800":"divide-zinc-100"}`}>
-                    {leaveRequests.map(req=>{
-                      const emp=employees.find(e=>e.id===req.employeeId);
-                      return (
-                        <tr key={req.id} className={`hover:${isDark?"bg-zinc-900/40":"bg-zinc-50"} transition`}>
-                          <td className="px-4 py-3 font-semibold">{emp?`${emp.firstName} ${emp.lastName}`:"Unknown"}</td>
-                          <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isDark?"border-zinc-700 text-zinc-300 bg-zinc-800":"border-zinc-200 text-zinc-600 bg-zinc-50"}`}>{req.type}</span></td>
-                          <td className="px-4 py-3 font-mono text-zinc-400">{req.startDate}{req.startDate!==req.endDate?` → ${req.endDate}`:""}</td>
-                          <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor(req.status,isDark)}`}>{req.status}</span></td>
-                          <td className="px-4 py-3 text-zinc-500 italic">{req.note||"—"}</td>
-                          <td className="px-4 py-3">
-                            {req.status==="Pending"&&(
-                              <div className="flex gap-1.5">
-                                <button onClick={()=>approveLeave(req.id)} className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-700 transition flex items-center gap-1">
-                                  <Icons.Check className="w-3 h-3" />
-                                  <span>Approve</span>
-                                </button>
-                                <button onClick={()=>rejectLeave(req.id)} className="px-2 py-1 bg-rose-600 text-white text-[10px] font-bold rounded hover:bg-rose-700 transition flex items-center gap-1">
-                                  <Icons.X className="w-3 h-3" />
-                                  <span>Reject</span>
-                                </button>
-                              </div>
-                            )}
-                          </td>
+                      {/* Type filter */}
+                      <select
+                        value={leaveTypeFilter}
+                        onChange={e => setLeaveTypeFilter(e.target.value as typeof leaveTypeFilter)}
+                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border outline-none ${
+                          isDark
+                            ? "bg-zinc-900 border-zinc-700 text-zinc-300"
+                            : "bg-white border-zinc-200 text-zinc-700 shadow-2xs"
+                        }`}
+                      >
+                        <option value="All">All Types</option>
+                        <option value="Annual">Annual Leave</option>
+                        <option value="Sick">Sick Leave</option>
+                        <option value="Casual">Casual Leave</option>
+                        <option value="Unpaid">Unpaid Leave</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Table */}
+                  <div className={`rounded-xl border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
+                    <table className="w-full text-xs">
+                      <thead className={`border-b ${isDark ? "bg-zinc-900/90 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                        <tr>
+                          {["Employee", "Leave Type", "Schedule Period", "Status", "Reason / Note", "Actions"].map(h => (
+                            <th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400">
+                              {h}
+                            </th>
+                          ))}
                         </tr>
-                      );
-                    })}
-                    {leaveRequests.length===0&&<tr><td colSpan={6} className="px-4 py-8 text-center text-xs text-zinc-500">No leave requests.</td></tr>}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody className={`divide-y ${isDark ? "divide-zinc-800/80" : "divide-zinc-100"}`}>
+                        {filteredLeaveRequests.map(req => {
+                          const emp = employees.find(e => e.id === req.employeeId);
+                          const initials = emp ? `${emp.firstName[0] || ""}${emp.lastName[0] || ""}`.toUpperCase() : "??";
+                          const days = calcLeaveDays(req.startDate, req.endDate);
+
+                          const typeBadgeStyle = 
+                            req.type === "Annual" ? (isDark ? "bg-sky-500/15 text-sky-400 border-sky-500/30" : "bg-sky-50 text-sky-700 border-sky-200") :
+                            req.type === "Sick" ? (isDark ? "bg-amber-500/15 text-amber-400 border-amber-500/30" : "bg-amber-50 text-amber-700 border-amber-200") :
+                            req.type === "Casual" ? (isDark ? "bg-purple-500/15 text-purple-400 border-purple-500/30" : "bg-purple-50 text-purple-700 border-purple-200") :
+                            (isDark ? "bg-zinc-800 text-zinc-400 border-zinc-700" : "bg-zinc-100 text-zinc-600 border-zinc-200");
+
+                          return (
+                            <tr key={req.id} className={`hover:${isDark ? "bg-zinc-900/40" : "bg-zinc-50/70"} transition-colors`}>
+                              {/* Employee */}
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#0F85B0]/20 to-sky-500/30 text-[#0F85B0] font-extrabold text-[11px] flex items-center justify-center border border-[#0F85B0]/20 shrink-0">
+                                    {initials}
+                                  </div>
+                                  <div>
+                                    <p className={`font-semibold text-xs ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>
+                                      {emp ? `${emp.firstName} ${emp.lastName}` : "Unknown Staff"}
+                                    </p>
+                                    <p className="text-[10px] text-zinc-400">
+                                      {emp?.role || "Staff"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Type */}
+                              <td className="px-4 py-3">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${typeBadgeStyle}`}>
+                                  {req.type}
+                                </span>
+                              </td>
+
+                              {/* Period */}
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-mono text-xs ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                                    {req.startDate}{req.startDate !== req.endDate ? ` → ${req.endDate}` : ""}
+                                  </span>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-600"}`}>
+                                    {days} {days === 1 ? "day" : "days"}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Status */}
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusColor(req.status, isDark)}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    req.status === "Approved" ? "bg-emerald-500" :
+                                    req.status === "Pending" ? "bg-amber-500 animate-pulse" :
+                                    "bg-rose-500"
+                                  }`} />
+                                  <span>{req.status}</span>
+                                </span>
+                              </td>
+
+                              {/* Note */}
+                              <td className="px-4 py-3">
+                                <span className={`text-xs ${req.note ? (isDark ? "text-zinc-300 italic" : "text-zinc-600 italic") : "text-zinc-400"}`}>
+                                  {req.note ? `"${req.note}"` : "—"}
+                                </span>
+                              </td>
+
+                              {/* Actions */}
+                              <td className="px-4 py-3">
+                                {req.status === "Pending" ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => approveLeave(req.id)}
+                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg shadow-xs transition flex items-center gap-1"
+                                      title="Approve Leave"
+                                    >
+                                      <Icons.Check className="w-3 h-3" />
+                                      <span>Approve</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => rejectLeave(req.id)}
+                                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow-xs transition flex items-center gap-1"
+                                      title="Reject Leave"
+                                    >
+                                      <Icons.X className="w-3 h-3" />
+                                      <span>Reject</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-zinc-400 font-medium">
+                                    {req.status === "Approved" ? "Processed" : "Declined"}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        {filteredLeaveRequests.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-10 text-center">
+                              <div className="flex flex-col items-center justify-center">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${isDark ? "bg-zinc-800 text-zinc-500" : "bg-zinc-100 text-zinc-400"}`}>
+                                  <Icons.Calendar className="w-5 h-5" />
+                                </div>
+                                <p className={`font-semibold text-xs ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                                  No leave requests found
+                                </p>
+                                <p className="text-[11px] text-zinc-400 mt-0.5">
+                                  {leaveSearchQuery || leaveStatusFilter !== "All" || leaveTypeFilter !== "All"
+                                    ? "Try adjusting your search query or filters"
+                                    : "All staff members are on regular duty with no active leave requests"}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ═══════════════ PAYROLL ENGINE ═══════════════ */}
           {activeTab==="payroll" && (
-            <div className="space-y-4">
-              {/* Summary cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[{label:"Gross Salaries Pool",value:`LKR ${payrollTotals.gross.toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"Net Remittances",value:`LKR ${payrollTotals.net.toLocaleString()}`,color:isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"},{label:"EPF (8%+12%)",value:`LKR ${(payrollTotals.epfEmp+payrollTotals.epfEmr).toLocaleString()}`,color:isDark ? "text-zinc-100" : "text-zinc-900"},{label:"APIT Total",value:`LKR ${Math.round(payrollTotals.apit).toLocaleString()}`,color:isDark ? "text-amber-400" : "text-amber-600"}].map(s=>(
-                  <div key={s.label} className={cardCls(isDark)}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">{s.label}</p>
-                    <p className={`text-xl font-extrabold ${s.color}`}>{s.value}</p>
-                  </div>
-                ))}
-              </div>
-
-
-              {/* Toolbar */}
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  {monthSelector(selectedMonth, setSelectedMonth)}
-                  <span className={`text-[10px] font-mono ${isDark?"text-zinc-500":"text-zinc-400"}`}>{dateRange.startDate} → {dateRange.endDate}</span>
-                  {isCurrentMonthFinalized && <span className={`px-2 py-1 rounded text-[10px] font-bold border flex items-center gap-1 ${statusColor("Finalized",isDark)}`}><Icons.LockClosed className="w-3 h-3" /><span>Finalized</span></span>}
+            <div className="space-y-6">
+              {/* Header with Title and Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className={`text-lg font-extrabold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                    Payroll Engine &amp; Statutory Compliance
+                  </h2>
+                  <p className={`text-xs ${isDark ? "text-zinc-400" : "text-zinc-500"} mt-0.5`}>
+                    Automated salary calculations, overtime compensation, EPF/ETF contributions &amp; tax withholding
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={downloadPayrollCSV} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button onClick={downloadPayrollCSV} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-smooth ${isDark ? "bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>Export CSV</span>
                   </button>
-                  {!isCurrentMonthFinalized&&<button onClick={handleFinalizePayroll} className="px-3 py-1.5 text-xs font-bold rounded bg-[#0F85B0] text-white hover:bg-[#0c6c8f] transition shadow flex items-center gap-1.5"><Icons.LockClosed className="w-3.5 h-3.5" /><span>Finalize Month</span></button>}
-                  <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark?"bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  {!isCurrentMonthFinalized && (
+                    <button onClick={handleFinalizePayroll} className="px-3.5 py-2 text-xs font-bold rounded-xl bg-[#0F85B0] hover:bg-[#0c6c8f] text-white shadow-md shadow-[#0F85B0]/20 transition-smooth flex items-center gap-1.5">
+                      <Icons.LockClosed className="w-3.5 h-3.5" />
+                      <span>Finalize Month</span>
+                    </button>
+                  )}
+                  <button onClick={downloadEpfFormC} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-smooth ${isDark ? "bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>EPF Form C3</span>
                   </button>
                 </div>
               </div>
 
-              {/* Payroll table */}
-              <div className={`rounded-lg border overflow-hidden ${isDark?"border-zinc-800":"border-zinc-200"}`}>
+              {/* 4 Executive Metric Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* Gross Salaries Pool */}
+                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Gross Salaries Pool</span>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"}`}>
+                      <Icons.Briefcase className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className={`text-xl font-extrabold mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                    LKR {payrollTotals.gross.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-1">Total monthly salary allocation</p>
+                </div>
+
+                {/* Net Remittances */}
+                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Net Remittances</span>
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8]">
+                      <Icons.Wallet className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl font-extrabold mt-2 text-[#0F85B0] dark:text-[#38bdf8]">
+                    LKR {payrollTotals.net.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-1">Disbursable to staff accounts</p>
+                </div>
+
+                {/* EPF (8% + 12%) */}
+                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">EPF Total (8%+12%)</span>
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                      <Icons.Shield className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className={`text-xl font-extrabold mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                    LKR {(payrollTotals.epfEmp + payrollTotals.epfEmr).toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-1">Statutory retirement fund total</p>
+                </div>
+
+                {/* APIT Total */}
+                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">APIT Total</span>
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      <Icons.FileText className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl font-extrabold mt-2 text-amber-600 dark:text-amber-400">
+                    LKR {Math.round(payrollTotals.apit).toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-1">Inland revenue withholding tax</p>
+                </div>
+              </div>
+
+              {/* Filter / Period Bar */}
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  {monthSelector(selectedMonth, setSelectedMonth)}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-medium ${isDark ? "bg-zinc-850 border-zinc-800 text-zinc-400" : "bg-white border-zinc-200 text-zinc-500 shadow-2xs"}`}>
+                    <Icons.Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>{dateRange.startDate} → {dateRange.endDate}</span>
+                  </div>
+                  {isCurrentMonthFinalized ? (
+                    <span className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border flex items-center gap-1.5 ${statusColor("Finalized", isDark)}`}>
+                      <Icons.LockClosed className="w-3 h-3" />
+                      <span>Finalized</span>
+                    </span>
+                  ) : (
+                    <span className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border flex items-center gap-1.5 ${isDark ? "bg-sky-500/10 border-sky-500/30 text-sky-400" : "bg-sky-50 border-sky-200 text-[#0F85B0]"}`}>
+                      <Icons.Clock className="w-3 h-3" />
+                      <span>Active Cycle</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Payroll table Card */}
+              <div className={`rounded-2xl border overflow-hidden transition-smooth backdrop-blur-xl ${
+                isDark
+                  ? "bg-white/5 border-white/10 shadow-xl"
+                  : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+              }`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
-                    <thead className={`border-b ${isDark?"bg-zinc-900/60 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                      <tr>{["Staff Name","Pay Basis","Base Earning","OT Earn","Allowances","No-Pay Cut","EPF (8%)","APIT","Net Salary",""].map(h=><th key={h} className="px-5 py-3.5 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400 whitespace-nowrap">{h}</th>)}</tr>
+                    <thead className={`border-b ${isDark ? "bg-slate-900/50 border-slate-800/80" : "bg-slate-50/80 border-slate-200/80"}`}>
+                      <tr>
+                        {["Staff Member", "Base (LKR)", "OT Earn", "Allowances", "No-Pay", "EPF (8%)", "APIT", "Net Salary", "Actions"].map((h, i) => (
+                          <th key={h} className={`px-3 py-3 font-extrabold text-[10px] uppercase tracking-wider text-slate-400 whitespace-nowrap ${
+                            i === 8 ? "text-right" : "text-left"
+                          }`}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
                     </thead>
-                    <tbody className={`divide-y ${isDark?"divide-zinc-800/70":"divide-zinc-100"}`}>
-                      {payrollCalcs.map(c=>(
-                        <tr key={c.employee.id} className={`hover:${isDark?"bg-zinc-900/30":"bg-zinc-50"} transition ${isCurrentMonthFinalized?"opacity-80":""}`}>
-                          <td className="px-5 py-3.5 whitespace-nowrap">
-                            <p className="font-bold">{c.employee.firstName} {c.employee.lastName}</p>
-                            <p className="text-[10px] text-zinc-400">{c.employee.role}</p>
-                          </td>
-                          <td className="px-5 py-3.5"><span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${isDark?"bg-zinc-900 border-zinc-700 text-zinc-400":"bg-zinc-50 border-zinc-200 text-zinc-600"}`}>{c.employee.payType}</span></td>
-                          <td className="px-5 py-3.5 font-mono font-semibold whitespace-nowrap">
-                            <p>LKR {c.basicEarnings.toLocaleString()}</p>
-                            {c.employee.payType==="Session-based"&&<p className="text-[9px] text-[#38bdf8] mt-0.5">{c.sessionCount} sessions</p>}
-                          </td>
-                          <td className="px-5 py-3.5 font-mono text-zinc-500 whitespace-nowrap">LKR {c.otPay.toLocaleString()}</td>
-                          <td className="px-5 py-3.5 font-mono text-emerald-500 font-bold whitespace-nowrap">+LKR {c.totalAllowances.toLocaleString()}</td>
-                          <td className="px-5 py-3.5 font-mono text-rose-500 whitespace-nowrap">{c.noPayDeduction>0?`-LKR ${Math.round(c.noPayDeduction).toLocaleString()}`:"LKR 0"}</td>
-                          <td className="px-5 py-3.5 font-mono text-zinc-400 whitespace-nowrap">{c.employee.epfEligible?`-LKR ${Math.round(c.employeeEpf).toLocaleString()}`:"Exempt"}</td>
-                          <td className="px-5 py-3.5 font-mono text-amber-500 whitespace-nowrap">{c.apitMonthly>0?`-LKR ${Math.round(c.apitMonthly).toLocaleString()}`:"—"}</td>
-                          <td className="px-5 py-3.5 font-mono font-extrabold text-[#0ea5e9] whitespace-nowrap">LKR {Math.round(c.netSalary).toLocaleString()}</td>
-                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                            <div className="inline-flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  const adjKey = `${selectedMonth}_${c.employee.id}`;
-                                  const existing = manualAdjustments[adjKey] || { bonusAmount: 0, deductionAmount: 0, note: "" };
-                                  setAdjustingPayslipEmpId(c.employee.id);
-                                  setManualBonusInput(existing.bonusAmount);
-                                  setManualDeductionInput(existing.deductionAmount);
-                                  setManualExceedIncomeInput(monthlyExcessIncome[adjKey] || 0);
-                                  setPayslipNoteInput(existing.note);
-                                }}
-                                className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition inline-flex items-center gap-1 ${isDark ? "bg-zinc-800 border-zinc-700 text-[#7dd3fc] hover:bg-zinc-750" : "bg-[#f0f9ff] border-[#bae6fd] text-[#0c6c8f] hover:bg-[#e0f2fe]"}`}
-                              >
-                                <Icons.Edit className="w-3 h-3" />
-                                <span>Adjust</span>
-                              </button>
-                              <button onClick={()=>setSelectedPaySlip(c.employee.id)} className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition ${isDark?"bg-zinc-850 border-zinc-700 text-white hover:bg-zinc-800":"bg-white border-zinc-200 text-zinc-700 shadow-sm hover:bg-zinc-50"}`}>Pay Slip</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody className={`divide-y ${isDark ? "divide-slate-800/60" : "divide-slate-100"}`}>
+                      {payrollCalcs.map(c => {
+                        const adjKey = `${selectedMonth}_${c.employee.id}`;
+                        const existing = manualAdjustments[adjKey];
+                        const hasAdjustment = existing && (existing.bonusAmount > 0 || existing.deductionAmount > 0 || (monthlyExcessIncome[adjKey] || 0) > 0);
+
+                        return (
+                          <tr key={c.employee.id} className={`hover:${isDark ? "bg-slate-800/20" : "bg-slate-50/70"} transition-smooth ${isCurrentMonthFinalized ? "opacity-85" : ""}`}>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-[11px] flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                                  {c.employee.firstName[0]}{c.employee.lastName[0]}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className={`font-bold text-xs ${isDark ? "text-white" : "text-zinc-900"}`}>
+                                      {c.employee.firstName} {c.employee.lastName}
+                                    </p>
+                                    {hasAdjustment && (
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#0ea5e9]" title="Manual adjustments active" />
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-zinc-400">
+                                    {c.employee.role} · <span className="font-semibold text-zinc-500 dark:text-zinc-400">{c.employee.payType}</span>
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 font-mono font-semibold whitespace-nowrap">
+                              <p className={isDark ? "text-zinc-200" : "text-zinc-800"}>LKR {c.basicEarnings.toLocaleString()}</p>
+                              {c.employee.payType === "Session-based" && (
+                                <p className="text-[9px] text-[#0ea5e9] mt-0.5 font-sans font-medium">{c.sessionCount} sessions</p>
+                              )}
+                            </td>
+                            <td className="px-3 py-3 font-mono text-zinc-400 whitespace-nowrap">
+                              LKR {Math.round(c.otPay).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                              +LKR {c.totalAllowances.toLocaleString()}
+                            </td>
+                            <td className="px-3 py-3 font-mono font-bold text-rose-500 whitespace-nowrap">
+                              {c.noPayDeduction > 0 ? `-LKR ${Math.round(c.noPayDeduction).toLocaleString()}` : "LKR 0"}
+                            </td>
+                            <td className="px-3 py-3 font-mono text-zinc-400 whitespace-nowrap">
+                              {c.employee.epfEligible ? `-LKR ${Math.round(c.employeeEpf).toLocaleString()}` : "Exempt"}
+                            </td>
+                            <td className="px-3 py-3 font-mono text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                              {c.apitMonthly > 0 ? `-LKR ${Math.round(c.apitMonthly).toLocaleString()}` : "—"}
+                            </td>
+                            <td className="px-3 py-3 font-mono font-extrabold text-xs text-[#0F85B0] dark:text-[#38bdf8] whitespace-nowrap">
+                              LKR {Math.round(c.netSalary).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-3 text-right whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const adjKey = `${selectedMonth}_${c.employee.id}`;
+                                    const existing = manualAdjustments[adjKey] || { bonusAmount: 0, deductionAmount: 0, note: "" };
+                                    setAdjustingPayslipEmpId(c.employee.id);
+                                    setManualBonusInput(existing.bonusAmount);
+                                    setManualDeductionInput(existing.deductionAmount);
+                                    setManualExceedIncomeInput(monthlyExcessIncome[adjKey] || 0);
+                                    setPayslipNoteInput(existing.note);
+                                  }}
+                                  className={`px-2 py-1 rounded-lg border text-[10px] font-bold transition-smooth flex items-center gap-1 ${
+                                    isDark
+                                      ? "border-slate-700 bg-slate-800/80 text-sky-400 hover:bg-slate-700 hover:text-white"
+                                      : "border-slate-200 bg-white text-[#0F85B0] hover:bg-slate-50 shadow-2xs"
+                                  }`}
+                                >
+                                  <Icons.Edit className="w-3 h-3" />
+                                  <span>Adjust</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedPaySlip(c.employee.id)}
+                                  className={`px-2 py-1 rounded-lg border text-[10px] font-bold transition-smooth active:scale-95 flex items-center gap-1 ${
+                                    isDark
+                                      ? "border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                      : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 shadow-2xs"
+                                  }`}
+                                >
+                                  <Icons.FileText className="w-3 h-3" />
+                                  <span>Payslip</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1977,9 +2803,103 @@ export default function Home() {
 
           {/* ═══════════════ REPORTS ═══════════════ */}
           {activeTab==="reports" && (
-            <div className="space-y-5">
-              <h2 className={`text-sm font-bold ${isDark?"text-white":"text-zinc-900"}`}>Reports & History</h2>
-              {/* Payroll history with Year Filter */}
+            <div className="space-y-6">
+              {/* Header with Title and Action Badges */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className={`text-lg font-extrabold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                    Reports, Archives &amp; Audit Logs
+                  </h2>
+                  <p className={`text-xs ${isDark ? "text-zinc-400" : "text-zinc-500"} mt-0.5`}>
+                    Historical locked payroll periods, compliance summaries, and immutable biometric audit records
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${
+                    isDark ? "bg-zinc-900/80 border-zinc-800 text-zinc-300" : "bg-white border-zinc-200 text-zinc-700 shadow-2xs"
+                  }`}>
+                    <Icons.Shield className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Audit Trail: {auditLogs.length} Events</span>
+                  </div>
+                  <div className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${
+                    isDark ? "bg-zinc-900/80 border-zinc-800 text-zinc-300" : "bg-white border-zinc-200 text-zinc-700 shadow-2xs"
+                  }`}>
+                    <Icons.Calendar className="w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8]" />
+                    <span>{payrollHistory.length} Locked Periods</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Executive Metric Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* Metric 1: Total Audit Events */}
+                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total System Events</span>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? "bg-zinc-800 text-[#38bdf8]" : "bg-sky-50 text-[#0F85B0]"}`}>
+                      <Icons.Clipboard className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className={`text-xl font-extrabold mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                    {auditLogs.length}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-1">Immutable activity log entries</p>
+                </div>
+
+                {/* Metric 2: Terminal Scans */}
+                {(() => {
+                  const bioEvents = auditLogs.filter(l => l.entity === "BiometricHardware" || l.details.toLowerCase().includes("biometric") || l.details.toLowerCase().includes("scan")).length;
+                  return (
+                    <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Hardware Scans</span>
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                          <Icons.Camera className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className={`text-xl font-extrabold mt-2 text-teal-600 dark:text-teal-400`}>
+                        {bioEvents}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-1">Terminal real-time punches</p>
+                    </div>
+                  );
+                })()}
+
+                {/* Metric 3: Archived Payroll Cycles */}
+                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Archived Cycles</span>
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8]">
+                      <Icons.Calendar className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl font-extrabold mt-2 text-[#0F85B0] dark:text-[#38bdf8]">
+                    {payrollHistory.length}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-1">Locked periods on record</p>
+                </div>
+
+                {/* Metric 4: Security Actions */}
+                {(() => {
+                  const secEvents = auditLogs.filter(l => l.entity === "AdminSecurity" || l.action === "FINALIZE" || l.action === "DELETE").length;
+                  return (
+                    <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Security &amp; Admin</span>
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                          <Icons.Shield className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-extrabold mt-2 text-amber-600 dark:text-amber-400">
+                        {secEvents}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-1">Privileged system verifications</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Section 1: Payroll History with Year Filter */}
               {(() => {
                 const availableYears = Array.from(
                   new Set(payrollHistory.map(p => p.month.split("-")[0]))
@@ -1992,20 +2912,32 @@ export default function Home() {
                 });
 
                 return (
-                  <div className={cardCls(isDark)}>
-                    <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                      <div>
-                        <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Payroll History</h3>
-                        <p className="text-[11px] text-zinc-500">Click any period card below to view detailed breakdown &amp; employee statements.</p>
+                  <div className={`rounded-2xl border overflow-hidden transition-smooth backdrop-blur-xl p-5 ${
+                    isDark
+                      ? "bg-white/5 border-white/10 shadow-xl"
+                      : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                  }`}>
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0F85B0]/20">
+                          <Icons.Calendar className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className={`text-sm font-bold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                            Payroll Archive Statements
+                          </h3>
+                          <p className="text-xs text-zinc-400">Click any period card below to view detailed breakdown &amp; employee statements</p>
+                        </div>
                       </div>
 
                       {/* Year Filter Tabs */}
-                      <div className={`flex items-center gap-1 p-1 rounded-lg border text-xs font-semibold ${isDark ? "bg-zinc-950 border-zinc-800" : "bg-zinc-100 border-zinc-200"}`}>
+                      <div className={`flex items-center gap-1 p-1 rounded-xl border text-xs font-semibold ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-zinc-100 border-zinc-200"}`}>
                         {yearOptions.map(yr => (
                           <button
                             key={yr}
+                            type="button"
                             onClick={() => setSelectedHistoryYear(yr)}
-                            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                               selectedHistoryYear === yr
                                 ? isDark ? "bg-[#0F85B0] text-white shadow" : "bg-white text-[#06394d] shadow-sm"
                                 : isDark ? "text-zinc-400 hover:text-white" : "text-zinc-600 hover:text-zinc-900"
@@ -2017,41 +2949,57 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                       {filteredHistory.map(period => (
                         <div
                           key={period.id}
                           onClick={() => setSelectedHistoryPeriodId(period.id)}
-                          className={`p-4 rounded-lg border transition-all cursor-pointer group hover:-translate-y-0.5 ${
+                          className={`p-4 rounded-xl border transition-all cursor-pointer group hover:-translate-y-0.5 ${
                             isDark
-                              ? "bg-zinc-950/40 border-zinc-800 hover:border-[#0ea5e9]/50 hover:bg-zinc-900"
-                              : "bg-zinc-50 border-zinc-200 hover:border-[#7dd3fc] hover:bg-white shadow-sm"
+                              ? "bg-zinc-900/60 border-zinc-800 hover:border-[#0ea5e9]/50 hover:bg-zinc-900 shadow-md shadow-black/20"
+                              : "bg-white border-zinc-200/90 hover:border-[#7dd3fc] hover:bg-white shadow-sm"
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-xs group-hover:text-[#0ea5e9] transition">{period.label}</span>
+                            <span className="font-extrabold text-sm group-hover:text-[#0ea5e9] transition">{period.label}</span>
                             <div className="flex items-center gap-1.5">
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
-                              <span className="text-zinc-400 text-[10px]">➜</span>
+                              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
+                              <Icons.ChevronRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-[#0ea5e9] transition" />
                             </div>
                           </div>
-                          <p className="text-lg font-extrabold text-[#0ea5e9] mb-1">LKR {period.grossSalaryPool.toLocaleString()}</p>
-                          <p className="text-[10px] text-zinc-500">Net: LKR {period.netRemittances.toLocaleString()}</p>
-                          <p className="text-[10px] text-zinc-500">EPF: LKR {period.totalEpf.toLocaleString()} · ETF: LKR {period.totalEtf.toLocaleString()}</p>
-                          <div className="mt-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                          <p className="text-xl font-extrabold text-[#0ea5e9] mb-1">LKR {period.grossSalaryPool.toLocaleString()}</p>
+                          <p className="text-xs text-zinc-500">Net: LKR {period.netRemittances.toLocaleString()}</p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">EPF: LKR {period.totalEpf.toLocaleString()} · ETF: LKR {period.totalEtf.toLocaleString()}</p>
+                          <div className="mt-3 pt-2.5 border-t border-dashed border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 font-mono">
                             <span>Finalized: {period.finalizedAt?.split(" ")[0]}</span>
-                            <span className="font-sans text-[#0ea5e9] font-bold group-hover:underline">View Details</span>
+                            <span className="font-sans text-[#0ea5e9] font-bold group-hover:underline flex items-center gap-1">
+                              <span>View Summary</span>
+                              <Icons.ChevronRight className="w-3 h-3" />
+                            </span>
                           </div>
                         </div>
                       ))}
                       {filteredHistory.length === 0 && (
-                        <p className="col-span-3 py-6 text-center text-xs text-zinc-500">No finalized payroll periods found for {selectedHistoryYear}.</p>
+                        <div className="col-span-3 py-10 text-center flex flex-col items-center justify-center">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${
+                            isDark ? "bg-zinc-800/60 text-zinc-500 border border-zinc-700/60" : "bg-zinc-100 text-zinc-400 border border-zinc-200"
+                          }`}>
+                            <Icons.Calendar className="w-6 h-6" />
+                          </div>
+                          <p className={`text-xs font-bold ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                            No finalized payroll periods found for {selectedHistoryYear}
+                          </p>
+                          <p className="text-[11px] text-zinc-400 mt-1 max-w-sm">
+                            When you lock a monthly cycle using <strong>Finalize Month</strong> in the Payroll Engine, historical statements appear here.
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
                 );
               })()}
-              {/* Audit Trail & Activity Log Inspector */}
+
+              {/* Section 2: Audit Trail & Activity Log Inspector */}
               {(() => {
                 const actionOptions = ["All", "CREATE", "UPDATE", "FINALIZE", "APPROVE", "DELETE"];
 
@@ -2087,35 +3035,56 @@ export default function Home() {
                 };
 
                 return (
-                  <div className={cardCls(isDark)}>
+                  <div className={`rounded-2xl border overflow-hidden transition-smooth backdrop-blur-xl p-5 ${
+                    isDark
+                      ? "bg-white/5 border-white/10 shadow-xl"
+                      : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                  }`}>
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Audit Trail &amp; Activity Log Inspector</h3>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-700"}`}>
-                            {filteredLogs.length} / {auditLogs.length} Events
-                          </span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <Icons.Shield className="w-4 h-4" />
                         </div>
-                        <p className="text-[11px] text-zinc-500 mt-0.5">Real-time system events, hardware scans, payroll finalizations, and admin actions.</p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className={`text-sm font-bold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                              Audit Trail &amp; Activity Log Inspector
+                            </h3>
+                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${
+                              isDark ? "bg-zinc-800/80 border-zinc-700 text-zinc-300" : "bg-zinc-100 border-zinc-200 text-zinc-700"
+                            }`}>
+                              {filteredLogs.length} / {auditLogs.length} Events
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-400 mt-0.5">Real-time system events, biometric scans, payroll locks &amp; admin operations</p>
+                        </div>
                       </div>
 
                       {/* Filter & Search Bar */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <input
-                          type="text"
-                          placeholder="Search logs (e.g. Ruwan, PIN, Payroll)..."
-                          value={auditSearch}
-                          onChange={e => setAuditSearch(e.target.value)}
-                          className={`${inputCls(isDark)} max-w-[240px] text-xs`}
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Search logs (e.g. Ruwan, PIN, Payroll)..."
+                            value={auditSearch}
+                            onChange={e => setAuditSearch(e.target.value)}
+                            className={`pl-8 pr-3 py-1.5 rounded-xl border text-xs font-medium transition ${
+                              isDark
+                                ? "bg-zinc-900/80 border-zinc-700 text-white placeholder-zinc-500 focus:border-teal-500"
+                                : "bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#0F85B0]"
+                            } max-w-[240px]`}
+                          />
+                          <Icons.Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                        </div>
 
                         {/* Action Filter Pills */}
-                        <div className={`flex items-center gap-1 p-1 rounded-lg border text-xs font-semibold ${isDark ? "bg-zinc-950 border-zinc-800" : "bg-zinc-100 border-zinc-200"}`}>
+                        <div className={`flex items-center gap-1 p-1 rounded-xl border text-xs font-semibold ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-zinc-100 border-zinc-200"}`}>
                           {actionOptions.map(act => (
                             <button
                               key={act}
+                              type="button"
                               onClick={() => setAuditActionFilter(act)}
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
                                 auditActionFilter === act
                                   ? isDark ? "bg-[#0F85B0] text-white shadow" : "bg-white text-[#06394d] shadow-sm"
                                   : isDark ? "text-zinc-400 hover:text-white" : "text-zinc-600 hover:text-zinc-900"
@@ -2128,23 +3097,23 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                    <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
                       {filteredLogs.map(log => (
                         <div
                           key={log.id}
                           onClick={() => setSelectedAuditLogId(log.id)}
-                          className={`p-3 rounded-lg border transition-all cursor-pointer group hover:-translate-y-0.5 ${
+                          className={`p-3.5 rounded-xl border transition-all cursor-pointer group hover:-translate-y-0.5 ${
                             isDark
-                              ? "bg-zinc-950/40 border-zinc-800/80 hover:border-[#0ea5e9]/40 hover:bg-zinc-900"
-                              : "bg-zinc-50 border-zinc-200/80 hover:border-[#7dd3fc] hover:bg-white shadow-sm"
+                              ? "bg-zinc-900/40 border-zinc-800/80 hover:border-[#0ea5e9]/50 hover:bg-zinc-800/60 shadow-sm"
+                              : "bg-white border-zinc-200/80 hover:border-[#7dd3fc] hover:bg-white shadow-xs"
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
+                          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                             <div className="flex items-center gap-2">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider border uppercase ${getActionPill(log.action)}`}>
+                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold tracking-wider border uppercase ${getActionPill(log.action)}`}>
                                 {log.action}
                               </span>
-                              <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-400" : "bg-zinc-200/60 border-zinc-300 text-zinc-600"}`}>
+                              <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-400" : "bg-zinc-100 border-zinc-200 text-zinc-600"}`}>
                                 {log.entity}
                               </span>
                               <span className="font-mono text-[10px] text-zinc-400">ID: {log.entityId}</span>
@@ -2152,18 +3121,18 @@ export default function Home() {
 
                             <div className="flex items-center gap-3 text-[10px]">
                               {log.actor && (
-                                <span className={`font-semibold flex items-center gap-1 ${isDark ? "text-zinc-400" : "text-zinc-600"}`}>
+                                <span className={`font-semibold flex items-center gap-1.5 ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
                                   <Icons.User className="w-3 h-3 text-[#38bdf8]" />
                                   <span>{log.actor}</span>
                                 </span>
                               )}
                               {log.ipAddress && (
-                                <span className="font-mono text-zinc-500">
+                                <span className="font-mono text-zinc-400">
                                   IP: {log.ipAddress}
                                 </span>
                               )}
                               <span className="font-mono text-zinc-400 flex items-center gap-1">
-                                <Icons.Clock className="w-3 h-3 text-emerald-400" />
+                                <Icons.Clock className="w-3 h-3 text-emerald-500" />
                                 <span>{log.timestamp}</span>
                               </span>
                             </div>
@@ -2173,17 +3142,19 @@ export default function Home() {
                             <p className={`text-xs ${isDark ? "text-zinc-200" : "text-zinc-800"} font-medium`}>
                               {log.details}
                             </p>
-                            <span className="text-[10px] font-bold text-[#0ea5e9] opacity-0 group-hover:opacity-100 transition whitespace-nowrap flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-[#0F85B0] dark:text-[#38bdf8] opacity-0 group-hover:opacity-100 transition whitespace-nowrap flex items-center gap-1">
                               <span>Inspect</span>
-                              <Icons.Search className="w-3 h-3 text-[#38bdf8]" />
+                              <Icons.Search className="w-3 h-3" />
                             </span>
                           </div>
                         </div>
                       ))}
 
                       {filteredLogs.length === 0 && (
-                        <div className="py-8 text-center text-xs text-zinc-500">
-                          No audit log events match your search criteria.
+                        <div className="py-12 text-center text-xs text-zinc-500 flex flex-col items-center justify-center">
+                          <Icons.Search className="w-8 h-8 text-zinc-400 mb-2 opacity-50" />
+                          <p className="font-bold">No audit log events match your search criteria</p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">Try clearing the search query or selecting &quot;All&quot; actions</p>
                         </div>
                       )}
                     </div>
@@ -2198,7 +3169,9 @@ export default function Home() {
             <div className="space-y-5 max-w-xl mx-auto">
               {!selfServiceEmp ? (
                 <div className={`${cardCls(isDark)} text-center py-12`}>
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4 ${isDark ? "bg-zinc-800 text-zinc-100" : "bg-[#e0f2fe] text-[#0c6c8f]"}`}>👤</div>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-[#e0f2fe] text-[#0c6c8f]"}`}>
+                    <Icons.User className="w-7 h-7" />
+                  </div>
                   <h2 className="font-bold text-lg mb-1">Employee Self-Service</h2>
                   <p className="text-xs text-zinc-500 mb-6">Enter your Biometric ID to view your payslip and attendance summary</p>
                   <div className="flex gap-2 max-w-xs mx-auto">
@@ -2211,9 +3184,14 @@ export default function Home() {
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="font-bold text-lg">{selfServiceEmp.firstName} {selfServiceEmp.lastName}</h2>
-                      <p className="text-xs text-zinc-500">{selfServiceEmp.role} · {selfServiceEmp.payType}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                        {selfServiceEmp.firstName[0]}{selfServiceEmp.lastName[0]}
+                      </div>
+                      <div>
+                        <h2 className="font-bold text-lg">{selfServiceEmp.firstName} {selfServiceEmp.lastName}</h2>
+                        <p className="text-xs text-zinc-500">{selfServiceEmp.role} · {selfServiceEmp.payType}</p>
+                      </div>
                     </div>
                     <button onClick={()=>{setSelfServiceEmp(null);setSelfServicePin("");}} className={`px-3 py-1.5 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400 hover:bg-zinc-800":"border-zinc-200 text-zinc-600 hover:bg-zinc-50"}`}>← Back</button>
                   </div>
@@ -2632,8 +3610,15 @@ export default function Home() {
                       </div>
 
                       {pinChangeMsg && (
-                        <p className={`text-xs font-bold text-center ${pinChangeMsg.startsWith("✓") ? "text-emerald-400" : "text-rose-500"}`}>
-                          {pinChangeMsg}
+                        <p className={`text-xs font-bold text-center flex items-center justify-center gap-1.5 ${
+                          pinChangeMsg.includes("successfully") ? "text-emerald-400" : "text-rose-500"
+                        }`}>
+                          {pinChangeMsg.includes("successfully") ? (
+                            <Icons.Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          ) : (
+                            <Icons.AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          )}
+                          <span>{pinChangeMsg}</span>
                         </p>
                       )}
 
@@ -2648,82 +3633,465 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* SALARY SETTINGS */}
+                {/* SALARY & DYNAMIC BONUS SETTINGS */}
                 {settingsTab==="epf" && (
-                  <div className="space-y-10 max-w-2xl pb-10">
+                  <div className="space-y-8 max-w-4xl pb-10">
                     
-                    {/* GLOBAL BONUS RATES */}
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Global Dynamic Bonuses</h3>
-                      <p className="text-[10px] text-zinc-500">These rates apply to all employees by default unless overridden in their specific staff profile.</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className={labelCls}>Worked Day Bonus (LKR)</label>
-                          <input type="number" className={inputCls(isDark)} value={salarySettings.globalWorkedDayBonus} onChange={e=>updateSalarySettings({globalWorkedDayBonus: parseFloat(e.target.value)||0})}/>
+                    {/* DYNAMIC BONUSES & ATTENDANCE INCENTIVES ENGINE */}
+                    <div className={`p-6 rounded-2xl border transition-smooth ${
+                      isDark ? "bg-zinc-950/40 border-zinc-800 shadow-xl shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"
+                    } space-y-6`}>
+                      {/* Section Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200/80 dark:border-zinc-800/80 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+                            isDark ? "bg-sky-500/10 border-sky-500/20 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                          }`}>
+                            <Icons.TrendingUp className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className={`text-base font-extrabold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                                Dynamic Attendance &amp; Punctuality Bonuses
+                              </h3>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                Real-Time Biometric Sync
+                              </span>
+                            </div>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                              Calculates per-day worked incentives and on-time arrival bonuses directly into employee payslips.
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <label className={labelCls}>Punctual Bonus (LKR)</label>
-                          <input type="number" className={inputCls(isDark)} value={salarySettings.globalPunctualBonus} onChange={e=>updateSalarySettings({globalPunctualBonus: parseFloat(e.target.value)||0})}/>
-                        </div>
-                        <div>
-                          <label className={labelCls}>Income Bonus (%)</label>
-                          <input type="number" className={inputCls(isDark)} value={salarySettings.globalIncomeBonusPct} onChange={e=>updateSalarySettings({globalIncomeBonusPct: parseFloat(e.target.value)||0})}/>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateSalarySettings(salarySettings);
+                              setSettingsSaveMsg("Dynamic Bonus rates saved successfully!");
+                              setTimeout(() => setSettingsSaveMsg(""), 3000);
+                            }}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-95"
+                          >
+                            <Icons.Check className="w-3.5 h-3.5" />
+                            <span>Save Dynamic Rates</span>
+                          </button>
                         </div>
                       </div>
-                      
-                      {/* PER-STAFF EXCEED INCOME BONUS */}
-                      <div className="pt-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <label className={labelCls}>Staff Exceed Income Bonus (LKR) — Month: {selectedMonth}</label>
-                            <p className="text-[10px] text-zinc-500">Manually set the exceed income bonus for each person for {selectedMonth}.</p>
+
+                      {/* Formula Visual Explainer Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className={`p-3.5 rounded-xl border ${
+                          isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200/80"
+                        }`}>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Worked Days Bonus</span>
                           </div>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${isDark ? "bg-slate-800 border-slate-700 text-sky-400" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
-                            Manual Per-Person
+                          <p className="font-mono text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                            Attended Days × Rate
+                          </p>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            e.g. 21 days × LKR {salarySettings.globalWorkedDayBonus || 200} = <strong className="text-zinc-700 dark:text-zinc-200">LKR {(21 * (salarySettings.globalWorkedDayBonus || 200)).toLocaleString()}</strong>
+                          </p>
+                        </div>
+
+                        <div className={`p-3.5 rounded-xl border ${
+                          isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200/80"
+                        }`}>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#0F85B0] shrink-0" />
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Punctual Days Bonus</span>
+                          </div>
+                          <p className="font-mono text-xs font-extrabold text-[#0F85B0] dark:text-[#38bdf8]">
+                            On-Time Days × Rate
+                          </p>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            e.g. 21 scans × LKR {salarySettings.globalPunctualBonus || 200} = <strong className="text-zinc-700 dark:text-zinc-200">LKR {(21 * (salarySettings.globalPunctualBonus || 200)).toLocaleString()}</strong>
+                            <span className="block mt-0.5 text-[9px] text-[#0F85B0] dark:text-[#38bdf8] font-bold">
+                              Policy: {salarySettings.punctualGraceType === "Strict" ? "Strict (0m Cutoff)" : `+${salarySettings.punctualGraceMinutes || 15}m Grace Window`}
+                            </span>
+                          </p>
+                        </div>
+
+                        <div className={`p-3.5 rounded-xl border ${
+                          isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200/80"
+                        }`}>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Exceed Income Bonus</span>
+                          </div>
+                          <p className="font-mono text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                            Clinic Revenue Surplus × %
+                          </p>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            Applies global share ({salarySettings.globalIncomeBonusPct || 0}%) or per-person manual bonus.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Part 1: Global Baseline Dynamic Rates */}
+                      <div className="space-y-3 pt-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                              Clinic Global Baseline Incentive Rates
+                            </h4>
+                            <p className="text-[11px] text-zinc-400">
+                              Default rates applied across all staff members unless specifically customized below.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Global Worked Day Bonus */}
+                          <div className={`p-4 rounded-xl border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50/70 border-zinc-200"} space-y-2.5`}>
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-200">Worked Day Bonus</label>
+                              <span className="text-[10px] font-mono text-emerald-600 font-bold">Per Attended Day</span>
+                            </div>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">LKR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="25"
+                                className={`${inputCls(isDark)} pl-12 font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400`}
+                                value={salarySettings.globalWorkedDayBonus}
+                                onChange={e => updateSalarySettings({ globalWorkedDayBonus: parseFloat(e.target.value) || 0 })}
+                              />
+                            </div>
+                            {/* Quick Presets */}
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                              {[150, 200, 250, 300].map(val => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => updateSalarySettings({ globalWorkedDayBonus: val })}
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                                    salarySettings.globalWorkedDayBonus === val
+                                      ? "bg-emerald-500 text-white border-emerald-500"
+                                      : isDark ? "border-zinc-700 hover:bg-zinc-800 text-zinc-400" : "border-zinc-200 hover:bg-white text-zinc-600"
+                                  }`}
+                                >
+                                  LKR {val}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Global Punctual Day Bonus */}
+                          <div className={`p-4 rounded-xl border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50/70 border-zinc-200"} space-y-2.5`}>
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-200">Punctual Day Bonus</label>
+                              <span className="text-[10px] font-mono text-[#0F85B0] dark:text-[#38bdf8] font-bold">Per On-Time Day</span>
+                            </div>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">LKR</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="25"
+                                className={`${inputCls(isDark)} pl-12 font-mono font-bold text-sm text-[#0F85B0] dark:text-[#38bdf8]`}
+                                value={salarySettings.globalPunctualBonus}
+                                onChange={e => updateSalarySettings({ globalPunctualBonus: parseFloat(e.target.value) || 0 })}
+                              />
+                            </div>
+                            {/* Quick Presets */}
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                              {[150, 200, 250, 300].map(val => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => updateSalarySettings({ globalPunctualBonus: val })}
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                                    salarySettings.globalPunctualBonus === val
+                                      ? "bg-[#0F85B0] text-white border-[#0F85B0]"
+                                      : isDark ? "border-zinc-700 hover:bg-zinc-800 text-zinc-400" : "border-zinc-200 hover:bg-white text-zinc-600"
+                                  }`}
+                                >
+                                  LKR {val}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Global Income Bonus Percentage */}
+                          <div className={`p-4 rounded-xl border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50/70 border-zinc-200"} space-y-2.5`}>
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-200">Income Bonus Share</label>
+                              <span className="text-[10px] font-mono text-amber-500 font-bold">Revenue %</span>
+                            </div>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.5"
+                                className={`${inputCls(isDark)} pr-8 font-mono font-bold text-sm text-amber-500`}
+                                value={salarySettings.globalIncomeBonusPct}
+                                onChange={e => updateSalarySettings({ globalIncomeBonusPct: parseFloat(e.target.value) || 0 })}
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">%</span>
+                            </div>
+                            {/* Quick Presets */}
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                              {[1, 2, 3, 5].map(val => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => updateSalarySettings({ globalIncomeBonusPct: val })}
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                                    salarySettings.globalIncomeBonusPct === val
+                                      ? "bg-amber-500 text-white border-amber-500"
+                                      : isDark ? "border-zinc-700 hover:bg-zinc-800 text-zinc-400" : "border-zinc-200 hover:bg-white text-zinc-600"
+                                  }`}
+                                >
+                                  {val}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Part 2: Per-Staff Dynamic Bonus Matrix & Overrides */}
+                      <div className="space-y-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                                Staff Individual Dynamic Bonus Matrix &amp; Overrides
+                              </h4>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                isDark ? "bg-zinc-800 text-zinc-300 border-zinc-700" : "bg-zinc-100 text-zinc-700 border-zinc-200"
+                              }`}>
+                                {activeEmployees.length} Staff Members
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-400 mt-0.5">
+                              Customize individual Worked &amp; Punctual rates. Set to 0 to automatically inherit the global baseline above.
+                            </p>
+                          </div>
+                          <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border ${
+                            isDark ? "bg-slate-800/80 border-slate-700 text-sky-400" : "bg-sky-50 border-sky-200 text-sky-700"
+                          }`}>
+                            Active Month: {selectedMonth}
                           </span>
                         </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+
+                        <div className="space-y-3 mt-2">
                           {activeEmployees.map(emp => {
                             const personBonusKey = `${selectedMonth}_${emp.id}`;
-                            const val = monthlyExcessIncome[personBonusKey] !== undefined
+                            const exceedVal = monthlyExcessIncome[personBonusKey] !== undefined
                               ? monthlyExcessIncome[personBonusKey]
                               : "";
-                            const initial = emp.firstName.charAt(0).toUpperCase();
+                            const initials = `${emp.firstName[0] || ""}${emp.lastName[0] || ""}`.toUpperCase();
+                            const isWorkedCustom = emp.attendanceBonusRate > 0;
+                            const isPunctualCustom = emp.punctualBonusRate > 0;
 
                             return (
                               <div
                                 key={emp.id}
-                                className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition ${
-                                  isDark ? "bg-slate-800/40 border-slate-700/60 hover:border-slate-600" : "bg-slate-50/80 border-slate-200/80 hover:border-slate-300"
+                                className={`p-4 rounded-xl border transition ${
+                                  isDark ? "bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700" : "bg-zinc-50/80 border-zinc-200 hover:border-zinc-300 shadow-2xs"
                                 }`}
                               >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#0F85B0] to-emerald-400 flex items-center justify-center text-white font-black text-xs shrink-0">
-                                    {initial}
+                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                  {/* Staff Info */}
+                                  <div className="flex items-center gap-3 min-w-[220px]">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-xs flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                                      {initials}
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-xs text-zinc-900 dark:text-zinc-100">{emp.firstName} {emp.lastName}</p>
+                                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{emp.role} · {emp.payType} · Biometric: {emp.biometricId}</p>
+                                    </div>
                                   </div>
-                                  <div className="min-w-0">
-                                    <p className="font-bold text-xs truncate">{emp.firstName} {emp.lastName}</p>
-                                    <p className="text-[10px] text-slate-400 truncate">{emp.role}</p>
+
+                                  {/* Dynamic Rate Adjustments */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+                                    {/* Worked Day Bonus */}
+                                    <div className={`p-2.5 rounded-lg border ${
+                                      isDark ? "bg-zinc-950/40 border-zinc-800/80" : "bg-white border-zinc-200"
+                                    }`}>
+                                      <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-300">Worked Day Bonus</label>
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                                          isWorkedCustom
+                                            ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                            : "text-zinc-400"
+                                        }`}>
+                                          {isWorkedCustom ? "Custom" : `Global: ${salarySettings.globalWorkedDayBonus}`}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] font-bold text-zinc-400">LKR</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="25"
+                                          placeholder={String(salarySettings.globalWorkedDayBonus)}
+                                          value={emp.attendanceBonusRate || ""}
+                                          onChange={e => updateEmployee(emp.id, { attendanceBonusRate: parseFloat(e.target.value) || 0 })}
+                                          className={`${inputCls(isDark)} py-1 px-2 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400`}
+                                        />
+                                        {isWorkedCustom && (
+                                          <button
+                                            type="button"
+                                            onClick={() => updateEmployee(emp.id, { attendanceBonusRate: 0 })}
+                                            className="text-[9px] px-1.5 py-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                            title="Reset to Global Baseline"
+                                          >
+                                            Reset
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Punctual Day Bonus */}
+                                    <div className={`p-2.5 rounded-lg border ${
+                                      isDark ? "bg-zinc-950/40 border-zinc-800/80" : "bg-white border-zinc-200"
+                                    }`}>
+                                      <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-300">Punctual Day Bonus</label>
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                                          isPunctualCustom
+                                            ? "bg-sky-500/10 text-[#0F85B0] dark:text-[#38bdf8] border border-sky-500/20"
+                                            : "text-zinc-400"
+                                        }`}>
+                                          {isPunctualCustom ? "Custom" : `Global: ${salarySettings.globalPunctualBonus}`}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] font-bold text-zinc-400">LKR</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="25"
+                                          placeholder={String(salarySettings.globalPunctualBonus)}
+                                          value={emp.punctualBonusRate || ""}
+                                          onChange={e => updateEmployee(emp.id, { punctualBonusRate: parseFloat(e.target.value) || 0 })}
+                                          className={`${inputCls(isDark)} py-1 px-2 text-xs font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]`}
+                                        />
+                                        {isPunctualCustom && (
+                                          <button
+                                            type="button"
+                                            onClick={() => updateEmployee(emp.id, { punctualBonusRate: 0 })}
+                                            className="text-[9px] px-1.5 py-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                            title="Reset to Global Baseline"
+                                          >
+                                            Reset
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Monthly Exceed Income Bonus */}
+                                    <div className={`p-2.5 rounded-lg border ${
+                                      isDark ? "bg-zinc-950/40 border-zinc-800/80" : "bg-white border-zinc-200"
+                                    }`}>
+                                      <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-300">Exceed Income Bonus</label>
+                                        <span className="text-[9px] text-zinc-400">Month: {selectedMonth}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] font-bold text-zinc-400">LKR</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="100"
+                                          placeholder="0"
+                                          className={`${inputCls(isDark)} py-1 px-2 text-xs font-mono font-bold text-right text-amber-500`}
+                                          value={exceedVal}
+                                          onChange={e => updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value) || 0, emp.id)}
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <span className="text-[11px] font-bold text-slate-400">LKR</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="100"
-                                    placeholder="0"
-                                    className={`${inputCls(isDark)} w-28 py-1 px-2.5 text-xs font-mono font-bold rounded-lg text-right text-emerald-500`}
-                                    value={val}
-                                    onChange={e => updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value) || 0, emp.id)}
-                                  />
                                 </div>
                               </div>
                             );
                           })}
                         </div>
+                      </div>
+                    </div>
+
+                    {/* PUNCTUALITY & ARRIVAL GRACE POLICY */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-2 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <Icons.Clock className="w-4 h-4 text-[#0F85B0] dark:text-[#38bdf8]" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Punctuality &amp; Arrival Grace Policy</h3>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          salarySettings.punctualGraceType === "Strict"
+                            ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                            : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                        }`}>
+                          {salarySettings.punctualGraceType === "Strict" ? "Strict Mode (0 min)" : `Grace Window (${salarySettings.punctualGraceMinutes || 15} mins)`}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500">
+                        Controls whether check-in events past the scheduled shift start time qualify as <strong>On-Time</strong> (awarding the Punctual Days Bonus) or <strong>Late</strong>.
+                      </p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Policy Mode</label>
+                          <select 
+                            className={inputCls(isDark)}
+                            value={salarySettings.punctualGraceType || "Grace Period"}
+                            onChange={e => updateSalarySettings({ punctualGraceType: e.target.value as "Strict" | "Grace Period" })}
+                          >
+                            <option value="Grace Period">Grace Period (Forgives minor delays)</option>
+                            <option value="Strict">Strict (Minute-by-Minute Cutoff)</option>
+                          </select>
+                          <p className="text-[10px] text-zinc-400 mt-1">
+                            {salarySettings.punctualGraceType === "Strict"
+                              ? "Any check-in after the exact shift start (e.g. 08:31 AM for 08:30) is marked Late."
+                              : `Arriving within ${salarySettings.punctualGraceMinutes || 15} mins of shift start awards the full Punctual Bonus.`
+                            }
+                          </p>
+                        </div>
+                        
+                        {salarySettings.punctualGraceType !== "Strict" && (
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className={labelCls}>Grace Period (Minutes)</label>
+                              <span className="text-[10px] font-mono text-[#0F85B0] dark:text-[#38bdf8] font-bold">
+                                +{salarySettings.punctualGraceMinutes || 15} mins tolerance
+                              </span>
+                            </div>
+                            <input 
+                              type="number" 
+                              min="1"
+                              max="120"
+                              step="5"
+                              className={inputCls(isDark)} 
+                              value={salarySettings.punctualGraceMinutes || 15} 
+                              onChange={e => updateSalarySettings({ punctualGraceMinutes: parseInt(e.target.value) || 0 })}
+                            />
+                            {/* Quick Presets */}
+                            <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
+                              {[5, 10, 15, 20, 30].map(mins => (
+                                <button
+                                  key={mins}
+                                  type="button"
+                                  onClick={() => updateSalarySettings({ punctualGraceMinutes: mins })}
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                                    (salarySettings.punctualGraceMinutes || 15) === mins
+                                      ? "bg-[#0F85B0] text-white border-[#0F85B0]"
+                                      : isDark ? "border-zinc-700 hover:bg-zinc-800 text-zinc-400" : "border-zinc-200 hover:bg-white text-zinc-600"
+                                  }`}
+                                >
+                                  {mins} min
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2780,7 +4148,7 @@ export default function Home() {
 
                       <div className="pt-2 flex items-center justify-between">
                         {settingsSaveMsg && settingsTab === "epf" ? <span className="text-xs font-bold text-emerald-400">{settingsSaveMsg}</span> : <span />}
-                        <button type="button" onClick={() => { updateEpfSettings(epfForm); updatePayrollCycleStartDay(cycleStartDayForm); setSettingsSaveMsg("Salary Settings updated successfully!"); setTimeout(() => setSettingsSaveMsg(""), 3000); }} className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition">Save Salary Settings</button>
+                        <button type="button" onClick={() => { updateEpfSettings(epfForm); updatePayrollCycleStartDay(cycleStartDayForm); updateSalarySettings(salarySettings); setSettingsSaveMsg("Salary & Bonus Settings updated successfully!"); setTimeout(() => setSettingsSaveMsg(""), 3000); }} className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded-xl shadow transition">Save Salary Settings</button>
                       </div>
                     </div>
 
@@ -3084,13 +4452,36 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="space-y-2 max-w-3xl">
-                      {activeEmployees.map(emp=>(
-                        <div key={emp.id} className={`flex items-center justify-between p-3.5 rounded-lg border hover:border-zinc-300 dark:hover:border-zinc-700 transition ${isDark?"bg-zinc-950/20 border-zinc-800":"bg-white border-zinc-200"}`}>
-                          <div>
-                            <p className="font-bold text-xs">{emp.firstName} {emp.lastName}</p>
-                            <p className="text-[10px] text-zinc-500">{emp.role} · {emp.payType} · Biometric: {emp.biometricId}</p>
-                            <div className="flex gap-1 mt-1 flex-wrap">
-                              {emp.allowanceIds.map(aid=>{const al=allowances.find(a=>a.id===aid);return al?<span key={aid} className={`text-[9px] px-1.5 py-0.5 rounded border ${isDark?"border-zinc-700 text-zinc-500":"border-zinc-200 text-zinc-500"}`}>{al.name}</span>:null;})}
+                      {activeEmployees.map(emp=>{
+                        const initials = `${emp.firstName[0] || ""}${emp.lastName[0] || ""}`.toUpperCase();
+                        return (
+                        <div key={emp.id} className={`flex items-center justify-between p-3.5 rounded-xl border hover:border-zinc-300 dark:hover:border-zinc-700 transition ${isDark?"bg-zinc-950/20 border-zinc-800":"bg-white border-zinc-200"}`}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-xs flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                              {initials}
+                            </div>
+                            <div>
+                              <p className="font-bold text-xs">{emp.firstName} {emp.lastName}</p>
+                              <p className="text-[10px] text-zinc-500">{emp.role} · {emp.payType} · Biometric: {emp.biometricId}</p>
+                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
+                                  isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                }`}>
+                                  <Icons.Calendar className="w-2.5 h-2.5 shrink-0" />
+                                  <span>Worked: LKR {(emp.attendanceBonusRate || salarySettings.globalWorkedDayBonus || 0).toLocaleString()}/day</span>
+                                  {emp.attendanceBonusRate > 0 && <span className="text-[8px] opacity-75 font-bold">(Custom)</span>}
+                                </span>
+                                <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
+                                  isDark ? "bg-sky-500/10 border-sky-500/30 text-sky-400" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                                }`}>
+                                  <Icons.Clock className="w-2.5 h-2.5 shrink-0" />
+                                  <span>Punctual: LKR {(emp.punctualBonusRate || salarySettings.globalPunctualBonus || 0).toLocaleString()}/day</span>
+                                  {emp.punctualBonusRate > 0 && <span className="text-[8px] opacity-75 font-bold">(Custom)</span>}
+                                </span>
+                              </div>
+                              <div className="flex gap-1 mt-1 flex-wrap">
+                                {emp.allowanceIds.map(aid=>{const al=allowances.find(a=>a.id===aid);return al?<span key={aid} className={`text-[9px] px-1.5 py-0.5 rounded border ${isDark?"border-zinc-700 text-zinc-500":"border-zinc-200 text-zinc-500"}`}>{al.name}</span>:null;})}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -3108,7 +4499,8 @@ export default function Home() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
 
                     {/* Machine Enrolled Persons Section */}
@@ -3360,7 +4752,7 @@ export default function Home() {
                     isDark ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50/80 border-slate-200/80"
                   }`}>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F85B0] via-purple-600 to-emerald-400 flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
                         {drawerInitial}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -3533,9 +4925,46 @@ export default function Home() {
                 <div className="col-span-2"><label className={labelCls}>Biometric ID</label><input required className={inputCls(isDark)} value={newEmp.biometricId} onChange={e=>setNewEmp(p=>({...p,biometricId:e.target.value}))}/></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><label className={labelCls}>Worked Day Bonus (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.attendanceBonusRate} onChange={e=>setNewEmp(p=>({...p,attendanceBonusRate:parseFloat(e.target.value)||0}))}/></div>
-                <div><label className={labelCls}>Punctual Bonus (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.punctualBonusRate} onChange={e=>setNewEmp(p=>({...p,punctualBonusRate:parseFloat(e.target.value)||0}))}/></div>
-                <div><label className={labelCls}>Income Bonus (%)</label><input type="number" className={inputCls(isDark)} value={newEmp.incomeBonusPercentage} onChange={e=>setNewEmp(p=>({...p,incomeBonusPercentage:parseFloat(e.target.value)||0}))}/></div>
+                <div>
+                  <label className={labelCls}>Worked Day Bonus (LKR / day)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="25"
+                    className={inputCls(isDark)}
+                    placeholder={`Global: LKR ${salarySettings.globalWorkedDayBonus}`}
+                    value={newEmp.attendanceBonusRate || ""}
+                    onChange={e => setNewEmp(p => ({ ...p, attendanceBonusRate: parseFloat(e.target.value) || 0 }))}
+                  />
+                  <p className="text-[10px] text-zinc-400 mt-1">Set 0 to inherit Global: LKR {salarySettings.globalWorkedDayBonus}</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Punctual Bonus (LKR / day)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="25"
+                    className={inputCls(isDark)}
+                    placeholder={`Global: LKR ${salarySettings.globalPunctualBonus}`}
+                    value={newEmp.punctualBonusRate || ""}
+                    onChange={e => setNewEmp(p => ({ ...p, punctualBonusRate: parseFloat(e.target.value) || 0 }))}
+                  />
+                  <p className="text-[10px] text-zinc-400 mt-1">Set 0 to inherit Global: LKR {salarySettings.globalPunctualBonus}</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Income Bonus (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    className={inputCls(isDark)}
+                    placeholder={`Global: ${salarySettings.globalIncomeBonusPct}%`}
+                    value={newEmp.incomeBonusPercentage || ""}
+                    onChange={e => setNewEmp(p => ({ ...p, incomeBonusPercentage: parseFloat(e.target.value) || 0 }))}
+                  />
+                  <p className="text-[10px] text-zinc-400 mt-1">Set 0 to inherit Global: {salarySettings.globalIncomeBonusPct}%</p>
+                </div>
               </div>
 
               <div><label className={labelCls}>Assign Allowances</label><div className="flex flex-wrap gap-2 mt-1">{allowances.map(al=>{const has=newEmp.allowanceIds.includes(al.id);return(<label key={al.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,allowanceIds:has?p.allowanceIds.filter(id=>id!==al.id):[...p.allowanceIds,al.id]}))}/>{al.name}</label>);})}</div></div>
@@ -3605,32 +5034,428 @@ export default function Home() {
       )}
 
       {/* ═══════════════ MODAL: ADD LEAVE REQUEST ═══════════════ */}
-      {showAddLeaveModal && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-          <div className={`w-full max-w-md rounded-xl shadow-2xl border ${isDark?"bg-zinc-900 border-zinc-800":"bg-white border-zinc-200"}`}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">New Leave Request</h3>
-              <button onClick={()=>setShowAddLeaveModal(false)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
-            </div>
-            <div className="p-6 space-y-4 text-xs">
-              <div><label className={labelCls}>Employee</label><select className={inputCls(isDark)} value={newLeave.employeeId} onChange={e=>setNewLeave(p=>({...p,employeeId:e.target.value}))}>{activeEmployees.map(e=><option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Type</label><select className={inputCls(isDark)} value={newLeave.type} onChange={e=>setNewLeave(p=>({...p,type:e.target.value as LeaveRequest["type"]}))}>{["Annual","Sick","Casual","Unpaid"].map(t=><option key={t}>{t}</option>)}</select></div>
-                <div><label className={labelCls}>Status</label><select className={inputCls(isDark)} value={newLeave.status} onChange={e=>setNewLeave(p=>({...p,status:e.target.value as LeaveRequest["status"]}))}><option>Pending</option><option>Approved</option></select></div>
+      {showAddLeaveModal && (() => {
+        const selectedEmp = activeEmployees.find(e => e.id === newLeave.employeeId) || activeEmployees[0];
+        
+        // Calculate duration if dates are selected
+        const effectiveEndDate = leaveDurationMode === "single" || !newLeave.endDate
+          ? newLeave.startDate
+          : newLeave.endDate;
+
+        let durationDays = 0;
+        let isDateInvalid = false;
+        if (newLeave.startDate && effectiveEndDate) {
+          const start = new Date(newLeave.startDate);
+          const end = new Date(effectiveEndDate);
+          if (end < start) {
+            isDateInvalid = true;
+          } else {
+            durationDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          }
+        }
+
+        const leaveTypes: { type: LeaveRequest["type"]; label: string; icon: React.ReactNode; quotaKey?: "annual" | "sick" | "casual" }[] = [
+          { type: "Annual", label: "Annual Leave", icon: <Icons.Sun className="w-3.5 h-3.5" />, quotaKey: "annual" },
+          { type: "Sick", label: "Sick Leave", icon: <Icons.HeartPulse className="w-3.5 h-3.5" />, quotaKey: "sick" },
+          { type: "Casual", label: "Casual Leave", icon: <Icons.Coffee className="w-3.5 h-3.5" />, quotaKey: "casual" },
+          { type: "Unpaid", label: "Unpaid Leave", icon: <Icons.FileText className="w-3.5 h-3.5" /> },
+        ];
+
+        const availableQuota = selectedEmp && newLeave.type !== "Unpaid" && selectedEmp.leaveBalances
+          ? (selectedEmp.leaveBalances[newLeave.type.toLowerCase() as "annual" | "sick" | "casual"] ?? 0)
+          : null;
+
+        const isQuotaExceeded = availableQuota !== null && durationDays > availableQuota;
+
+        const quickReasons = [
+          { label: "Family Vacation", icon: <Icons.Sun className="w-3 h-3 text-amber-500" /> },
+          { label: "Doctor Appointment", icon: <Icons.HeartPulse className="w-3 h-3 text-rose-500" /> },
+          { label: "Personal / Family Matters", icon: <Icons.Home className="w-3 h-3 text-blue-500" /> },
+          { label: "Medical Recovery", icon: <Icons.Clock className="w-3 h-3 text-purple-500" /> },
+          { label: "Travel / Out of City", icon: <Icons.Plane className="w-3 h-3 text-teal-500" /> },
+        ];
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md transition-all duration-200 animate-in fade-in">
+            <div className={`relative w-full max-w-lg rounded-2xl shadow-2xl border overflow-hidden transition-all ${
+              isDark ? "bg-zinc-900/95 border-zinc-800 text-white" : "bg-white/95 border-zinc-200/90 text-zinc-900"
+            } backdrop-blur-xl`}>
+              
+              {/* Top Accent Gradient Bar */}
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-teal-500 via-[#0F85B0] to-indigo-500" />
+
+              {/* Modal Header */}
+              <div className={`flex items-center justify-between px-6 py-5 border-b ${isDark ? "border-zinc-800/80" : "border-zinc-100"}`}>
+                <div className="flex items-center gap-3.5">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${
+                    isDark ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "bg-teal-50 text-teal-600 border border-teal-200/60"
+                  }`}>
+                    <Icons.Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className={`text-base font-bold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                      New Leave Request
+                    </h3>
+                    <p className="text-xs text-zinc-400 font-medium">Record planned vacation, sick leave, or personal time off</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddLeaveModal(false)}
+                  className={`p-2 rounded-xl transition ${
+                    isDark ? "text-zinc-400 hover:text-white hover:bg-zinc-800" : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
+                  }`}
+                  aria-label="Close modal"
+                >
+                  <Icons.X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Start Date</label><input type="date" className={inputCls(isDark)} value={newLeave.startDate} onChange={e=>setNewLeave(p=>({...p,startDate:e.target.value}))}/></div>
-                <div><label className={labelCls}>End Date</label><input type="date" className={inputCls(isDark)} value={newLeave.endDate} onChange={e=>setNewLeave(p=>({...p,endDate:e.target.value}))}/></div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
+                
+                {/* 1. Employee Selector & Live Balance Preview */}
+                <div className="space-y-2">
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                    Staff Member
+                  </label>
+                  <div className="relative">
+                    <select
+                      className={`w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border transition appearance-none cursor-pointer pr-10 ${
+                        isDark 
+                          ? "bg-zinc-800/80 border-zinc-700 text-white hover:border-zinc-600 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" 
+                          : "bg-zinc-50 border-zinc-200 text-zinc-800 hover:border-zinc-300 focus:border-[#0F85B0] focus:ring-2 focus:ring-[#0F85B0]/20"
+                      }`}
+                      value={newLeave.employeeId || selectedEmp?.id || ""}
+                      onChange={e => setNewLeave(p => ({ ...p, employeeId: e.target.value }))}
+                    >
+                      {activeEmployees.map(e => (
+                        <option key={e.id} value={e.id}>
+                          {e.firstName} {e.lastName} ({e.role})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400">
+                      <Icons.ChevronRight className="w-4 h-4 rotate-90" />
+                    </div>
+                  </div>
+
+                  {/* Remaining Balances Strip for Selected Staff */}
+                  {selectedEmp && (
+                    <div className={`flex flex-wrap items-center gap-2 p-2.5 rounded-xl border text-[11px] ${
+                      isDark ? "bg-zinc-800/40 border-zinc-800/80" : "bg-slate-50 border-slate-200/80"
+                    }`}>
+                      <span className="text-zinc-400 font-medium">Available Quotas:</span>
+                      <span className={`px-2 py-0.5 rounded-md font-semibold flex items-center gap-1.5 ${
+                        (selectedEmp.leaveBalances?.annual ?? 0) === 0 ? "bg-rose-500/10 text-rose-500" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      }`}>
+                        <Icons.Sun className="w-3 h-3" />
+                        <span>Annual: {selectedEmp.leaveBalances?.annual ?? 14}/14d</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md font-semibold flex items-center gap-1.5 ${
+                        (selectedEmp.leaveBalances?.sick ?? 0) === 0 ? "bg-rose-500/10 text-rose-500" : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                      }`}>
+                        <Icons.HeartPulse className="w-3 h-3" />
+                        <span>Sick: {selectedEmp.leaveBalances?.sick ?? 7}/7d</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md font-semibold flex items-center gap-1.5 ${
+                        (selectedEmp.leaveBalances?.casual ?? 0) === 0 ? "bg-rose-500/10 text-rose-500" : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                      }`}>
+                        <Icons.Coffee className="w-3 h-3" />
+                        <span>Casual: {selectedEmp.leaveBalances?.casual ?? 3}/3d</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Leave Type (Interactive Pills) */}
+                <div className="space-y-2">
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                    Leave Category
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {leaveTypes.map(item => {
+                      const isSelected = newLeave.type === item.type;
+                      return (
+                        <button
+                          key={item.type}
+                          type="button"
+                          onClick={() => setNewLeave(p => ({ ...p, type: item.type }))}
+                          className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                            isSelected
+                              ? isDark
+                                ? "bg-teal-500/20 border-teal-500 text-teal-300 shadow-sm"
+                                : "bg-[#0F85B0]/10 border-[#0F85B0] text-[#0F85B0] shadow-sm font-bold"
+                              : isDark
+                                ? "bg-zinc-800/50 border-zinc-700/80 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+                                : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+                          }`}
+                        >
+                          <span className="shrink-0">{item.icon}</span>
+                          <span className="truncate">{item.label.replace(" Leave", "")}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Approval Pipeline Status */}
+                <div className="space-y-2">
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                    Approval Status
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setNewLeave(p => ({ ...p, status: "Pending" }))}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                        newLeave.status === "Pending"
+                          ? "bg-amber-500/15 border-amber-500/80 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20"
+                          : isDark
+                            ? "bg-zinc-800/40 border-zinc-700/70 text-zinc-400 hover:bg-zinc-800"
+                            : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      Pending Approval
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewLeave(p => ({ ...p, status: "Approved" }))}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                        newLeave.status === "Approved"
+                          ? "bg-emerald-500/15 border-emerald-500/80 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20"
+                          : isDark
+                            ? "bg-zinc-800/40 border-zinc-700/70 text-zinc-400 hover:bg-zinc-800"
+                            : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Instant Approve
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Date Selection & Duration Calculator */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                      Leave Duration
+                    </label>
+                    {/* Duration Mode Segmented Switch */}
+                    <div className="inline-flex p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLeaveDurationMode("single");
+                          if (newLeave.startDate) {
+                            setNewLeave(p => ({ ...p, endDate: p.startDate }));
+                          }
+                        }}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${
+                          leaveDurationMode === "single"
+                            ? isDark
+                              ? "bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-xs"
+                              : "bg-white text-[#0F85B0] border border-[#0F85B0]/20 shadow-xs"
+                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border border-transparent"
+                        }`}
+                      >
+                        <Icons.Calendar className="w-4 h-4 shrink-0" />
+                        <div className="flex flex-col text-left leading-tight whitespace-nowrap">
+                          <span className="font-bold">Single Day</span>
+                          <span className="text-[10px] font-medium opacity-75">(1 Day)</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLeaveDurationMode("range")}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${
+                          leaveDurationMode === "range"
+                            ? isDark
+                              ? "bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-xs"
+                              : "bg-white text-[#0F85B0] border border-[#0F85B0]/20 shadow-xs"
+                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border border-transparent"
+                        }`}
+                      >
+                        <Icons.Clock className="w-4 h-4 shrink-0" />
+                        <div className="flex flex-col text-left leading-tight whitespace-nowrap">
+                          <span className="font-bold">Date Range</span>
+                          <span className="text-[10px] font-medium opacity-75">(Multi-Day)</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {leaveDurationMode === "single" ? (
+                    <div>
+                      <span className="block text-[10px] text-zinc-400 mb-1 font-medium">Select Date</span>
+                      <input
+                        type="date"
+                        className={`w-full text-xs font-medium px-3.5 py-2.5 rounded-xl border transition ${
+                          isDark 
+                            ? "bg-zinc-800/80 border-zinc-700 text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" 
+                            : "bg-zinc-50 border-zinc-200 text-zinc-800 focus:border-[#0F85B0] focus:ring-2 focus:ring-[#0F85B0]/20"
+                        }`}
+                        value={newLeave.startDate}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setNewLeave(p => ({ ...p, startDate: val, endDate: val }));
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="block text-[10px] text-zinc-400 mb-1 font-medium">Start Date</span>
+                        <input
+                          type="date"
+                          className={`w-full text-xs font-medium px-3.5 py-2.5 rounded-xl border transition ${
+                            isDark 
+                              ? "bg-zinc-800/80 border-zinc-700 text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" 
+                              : "bg-zinc-50 border-zinc-200 text-zinc-800 focus:border-[#0F85B0] focus:ring-2 focus:ring-[#0F85B0]/20"
+                          }`}
+                          value={newLeave.startDate}
+                          onChange={e => setNewLeave(p => ({ ...p, startDate: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-zinc-400 mb-1 font-medium">End Date</span>
+                        <input
+                          type="date"
+                          className={`w-full text-xs font-medium px-3.5 py-2.5 rounded-xl border transition ${
+                            isDark 
+                              ? "bg-zinc-800/80 border-zinc-700 text-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" 
+                              : "bg-zinc-50 border-zinc-200 text-zinc-800 focus:border-[#0F85B0] focus:ring-2 focus:ring-[#0F85B0]/20"
+                          }`}
+                          value={newLeave.endDate}
+                          onChange={e => setNewLeave(p => ({ ...p, endDate: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Calculated Duration Banner */}
+                  {isDateInvalid && (
+                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-medium flex items-center gap-2">
+                      <Icons.AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>Invalid range: End date must be on or after start date.</span>
+                    </div>
+                  )}
+
+                  {!isDateInvalid && durationDays > 0 && (
+                    <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs font-semibold ${
+                      isQuotaExceeded 
+                        ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                        : isDark
+                          ? "bg-teal-500/10 border-teal-500/30 text-teal-300"
+                          : "bg-teal-50 border-teal-200 text-teal-700"
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <Icons.Calendar className="w-4 h-4" />
+                        <span>Total Duration: <strong>{durationDays} {durationDays === 1 ? "day (Single day leave)" : "days"}</strong></span>
+                      </div>
+                      {isQuotaExceeded && (
+                        <span className="text-[10px] font-normal underline">
+                          Exceeds current quota ({availableQuota}d)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Notes & Quick Suggestions */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                      Reason / Note (Optional)
+                    </label>
+                    <span className="text-[10px] text-zinc-400">Keep admin & payroll synced</span>
+                  </div>
+                  
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Taking scheduled annual leave for family trip; emergencies covered by colleague..."
+                    className={`w-full text-xs px-3.5 py-2.5 rounded-xl border resize-none transition ${
+                      isDark 
+                        ? "bg-zinc-800/80 border-zinc-700 text-white placeholder-zinc-500 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" 
+                        : "bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#0F85B0] focus:ring-2 focus:ring-[#0F85B0]/20"
+                    }`}
+                    value={newLeave.note}
+                    onChange={e => setNewLeave(p => ({ ...p, note: e.target.value }))}
+                  />
+
+                  {/* Quick Reason Chips */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {quickReasons.map(r => (
+                      <button
+                        key={r.label}
+                        type="button"
+                        onClick={() => setNewLeave(p => ({ ...p, note: p.note ? `${p.note}, ${r.label}` : r.label }))}
+                        className={`text-[10px] px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 ${
+                          isDark 
+                            ? "bg-zinc-800/50 border-zinc-700/60 text-zinc-300 hover:text-white hover:border-zinc-500" 
+                            : "bg-zinc-100/80 border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-200"
+                        }`}
+                      >
+                        {r.icon}
+                        <span>{r.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div><label className={labelCls}>Note</label><textarea className={`${inputCls(isDark)} h-16 resize-none`} value={newLeave.note} onChange={e=>setNewLeave(p=>({...p,note:e.target.value}))}/></div>
-              <div className="flex justify-end gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <button onClick={()=>setShowAddLeaveModal(false)} className={`px-4 py-2 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400":"border-zinc-200 text-zinc-600"}`}>Cancel</button>
-                <button onClick={()=>{if(newLeave.startDate&&newLeave.endDate){addLeaveRequest(newLeave);if(newLeave.status==="Approved")setTimeout(()=>approveLeave(leaveRequests[0]?.id),100);setShowAddLeaveModal(false);}}} className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow">Submit Request</button>
+
+              {/* Modal Footer */}
+              <div className={`flex items-center justify-end gap-3 px-6 py-4 border-t ${
+                isDark ? "border-zinc-800 bg-zinc-900/80" : "border-zinc-100 bg-zinc-50/70"
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddLeaveModal(false)}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition ${
+                    isDark
+                      ? "border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                      : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!newLeave.startDate || (leaveDurationMode === "range" && !newLeave.endDate) || isDateInvalid}
+                  onClick={() => {
+                    const finalEndDate = leaveDurationMode === "single" || !newLeave.endDate
+                      ? newLeave.startDate
+                      : newLeave.endDate;
+
+                    if (newLeave.startDate && finalEndDate && !isDateInvalid) {
+                      const finalLeave = {
+                        ...newLeave,
+                        endDate: finalEndDate,
+                        employeeId: newLeave.employeeId || selectedEmp?.id || activeEmployees[0]?.id || "",
+                      };
+                      addLeaveRequest(finalLeave);
+                      if (finalLeave.status === "Approved") {
+                        setTimeout(() => approveLeave(leaveRequests[0]?.id), 100);
+                      }
+                      setShowAddLeaveModal(false);
+                    }
+                  }}
+                  className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-lg transition-all flex items-center gap-2 ${
+                    !newLeave.startDate || (leaveDurationMode === "range" && !newLeave.endDate) || isDateInvalid
+                      ? "opacity-50 cursor-not-allowed bg-zinc-400 text-white"
+                      : isDark
+                        ? "bg-teal-500 hover:bg-teal-400 text-zinc-950 shadow-teal-500/20 active:scale-95"
+                        : "bg-[#0F85B0] hover:bg-[#0c6c8f] text-white shadow-[#0F85B0]/25 active:scale-95"
+                  }`}
+                >
+                  <Icons.Plus className="w-4 h-4" />
+                  <span>Submit Leave Request</span>
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
 
 
@@ -3638,20 +5463,129 @@ export default function Home() {
 
       {/* ═══════════════ MODAL: ADD HOLIDAY ═══════════════ */}
       {showAddHolidayModal && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-          <div className={`w-full max-w-sm rounded-xl shadow-2xl border ${isDark?"bg-zinc-900 border-zinc-800":"bg-white border-zinc-200"}`}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Add Public Holiday</h3>
-              <button onClick={()=>setShowAddHolidayModal(false)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
-            </div>
-            <div className="p-6 space-y-4 text-xs">
-              <div><label className={labelCls}>Date</label><input type="date" className={inputCls(isDark)} value={newHoliday.date} onChange={e=>setNewHoliday(p=>({...p,date:e.target.value}))}/></div>
-              <div><label className={labelCls}>Holiday Name</label><input className={inputCls(isDark)} value={newHoliday.name} onChange={e=>setNewHoliday(p=>({...p,name:e.target.value}))}/></div>
-              <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newHoliday.isDoubleOT} onChange={e=>setNewHoliday(p=>({...p,isDoubleOT:e.target.checked}))} className="rounded"/>Double OT on this day</label>
-              <div className="flex justify-end gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <button onClick={()=>setShowAddHolidayModal(false)} className={`px-4 py-2 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400":"border-zinc-200 text-zinc-600"}`}>Cancel</button>
-                <button onClick={()=>{if(newHoliday.date&&newHoliday.name){addHoliday(newHoliday);setShowAddHolidayModal(false);}}} className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow">Add Holiday</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md transition-all duration-200 animate-in fade-in">
+          <div className={`relative w-full max-w-md rounded-2xl shadow-2xl border overflow-hidden transition-all ${
+            isDark ? "bg-zinc-900/95 border-zinc-800 text-white" : "bg-white/95 border-zinc-200/90 text-zinc-900"
+          } backdrop-blur-xl`}>
+            {/* Top Accent Gradient Bar */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-500 via-rose-500 to-pink-500" />
+
+            <div className={`flex items-center justify-between px-6 py-5 border-b ${isDark ? "border-zinc-800/80" : "border-zinc-100"}`}>
+              <div className="flex items-center gap-3.5">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${
+                  isDark ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : "bg-amber-50 text-amber-600 border border-amber-200/60"
+                }`}>
+                  <Icons.Star className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className={`text-base font-bold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+                    Add Public Holiday
+                  </h3>
+                  <p className="text-xs text-zinc-400 font-medium">Configure clinic statutory calendar & OT policy</p>
+                </div>
               </div>
+              <button
+                onClick={() => setShowAddHolidayModal(false)}
+                className={`p-2 rounded-xl transition ${
+                  isDark ? "text-zinc-400 hover:text-white hover:bg-zinc-800" : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
+                }`}
+                aria-label="Close modal"
+              >
+                <Icons.X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                  Holiday Date
+                </label>
+                <input
+                  type="date"
+                  className={`w-full text-xs font-medium px-3.5 py-2.5 rounded-xl border transition ${
+                    isDark 
+                      ? "bg-zinc-800/80 border-zinc-700 text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20" 
+                      : "bg-zinc-50 border-zinc-200 text-zinc-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  }`}
+                  value={newHoliday.date}
+                  onChange={e => setNewHoliday(p => ({ ...p, date: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                  Holiday Name
+                </label>
+                <input
+                  placeholder="e.g. Binara Full Moon Poya Day"
+                  className={`w-full text-xs font-medium px-3.5 py-2.5 rounded-xl border transition ${
+                    isDark 
+                      ? "bg-zinc-800/80 border-zinc-700 text-white placeholder-zinc-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20" 
+                      : "bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  }`}
+                  value={newHoliday.name}
+                  onChange={e => setNewHoliday(p => ({ ...p, name: e.target.value }))}
+                />
+              </div>
+
+              <div className={`p-3.5 rounded-xl border transition flex items-start gap-3 cursor-pointer ${
+                newHoliday.isDoubleOT
+                  ? isDark
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-200"
+                    : "bg-amber-50 border-amber-200 text-amber-900"
+                  : isDark
+                    ? "bg-zinc-800/40 border-zinc-800 text-zinc-300"
+                    : "bg-zinc-50 border-zinc-200 text-zinc-700"
+              }`}
+              onClick={() => setNewHoliday(p => ({ ...p, isDoubleOT: !p.isDoubleOT }))}
+              >
+                <input
+                  type="checkbox"
+                  checked={newHoliday.isDoubleOT}
+                  onChange={e => setNewHoliday(p => ({ ...p, isDoubleOT: e.target.checked }))}
+                  className="mt-0.5 rounded text-amber-500 focus:ring-amber-500/20 h-4 w-4"
+                />
+                <div>
+                  <span className="font-bold text-xs block">Double OT (2.0× Rate)</span>
+                  <span className="text-[11px] text-zinc-400 font-normal">
+                    Staff working on this public holiday receive statutory double overtime rates automatically in payroll.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className={`flex items-center justify-end gap-3 px-6 py-4 border-t ${
+              isDark ? "border-zinc-800 bg-zinc-900/80" : "border-zinc-100 bg-zinc-50/70"
+            }`}>
+              <button
+                type="button"
+                onClick={() => setShowAddHolidayModal(false)}
+                className={`px-4 py-2 text-xs font-bold rounded-xl border transition ${
+                  isDark
+                    ? "border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                    : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!newHoliday.date || !newHoliday.name}
+                onClick={() => {
+                  if (newHoliday.date && newHoliday.name) {
+                    addHoliday(newHoliday);
+                    setShowAddHolidayModal(false);
+                  }
+                }}
+                className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-lg transition-all flex items-center gap-2 ${
+                  !newHoliday.date || !newHoliday.name
+                    ? "opacity-50 cursor-not-allowed bg-zinc-400 text-white"
+                    : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-amber-500/20 active:scale-95"
+                }`}
+              >
+                <Icons.Plus className="w-4 h-4" />
+                <span>Add Holiday</span>
+              </button>
             </div>
           </div>
         </div>
@@ -3672,8 +5606,9 @@ export default function Home() {
         const epfBase = calc.basicEarnings + empAllowances.filter(a => a.epfApplicable).reduce((sum, a) => sum + a.amount, 0);
         
         return (
-          <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm print:relative print:inset-auto print:p-0 print:m-0 print:bg-white print:block ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-            <div id="printable-payslip" className="bg-white text-zinc-900 w-full max-w-[480px] rounded-2xl shadow-2xl flex flex-col print:shadow-none print:rounded-none print:border print:border-zinc-300 print:mx-auto">
+          <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md transition-all duration-200 animate-in fade-in print:relative print:inset-auto print:p-0 print:m-0 print:bg-white print:block ${isDark ? "bg-zinc-950/75" : "bg-slate-900/50"}`}>
+            <div className="absolute inset-0 print:hidden" onClick={() => setSelectedPaySlip(null)} />
+            <div id="printable-payslip" className="relative z-10 bg-white text-zinc-900 w-full max-w-[480px] rounded-2xl shadow-2xl border border-zinc-200/80 flex flex-col transition-all duration-200 animate-in zoom-in-95 ease-out print:shadow-none print:rounded-none print:border print:border-zinc-300 print:mx-auto">
               <div className="p-6">
                 <div className="text-center mb-3 pb-3 border-b-2 border-dashed border-zinc-300">
                   {/* Clinic Logo */}
@@ -3819,100 +5754,239 @@ export default function Home() {
         );
       })()}
 
-      {/* ═══════════════ MODAL: MANUAL PAYSLIP ADJUSTMENT ═══════════════ */}
-      {adjustingPayslipEmpId && (() => {
-        const emp = activeEmployees.find(e => e.id === adjustingPayslipEmpId);
-        if (!emp) return null;
+      {/* ═══════════════ SLIDE DRAWER: MANUAL PAYSLIP ADJUSTMENT ═══════════════ */}
+      {(() => {
+        const emp = adjustingPayslipEmpId ? activeEmployees.find(e => e.id === adjustingPayslipEmpId) : null;
+        const calc = emp ? payrollCalcs.find(c => c.employee.id === emp.id) : null;
+        const empName = emp ? `${emp.firstName} ${emp.lastName}` : "";
+        const empRole = emp?.role || "Staff Member";
+        const empInitials = emp ? `${emp.firstName[0]}${emp.lastName[0]}` : "";
+
+        // Live calculation of adjusted net salary preview
+        const previewBonus = manualBonusInput || 0;
+        const previewDeduction = manualDeductionInput || 0;
+        const previewExceed = manualExceedIncomeInput || 0;
+        const originalNet = calc ? calc.netSalary : 0;
+        const currentNetWithAdjustment = calc
+          ? Math.max(0, originalNet + previewBonus + previewExceed - previewDeduction)
+          : 0;
+
         return (
-          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${isDark ? "bg-zinc-950/80" : "bg-slate-900/50"}`}>
-            <div className={`w-full max-w-md rounded-xl shadow-2xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
+          <div className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ${adjustingPayslipEmpId ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+            <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setAdjustingPayslipEmpId(null)} />
+            <div className={`absolute right-0 top-0 h-full w-full max-w-md shadow-2xl transition-transform duration-300 flex flex-col ${adjustingPayslipEmpId ? "translate-x-0" : "translate-x-full"} ${isDark ? "bg-slate-900 border-l border-slate-800" : "bg-white border-l border-slate-200"}`}>
+              
+              {/* Drawer Header */}
+              <div className={`px-6 py-5 border-b flex items-center justify-between ${isDark ? "border-slate-800 bg-slate-900/50" : "border-slate-100 bg-slate-50/50"}`}>
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#38bdf8]">Manual Payslip Adjustment</h3>
-                  <p className="text-[11px] text-zinc-500">{emp.firstName} {emp.lastName} · {selectedMonth}</p>
+                  <h3 className={`font-extrabold text-base tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
+                    Adjust Payslip &amp; Compensation
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Manual additions, deductions &amp; bonuses for {selectedMonth}
+                  </p>
                 </div>
-                <button onClick={() => setAdjustingPayslipEmpId(null)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                <button
+                  type="button"
+                  onClick={() => setAdjustingPayslipEmpId(null)}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-smooth ${
+                    isDark ? "border-slate-700 bg-slate-800 text-slate-400 hover:text-white" : "border-slate-200 bg-white text-slate-500 hover:text-slate-900 shadow-sm"
+                  }`}
+                  aria-label="Close drawer"
+                >
+                  <Icons.X className="w-4 h-4" />
                 </button>
               </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const adjKey = `${selectedMonth}_${emp.id}`;
-                  updatePayslipAdjustment(adjKey, {
-                    bonusAmount: manualBonusInput,
-                    deductionAmount: manualDeductionInput,
-                    note: payslipNoteInput.trim(),
-                  });
-                  updateMonthlyExcessIncome(selectedMonth, manualExceedIncomeInput, emp.id);
-                  setAdjustingPayslipEmpId(null);
-                }}
-                className="p-6 space-y-4 text-xs"
-              >
-                <div className="grid grid-cols-2 gap-3">
+
+              {/* Drawer Body */}
+              <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+                {/* Staff Context Card */}
+                {emp && (
+                  <div className={`p-4 rounded-2xl border transition-smooth ${
+                    isDark ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50/80 border-slate-200/80"
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                        {empInitials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-extrabold text-sm leading-tight ${isDark ? "text-white" : "text-slate-900"}`}>{empName}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${
+                            isDark ? "bg-[#042633]/60 border border-[#09526e]/50 text-[#7dd3fc]" : "bg-[#f0f9ff] border border-[#bae6fd] text-[#0c6c8f]"
+                          }`}>
+                            {empRole}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${
+                            isDark ? "bg-zinc-800/80 border-zinc-700 text-zinc-300" : "bg-white border-zinc-200 text-zinc-600"
+                          }`}>
+                            {emp.payType}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick financial context strip */}
+                    <div className="mt-3 pt-3 border-t border-dashed flex items-center justify-between text-xs border-slate-200 dark:border-slate-700/60">
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">Base Earnings</span>
+                        <span className="font-mono font-bold text-xs">LKR {(calc?.basicEarnings ?? 0).toLocaleString()}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-400 text-[10px] block">Current Net (Pre-Adjustment)</span>
+                        <span className={`font-mono font-bold text-xs text-[#0F85B0] dark:text-[#38bdf8]`}>
+                          LKR {Math.round(originalNet).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Fields */}
+                <form
+                  id="payroll-adjustment-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!emp) return;
+                    const adjKey = `${selectedMonth}_${emp.id}`;
+                    updatePayslipAdjustment(adjKey, {
+                      bonusAmount: manualBonusInput,
+                      deductionAmount: manualDeductionInput,
+                      note: payslipNoteInput.trim(),
+                    });
+                    updateMonthlyExcessIncome(selectedMonth, manualExceedIncomeInput, emp.id);
+                    setAdjustingPayslipEmpId(null);
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Bonus / Addition (LKR)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={100}
+                        className={`${inputCls(isDark)} font-mono font-bold rounded-xl text-sm text-emerald-500`}
+                        value={manualBonusInput}
+                        onChange={e => setManualBonusInput(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                        Deduction (LKR)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={100}
+                        className={`${inputCls(isDark)} font-mono font-bold rounded-xl text-sm text-rose-500`}
+                        value={manualDeductionInput}
+                        onChange={e => setManualDeductionInput(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className={labelCls}>Manual Bonus / Addition (LKR)</label>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                      Exceed Income Bonus (LKR)
+                    </label>
                     <input
                       type="number"
                       min={0}
-                      className={inputCls(isDark)}
-                      value={manualBonusInput}
-                      onChange={e => setManualBonusInput(parseFloat(e.target.value) || 0)}
+                      step={100}
+                      className={`${inputCls(isDark)} font-mono font-bold rounded-xl text-sm text-sky-500`}
+                      value={manualExceedIncomeInput}
+                      onChange={e => setManualExceedIncomeInput(parseFloat(e.target.value) || 0)}
+                      placeholder="0"
                     />
+                    <p className="text-[10px] text-zinc-400 mt-1">Manual clinic performance target exceed bonus for {selectedMonth}.</p>
                   </div>
+
                   <div>
-                    <label className={labelCls}>Manual Deduction (LKR)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      className={inputCls(isDark)}
-                      value={manualDeductionInput}
-                      onChange={e => setManualDeductionInput(parseFloat(e.target.value) || 0)}
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        Adjustment Reason / Remark Note
+                      </label>
+                      <span className="text-[10px] text-zinc-400">Prints on payslip</span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="e.g. Performance Incentive + Emergency Advance deduction approved by management"
+                      className={`${inputCls(isDark)} rounded-xl text-xs resize-none`}
+                      value={payslipNoteInput}
+                      onChange={e => setPayslipNoteInput(e.target.value)}
                     />
+                    {/* Quick preset chips */}
+                    <div className="flex flex-wrap gap-1.5 pt-1.5">
+                      {[
+                        "Performance Incentive",
+                        "Cash Advance Deduction",
+                        "Overtime Correction",
+                        "Target Bonus",
+                        "Special Medical Allowance",
+                      ].map(chip => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => setPayslipNoteInput(p => p ? `${p}, ${chip}` : chip)}
+                          className={`text-[10px] px-2.5 py-1 rounded-lg border transition ${
+                            isDark
+                              ? "bg-zinc-800/60 border-zinc-700/60 text-zinc-300 hover:text-white hover:bg-zinc-700"
+                              : "bg-zinc-100 border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/70"
+                          }`}
+                        >
+                          + {chip}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className={labelCls}>Exceed Income Bonus (LKR)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={100}
-                    className={`${inputCls(isDark)} font-mono font-bold text-emerald-500`}
-                    value={manualExceedIncomeInput}
-                    onChange={e => setManualExceedIncomeInput(parseFloat(e.target.value) || 0)}
-                    placeholder="e.g. 5000"
-                  />
-                  <p className="text-[10px] text-zinc-500 mt-1">Manual exceed income bonus for this employee for {selectedMonth}.</p>
-                </div>
+                  {/* Real-time Net Salary Impact Card */}
+                  <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                    isDark ? "bg-[#042633]/40 border-[#09526e]/60" : "bg-[#f0f9ff] border-[#bae6fd]"
+                  }`}>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Adjusted Net Salary Preview
+                      </span>
+                      <span className="text-[10px] text-zinc-400">
+                        Reflects immediate effect on payslip
+                      </span>
+                    </div>
+                    <span className={`text-sm font-extrabold font-mono text-[#0F85B0] dark:text-[#38bdf8]`}>
+                      LKR {Math.round(currentNetWithAdjustment).toLocaleString()}
+                    </span>
+                  </div>
+                </form>
+              </div>
 
-                <div>
-                  <label className={labelCls}>Payslip Remark / Reason Note</label>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Performance Incentive + Cash Advance deduction"
-                    className={inputCls(isDark)}
-                    value={payslipNoteInput}
-                    onChange={e => setPayslipNoteInput(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setAdjustingPayslipEmpId(null)}
-                    className={`flex-1 py-2 text-xs font-bold rounded border ${isDark ? "border-zinc-700 text-zinc-400" : "border-zinc-200 text-zinc-600"}`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition"
-                  >
-                    Save Adjustment
-                  </button>
-                </div>
-              </form>
+              {/* Drawer Footer Actions */}
+              <div className={`p-5 border-t flex items-center gap-3 ${isDark ? "border-slate-800 bg-slate-900/60" : "border-slate-100 bg-slate-50/60"}`}>
+                <button
+                  type="button"
+                  onClick={() => setAdjustingPayslipEmpId(null)}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl border transition-smooth ${
+                    isDark ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="payroll-adjustment-form"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white shadow-lg shadow-sky-500/25 transition-smooth flex items-center justify-center gap-1.5"
+                >
+                  <Icons.Check className="w-4 h-4" />
+                  <span>Save Adjustment</span>
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -3997,39 +6071,54 @@ export default function Home() {
         if (!log) return null;
 
         return (
-          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${isDark ? "bg-zinc-950/80" : "bg-slate-900/50"}`}>
-            <div className={`w-full max-w-lg rounded-xl shadow-2xl border overflow-hidden ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
+          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 animate-in fade-in ${isDark ? "bg-zinc-950/80" : "bg-slate-900/50"}`}>
+            <div className="absolute inset-0" onClick={() => setSelectedAuditLogId(null)} />
+            <div className={`relative z-10 w-full max-w-lg rounded-2xl shadow-2xl border overflow-hidden transition-all duration-200 animate-in zoom-in-95 ease-out ${isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}>
               {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className={`text-base font-extrabold ${isDark ? "text-white" : "text-zinc-900"}`}>Audit Log Event Detail</h3>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-700"}`}>{log.id}</span>
+              <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+                    isDark ? "bg-sky-500/10 border-sky-500/20 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                  }`}>
+                    <Icons.Clipboard className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">Recorded on <span className="font-mono text-zinc-400">{log.timestamp}</span></p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className={`text-base font-extrabold ${isDark ? "text-white" : "text-zinc-900"}`}>Audit Event Detail</h3>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-700"}`}>{log.id}</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">Recorded on <span className="font-mono text-zinc-400">{log.timestamp}</span></p>
+                  </div>
                 </div>
-                <button onClick={() => setSelectedAuditLogId(null)} className="p-1 rounded text-zinc-400 hover:text-zinc-800 dark:hover:text-white">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAuditLogId(null)}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
+                    isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400 hover:text-white" : "border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 shadow-sm"
+                  }`}
+                  aria-label="Close inspection modal"
+                >
+                  <Icons.X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Modal Content */}
-              <div className="p-6 space-y-5 text-xs">
+              <div className="p-6 space-y-4 text-xs">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                  <div className={`p-3 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Action Type</span>
-                    <span className="font-bold text-sm text-[#0ea5e9] block mt-0.5">{log.action}</span>
+                    <span className="font-bold text-sm text-[#0F85B0] dark:text-[#38bdf8] block mt-0.5">{log.action}</span>
                   </div>
-                  <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                  <div className={`p-3 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Target Module</span>
                     <span className={`font-bold text-sm block mt-0.5 ${isDark ? "text-white" : "text-zinc-900"}`}>{log.entity}</span>
                   </div>
                 </div>
 
-                <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"} space-y-2`}>
+                <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"} space-y-2`}>
                   <div className="flex justify-between">
                     <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Entity ID</span>
-                    <span className="font-mono text-[#38bdf8] font-bold">{log.entityId}</span>
+                    <span className="font-mono text-[#0F85B0] dark:text-[#38bdf8] font-bold">{log.entityId}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Triggered By / Actor</span>
@@ -4043,14 +6132,14 @@ export default function Home() {
 
                 <div>
                   <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-1.5">Action Event Description</span>
-                  <div className={`p-3 rounded-lg border font-medium ${isDark ? "bg-zinc-950 border-zinc-800 text-zinc-200" : "bg-zinc-100 border-zinc-200 text-zinc-800"}`}>
+                  <div className={`p-3 rounded-xl border font-medium ${isDark ? "bg-zinc-950 border-zinc-800 text-zinc-200" : "bg-zinc-100 border-zinc-200 text-zinc-800"}`}>
                     {log.details}
                   </div>
                 </div>
 
                 <div>
-                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-1.5">Raw Log Event Payload</span>
-                  <pre className={`p-3 rounded-lg border font-mono text-[11px] overflow-x-auto ${isDark ? "bg-zinc-950 border-zinc-800 text-emerald-400" : "bg-zinc-900 text-emerald-300 border-zinc-800"}`}>
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-1.5">Raw Event Payload</span>
+                  <pre className={`p-3 rounded-xl border font-mono text-[11px] overflow-x-auto ${isDark ? "bg-zinc-950 border-zinc-800 text-emerald-400" : "bg-zinc-900 text-emerald-300 border-zinc-800"}`}>
                     {JSON.stringify(log, null, 2)}
                   </pre>
                 </div>
@@ -4058,7 +6147,11 @@ export default function Home() {
 
               {/* Modal Footer */}
               <div className="flex justify-end px-6 py-4 border-t border-zinc-200 dark:border-zinc-800">
-                <button onClick={() => setSelectedAuditLogId(null)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAuditLogId(null)}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl shadow-md transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}
+                >
                   Close Inspection
                 </button>
               </div>
@@ -4066,45 +6159,60 @@ export default function Home() {
           </div>
         );
       })()}
+
+      {/* ═══════════════ MODAL: PAYROLL PERIOD DETAIL ═══════════════ */}
       {(() => {
         if (!selectedHistoryPeriodId) return null;
         const period = payrollHistory.find(p => p.id === selectedHistoryPeriodId);
         if (!period) return null;
 
         return (
-          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${isDark ? "bg-zinc-950/80" : "bg-slate-900/50"}`}>
-            <div className={`w-full max-w-3xl rounded-xl shadow-2xl border overflow-hidden ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
+          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 animate-in fade-in ${isDark ? "bg-zinc-950/80" : "bg-slate-900/50"}`}>
+            <div className="absolute inset-0" onClick={() => setSelectedHistoryPeriodId(null)} />
+            <div className={`relative z-10 w-full max-w-3xl rounded-2xl shadow-2xl border overflow-hidden transition-all duration-200 animate-in zoom-in-95 ease-out ${isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}>
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className={`text-base font-extrabold ${isDark ? "text-white" : "text-zinc-900"}`}>{period.label} Payroll Summary</h3>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
+              <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0F85B0]/20">
+                    <Icons.Calendar className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">Finalized on <span className="font-mono text-zinc-400">{period.finalizedAt}</span> · {period.employeeCount || activeEmployees.length} Staff Members</p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className={`text-base font-extrabold ${isDark ? "text-white" : "text-zinc-900"}`}>{period.label} Payroll Summary</h3>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">Finalized on <span className="font-mono">{period.finalizedAt}</span> · {period.employeeCount || activeEmployees.length} Staff Members</p>
+                  </div>
                 </div>
-                <button onClick={() => setSelectedHistoryPeriodId(null)} className="p-1 rounded text-zinc-400 hover:text-zinc-800 dark:hover:text-white">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                <button
+                  type="button"
+                  onClick={() => setSelectedHistoryPeriodId(null)}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
+                    isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400 hover:text-white" : "border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 shadow-sm"
+                  }`}
+                  aria-label="Close summary"
+                >
+                  <Icons.X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+              <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
                 {/* Metrics summary cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Gross Pool</span>
                     <span className={`text-lg font-extrabold block mt-0.5 ${isDark ? "text-white" : "text-zinc-900"}`}>LKR {period.grossSalaryPool.toLocaleString()}</span>
                   </div>
-                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Net Remittance</span>
-                    <span className="text-lg font-extrabold text-[#0ea5e9] block mt-0.5">LKR {period.netRemittances.toLocaleString()}</span>
+                    <span className="text-lg font-extrabold text-[#0F85B0] dark:text-[#38bdf8] block mt-0.5">LKR {period.netRemittances.toLocaleString()}</span>
                   </div>
-                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">EPF (8%+12%)</span>
                     <span className={`text-lg font-extrabold block mt-0.5 ${isDark ? "text-white" : "text-zinc-900"}`}>LKR {period.totalEpf.toLocaleString()}</span>
                   </div>
-                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">ETF (3%)</span>
                     <span className="text-lg font-extrabold text-emerald-500 block mt-0.5">LKR {period.totalEtf.toLocaleString()}</span>
                   </div>
@@ -4113,7 +6221,7 @@ export default function Home() {
                 {/* Breakdown Table */}
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">Staff Salary Breakdown</h4>
-                  <div className={`rounded-lg border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
+                  <div className={`rounded-xl border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
@@ -4139,7 +6247,7 @@ export default function Home() {
                                 <td className="py-2.5 px-3 text-right font-mono">LKR {base.toLocaleString()}</td>
                                 <td className="py-2.5 px-3 text-right font-mono text-emerald-500">+LKR {allw.toLocaleString()}</td>
                                 <td className="py-2.5 px-3 text-right font-mono text-zinc-400">{epf ? `-LKR ${epf.toLocaleString()}` : "Exempt"}</td>
-                                <td className="py-2.5 px-3 text-right font-mono font-bold text-[#0ea5e9]">LKR {net.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]">LKR {net.toLocaleString()}</td>
                               </tr>
                             );
                           })}
@@ -4153,16 +6261,20 @@ export default function Home() {
               {/* Footer Actions */}
               <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-200 dark:border-zinc-800">
                 <div className="flex gap-2">
-                  <button onClick={downloadPayrollCSV} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={downloadPayrollCSV} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>Export Period CSV</span>
                   </button>
-                  <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-bold rounded border flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={downloadEpfFormC} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>EPF Form C3</span>
                   </button>
                 </div>
-                <button onClick={() => setSelectedHistoryPeriodId(null)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedHistoryPeriodId(null)}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl shadow-md transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}
+                >
                   Close Summary
                 </button>
               </div>

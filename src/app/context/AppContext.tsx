@@ -188,6 +188,8 @@ export interface SalarySettings {
   globalIncomeBonusPct: number;
   otCalculationType: "Manual" | "Strict" | "Grace Period";
   otGracePeriodMinutes: number;
+  punctualGraceType: "Strict" | "Grace Period";
+  punctualGraceMinutes: number;
 }
 
 export interface CompanyProfile {
@@ -438,7 +440,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (saved) return JSON.parse(saved);
       } catch {}
     }
-    return { workingDaysPerMonth: 20, globalWorkedDayBonus: 0, globalPunctualBonus: 0, globalIncomeBonusPct: 0, otCalculationType: "Manual", otGracePeriodMinutes: 30 };
+    return {
+      workingDaysPerMonth: 20,
+      globalWorkedDayBonus: 0,
+      globalPunctualBonus: 0,
+      globalIncomeBonusPct: 0,
+      otCalculationType: "Manual",
+      otGracePeriodMinutes: 30,
+      punctualGraceType: "Grace Period",
+      punctualGraceMinutes: 15,
+    };
   });
   const [adminPin, setAdminPin] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -695,6 +706,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             globalIncomeBonusPct: clnData.clinic.globalIncomeBonusPct ?? prev.globalIncomeBonusPct,
             otCalculationType: clnData.clinic.otCalculationType ?? prev.otCalculationType,
             otGracePeriodMinutes: clnData.clinic.otGracePeriodMinutes ?? prev.otGracePeriodMinutes,
+            punctualGraceType: (clnData.clinic.punctualGraceType as "Strict" | "Grace Period") ?? prev.punctualGraceType ?? "Grace Period",
+            punctualGraceMinutes: clnData.clinic.punctualGraceMinutes ?? prev.punctualGraceMinutes ?? 15,
           }));
         }
 

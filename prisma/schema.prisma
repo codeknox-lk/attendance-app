@@ -30,6 +30,10 @@ model Clinic {
   otCalculationType     String   @default("Manual") // Manual, Strict, Grace Period
   otGracePeriodMinutes  Int      @default(30)
 
+  // Punctuality Policy
+  punctualGraceType     String   @default("Grace Period") // Strict, Grace Period
+  punctualGraceMinutes  Int      @default(15)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
