@@ -13,6 +13,7 @@ model Clinic {
   address               String?
   phone                 String?
   email                 String?
+  logoUrl               String?
   
   // Settings
   epfRegNo              String?

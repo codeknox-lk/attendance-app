@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, amount, type, isTaxable, taxDeductible } = body;
+    const { name, amount, type, isTaxable, taxDeductible, epfApplicable } = body;
     const clinicId = req.headers.get("x-clinic-id");
     if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
         amount: Number(amount) || 0,
         type: type || "Monthly",
         isTaxable: taxDeductible !== undefined ? !taxDeductible : (isTaxable ?? false),
+        epfApplicable: Boolean(epfApplicable),
       },
     });
 
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, name, amount, type, isTaxable, epfApplicable } = body;
+    const { id, name, amount, type, isTaxable, taxDeductible, epfApplicable } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Allowance ID required" }, { status: 400 });
@@ -54,14 +55,19 @@ export async function PUT(req: NextRequest) {
     const clinicId = req.headers.get("x-clinic-id");
     if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
+    const target = await db.allowance.findFirst({ where: { id, clinicId } });
+    if (!target) {
+      return NextResponse.json({ success: false, error: "Allowance not found" }, { status: 404 });
+    }
+
     const allowance = await db.allowance.update({
-      where: { id, clinicId },
+      where: { id: target.id },
       data: {
         ...(name !== undefined && { name }),
         ...(amount !== undefined && { amount: Number(amount) }),
         ...(type !== undefined && { type }),
-        ...(isTaxable !== undefined && { isTaxable }),
-        ...(epfApplicable !== undefined && { epfApplicable }),
+        ...(taxDeductible !== undefined ? { isTaxable: !taxDeductible } : (isTaxable !== undefined ? { isTaxable: Boolean(isTaxable) } : {})),
+        ...(epfApplicable !== undefined && { epfApplicable: Boolean(epfApplicable) }),
       },
     });
 
@@ -83,8 +89,13 @@ export async function DELETE(req: NextRequest) {
     const clinicId = req.headers.get("x-clinic-id");
     if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
 
+    const target = await db.allowance.findFirst({ where: { id, clinicId } });
+    if (!target) {
+      return NextResponse.json({ success: false, error: "Allowance not found" }, { status: 404 });
+    }
+
     await db.allowance.delete({
-      where: { id, clinicId },
+      where: { id: target.id },
     });
 
     return NextResponse.json({ success: true, message: "Allowance deleted successfully" });

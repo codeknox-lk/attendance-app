@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -125,33 +127,59 @@ body {
 
 /* ═══════════════ PRINT STYLES ═══════════════ */
 @media print {
-  body > *:not(.payslip-root),
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide main application interface so only the printable document exists */
   aside,
   header,
   nav,
-  .no-print {
-    display: none !important;
-  }
-
-  body {
-    background: white !important;
-    color: black !important;
-  }
-
-  .fixed.inset-0 > div:first-child {
+  main,
+  .print\:hidden,
+  button {
     display: none !important;
   }
 
   .fixed.inset-0 {
     position: static !important;
-    background: none !important;
+    inset: auto !important;
+    display: block !important;
+    background: transparent !important;
     backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
-  .fixed.inset-0 > div:last-child {
-    box-shadow: none !important;
-    border: none !important;
-    max-width: 100% !important;
+  #printable-payslip {
+    display: block !important;
+    margin: 0 auto !important;
     width: 100% !important;
+    max-width: 480px !important;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  @page {
+    size: portrait;
+    margin: 10mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
+

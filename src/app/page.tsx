@@ -75,7 +75,7 @@ const formatHoursAndMins = (decimalHours: number, options?: { showZero?: boolean
   }
 
   if (h > 0 && m > 0) {
-    return `${h} h and ${m} min`;
+    return `${h} h & ${m} min`;
   }
   if (h > 0) {
     return `${h} h`;
@@ -548,7 +548,7 @@ export default function Home() {
     biometricSettings, epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
     addEmployee, updateEmployee, deleteEmployee,
     updateAttendanceLog, deleteAttendanceLog,
-    addAllowance, deleteAllowance,
+    addAllowance, updateAllowance, deleteAllowance,
     updateOperatingHours,
     addLeaveRequest, approveLeave, rejectLeave,
     finalizePayroll,
@@ -673,11 +673,14 @@ export default function Home() {
   const [selfServiceError, setSelfServiceError] = useState("");
 
   const [newAllowance, setNewAllowance] = useState<Omit<Allowance,"id">>({ name:"", amount:10000, epfApplicable:false, taxDeductible:true, type:"Fixed" });
+  const [editingAllowanceId, setEditingAllowanceId] = useState<string | null>(null);
+  const [editingAllowanceForm, setEditingAllowanceForm] = useState<Omit<Allowance, "id">>({ name: "", amount: 10000, epfApplicable: false, taxDeductible: true, type: "Fixed" });
 
   // ── Manual Payslip Adjustment Modal state ──
   const [adjustingPayslipEmpId, setAdjustingPayslipEmpId] = useState<string | null>(null);
   const [manualBonusInput, setManualBonusInput] = useState<number>(0);
   const [manualDeductionInput, setManualDeductionInput] = useState<number>(0);
+  const [manualExceedIncomeInput, setManualExceedIncomeInput] = useState<number>(0);
   const [payslipNoteInput, setPayslipNoteInput] = useState<string>("");
 
   // ── Admin PIN Security & Company Settings state ──
@@ -728,14 +731,28 @@ export default function Home() {
     return { totalStaff: activeEmployees.length, present, late: todayLogs.filter(l=>l.status==="Late").length, onLeave: todayLogs.filter(l=>l.status==="On-Leave").length, absent: todayLogs.filter(l=>l.status==="Absent").length, presentPercent: activeEmployees.length>0 ? Math.round((present/activeEmployees.length)*100):0, todayLogs };
   }, [activeEmployees, attendanceLogs, hasMounted]);
 
-  const filteredLogs = useMemo(() => attendanceLogs
-    .filter(l => {
-      if (l.date < dateRange.startDate || l.date > dateRange.endDate) return false;
-      const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId || (l.employee && e.biometricId === String(l.employee.biometricId)));
-      const empName = emp ? `${emp.firstName} ${emp.lastName}` : (l.employee ? `${l.employee.firstName} ${l.employee.lastName}` : `Staff #${l.employeeId}`);
-      return empName.toLowerCase().includes(attendanceSearch.toLowerCase()) &&
-        (attendanceStatusFilter === "All" || l.status === attendanceStatusFilter);
-    }).sort((a,b) => b.date.localeCompare(a.date)), [attendanceLogs, employees, attendanceSearch, attendanceStatusFilter, dateRange]);
+  const searchedLogs = useMemo(() => attendanceLogs.filter(l => {
+    if (l.date < dateRange.startDate || l.date > dateRange.endDate) return false;
+    const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId || (l.employee && e.biometricId === String(l.employee.biometricId)));
+    const empName = emp ? `${emp.firstName} ${emp.lastName}` : (l.employee ? `${l.employee.firstName} ${l.employee.lastName}` : `Staff #${l.employeeId}`);
+    return empName.toLowerCase().includes(attendanceSearch.toLowerCase());
+  }), [attendanceLogs, employees, attendanceSearch, dateRange]);
+
+  const statusCounts = useMemo(() => {
+    const c: Record<string, number> = { All: 0, "On-Time": 0, Late: 0, "Half-Day": 0, "On-Leave": 0, Absent: 0 };
+    searchedLogs.forEach(l => {
+      c.All++;
+      if (c[l.status] !== undefined) c[l.status]++;
+    });
+    return c;
+  }, [searchedLogs]);
+
+  const filteredLogs = useMemo(() => {
+    return (attendanceStatusFilter === "All"
+      ? searchedLogs
+      : searchedLogs.filter(l => l.status === attendanceStatusFilter)
+    ).sort((a, b) => b.date.localeCompare(a.date));
+  }, [searchedLogs, attendanceStatusFilter]);
 
   const totalAttendancePages = Math.max(1, Math.ceil(filteredLogs.length / attendancePageSize));
   const currentPage = Math.min(attendancePage, totalAttendancePages);
@@ -743,12 +760,6 @@ export default function Home() {
     const start = (currentPage - 1) * attendancePageSize;
     return filteredLogs.slice(start, start + attendancePageSize);
   }, [filteredLogs, currentPage, attendancePageSize]);
-
-  const statusCounts = useMemo(() => {
-    const c: Record<string,number> = {All:0,"On-Time":0,Late:0,"Half-Day":0,"On-Leave":0,Absent:0};
-    attendanceLogs.forEach(l => { if (l.date>=dateRange.startDate && l.date<=dateRange.endDate) { c.All++; if(c[l.status]!==undefined) c[l.status]++; } });
-    return c;
-  }, [attendanceLogs, dateRange]);
 
   // APIT calculation
   const calcApit = useCallback((annualIncome: number): number => {
@@ -826,7 +837,10 @@ export default function Home() {
 
       const workedDaysBonus = sessionCount * attBonusRate;
       const punctualDaysBonus = punctualCount * puncBonusRate;
-      const exceedIncomeBonus = (monthlyExcessIncome[selectedMonth] || 0) * (incBonusPct / 100);
+      const personBonusKey = `${selectedMonth}_${emp.id}`;
+      const exceedIncomeBonus = monthlyExcessIncome[personBonusKey] !== undefined
+        ? (monthlyExcessIncome[personBonusKey] || 0)
+        : ((monthlyExcessIncome[selectedMonth] || 0) * (incBonusPct / 100));
 
       const employeeEpf = emp.epfEligible ? epfBase * (epfSettings.employeeRate/100) : 0;
       const employerEpf = emp.epfEligible ? epfBase * (epfSettings.employerRate/100) : 0;
@@ -959,10 +973,10 @@ export default function Home() {
 
   // ─── MAIN APPLICATION RENDER ──────────────────────────────────────────────────
   return (
-    <div className={`flex flex-1 min-h-screen ${isDark ? "dark bg-[#090d16] text-slate-100" : "bg-slate-50 text-slate-800"}`} style={isDark ? { colorScheme: "dark" } : {}}>
+    <div className={`flex flex-1 min-h-screen print:min-h-0 print:block print:bg-white ${isDark ? "dark bg-[#090d16] text-slate-100" : "bg-slate-50 text-slate-800"}`} style={isDark ? { colorScheme: "dark" } : {}}>
       {/* ── Mobile/Tablet Backdrop Drawer Overlay ── */}
       <div
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden print:hidden ${
           mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setMobileMenuOpen(false)}
@@ -1419,8 +1433,8 @@ export default function Home() {
               {/* Top Quick Stat Cards - Matching Dashboard style */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 {[
-                  { label: "Total Logs", value: filteredLogs.length, color: "from-[#0ea5e9] to-[#0F85B0]", badge: selectedMonth, icon: <Icons.Clock className="w-4 h-4 text-[#38bdf8]" /> },
-                  { label: "On-Time Rate", value: `${Math.round(((statusCounts["On-Time"] || 0) / (filteredLogs.length || 1)) * 100)}%`, color: "from-emerald-500 to-teal-600", badge: `${statusCounts["On-Time"] || 0} Punches`, icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
+                  { label: "Total Logs", value: statusCounts.All, color: "from-[#0ea5e9] to-[#0F85B0]", badge: selectedMonth, icon: <Icons.Clock className="w-4 h-4 text-[#38bdf8]" /> },
+                  { label: "On-Time Rate", value: `${Math.min(100, Math.round(((statusCounts["On-Time"] || 0) / (statusCounts.All || 1)) * 100))}%`, color: "from-emerald-500 to-teal-600", badge: `${statusCounts["On-Time"] || 0} Punches`, icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
                   { label: "Late Arrivals", value: statusCounts["Late"] || 0, color: "from-amber-500 to-orange-600", badge: "Grace Check", icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
                   { label: "Overtime Logged", value: formatHoursAndMins(filteredLogs.reduce((s, l) => s + (l.overtimeHours > 0 ? l.overtimeHours : calculateOvertimeHours(l.checkOut, l.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes)), 0)), color: "from-indigo-500 to-purple-600", badge: "Approved OT", icon: <Icons.TrendingUp className="w-4 h-4 text-indigo-400" /> },
                 ].map((item, idx) => (
@@ -1941,6 +1955,7 @@ export default function Home() {
                                   setAdjustingPayslipEmpId(c.employee.id);
                                   setManualBonusInput(existing.bonusAmount);
                                   setManualDeductionInput(existing.deductionAmount);
+                                  setManualExceedIncomeInput(monthlyExcessIncome[adjKey] || 0);
                                   setPayslipNoteInput(existing.note);
                                 }}
                                 className={`px-2.5 py-1.5 rounded text-[10px] font-bold border transition inline-flex items-center gap-1 ${isDark ? "bg-zinc-800 border-zinc-700 text-[#7dd3fc] hover:bg-zinc-750" : "bg-[#f0f9ff] border-[#bae6fd] text-[#0c6c8f] hover:bg-[#e0f2fe]"}`}
@@ -2401,15 +2416,99 @@ export default function Home() {
                 {settingsTab === "company" && (
                   <div className="space-y-5 max-w-xl">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Clinic / Organization Details</h3>
-                    <p className="text-xs text-zinc-500">These details will appear on all printed Salary Statements, Payslips, and EPF Form C-3 reports.</p>
+                    <p className="text-xs text-zinc-500">These details and custom logo will appear on all printed Salary Statements, Payslips, and EPF Form C-3 reports.</p>
                     
+                    {/* Official Clinic Logo Upload */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-smooth ${
+                      isDark ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50/80 border-slate-200/80"
+                    }`}>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                        Official Clinic Logo
+                      </label>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        {/* Logo Preview box */}
+                        <div className={`w-20 h-20 rounded-2xl border-2 border-dashed flex items-center justify-center p-2 shrink-0 relative overflow-hidden transition ${
+                          profileForm.logoUrl
+                            ? (isDark ? "bg-slate-800 border-sky-500/50 shadow-md" : "bg-white border-[#0F85B0]/40 shadow-sm")
+                            : (isDark ? "bg-slate-900/60 border-slate-700 text-slate-500" : "bg-white border-slate-200 text-slate-400 shadow-sm")
+                        }`}>
+                          {profileForm.logoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={profileForm.logoUrl} alt="Clinic Logo Preview" className="max-w-full max-h-full object-contain" />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-center">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src="/logo.png" alt="Default Logo" className="w-8 h-8 object-contain opacity-40 grayscale mb-1" />
+                              <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Default</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Upload Controls & Guidance */}
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white text-xs font-bold shadow-sm transition">
+                              <Icons.Printer className="w-3.5 h-3.5" />
+                              <span>{profileForm.logoUrl ? "Change Clinic Logo" : "Upload Clinic Logo"}</span>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                className="hidden"
+                                onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  if (file.size > 1.5 * 1024 * 1024) {
+                                    alert("Please choose an image under 1.5 MB for crisp print rendering.");
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = ev => {
+                                    const b64 = ev.target?.result as string;
+                                    if (b64) setProfileForm(p => ({ ...p, logoUrl: b64 }));
+                                  };
+                                  reader.readAsDataURL(file);
+                                }}
+                              />
+                            </label>
+
+                            {profileForm.logoUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setProfileForm(p => ({ ...p, logoUrl: "" }))}
+                                className="px-2.5 py-1.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 text-xs font-bold transition"
+                              >
+                                Remove Custom Logo
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Guidance */}
+                          <div className={`p-2.5 rounded-xl border text-[11px] space-y-1 ${
+                            isDark ? "bg-slate-900/40 border-slate-800 text-slate-400" : "bg-white/80 border-slate-200/80 text-slate-500 shadow-sm"
+                          }`}>
+                            <p className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              Recommended Logo Guidelines:
+                            </p>
+                            <ul className="list-disc list-inside space-y-0.5 text-[10px] pl-1 text-slate-500 dark:text-slate-400">
+                              <li><strong>Format:</strong> Transparent PNG, SVG, or JPG (transparent background looks best on printed slips).</li>
+                              <li><strong>Size &amp; Shape:</strong> Square or horizontal icon (e.g. 250×250px up to 600×600px).</li>
+                              <li><strong>File Weight:</strong> Under 1.5 MB for sharp PDF/print generation.</li>
+                              <li><strong>Where it appears:</strong> Automatically rendered at the top of all printed Payslips &amp; Salary Statements!</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="space-y-3 pt-2">
                       <div>
                         <label className={labelCls}>Clinic / Company Name</label>
                         <input
                           className={inputCls(isDark)}
-                          value={profileForm.name}
+                          value={profileForm.name || ""}
                           onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
+                          placeholder="e.g. MedicFlow Primary Clinic"
                         />
                       </div>
                       <div>
@@ -2417,33 +2516,49 @@ export default function Home() {
                         <textarea
                           rows={2}
                           className={inputCls(isDark)}
-                          value={profileForm.address}
+                          value={profileForm.address || ""}
                           onChange={e => setProfileForm(p => ({ ...p, address: e.target.value }))}
+                          placeholder="e.g. Colombo, Sri Lanka"
                         />
                       </div>
-                      <div>
-                        <label className={labelCls}>Contact Phone Number</label>
-                        <input
-                          className={inputCls(isDark)}
-                          value={profileForm.phone}
-                          onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Contact Phone Number</label>
+                          <input
+                            className={inputCls(isDark)}
+                            value={profileForm.phone || ""}
+                            onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                            placeholder="+94 11 234 5678"
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Official Contact Email</label>
+                          <input
+                            type="email"
+                            className={inputCls(isDark)}
+                            value={profileForm.email || ""}
+                            onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
+                            placeholder="info@clinic.com"
+                          />
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className={labelCls}>EPF Registration No.</label>
                           <input
                             className={inputCls(isDark)}
-                            value={profileForm.email}
-                            onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
+                            value={profileForm.epfRegNo || ""}
+                            onChange={e => setProfileForm(p => ({ ...p, epfRegNo: e.target.value }))}
+                            placeholder="e.g. EPF/A/98765"
                           />
                         </div>
                         <div>
                           <label className={labelCls}>ETF Registration No.</label>
                           <input
                             className={inputCls(isDark)}
-                            value={profileForm.phone}
-                            onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                            value={profileForm.etfRegNo || ""}
+                            onChange={e => setProfileForm(p => ({ ...p, etfRegNo: e.target.value }))}
+                            placeholder="e.g. ETF/B/43210"
                           />
                         </div>
                       </div>
@@ -2456,6 +2571,9 @@ export default function Home() {
                           type="button"
                           onClick={() => {
                             updateCompanyProfile(profileForm);
+                            if (profileForm.epfRegNo || profileForm.etfRegNo) {
+                              updateEpfSettings({ epfRegNo: profileForm.epfRegNo, etfRegNo: profileForm.etfRegNo });
+                            }
                             setSettingsSaveMsg("Clinic profile saved successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
@@ -2554,10 +2672,58 @@ export default function Home() {
                         </div>
                       </div>
                       
+                      {/* PER-STAFF EXCEED INCOME BONUS */}
                       <div className="pt-2">
-                        <label className={labelCls}>Clinic Excess Income Target (LKR) — Current Month: {selectedMonth}</label>
-                        <input type="number" className={`${inputCls(isDark)} max-w-xs`} value={monthlyExcessIncome[selectedMonth] || ""} placeholder="e.g. 320000" onChange={e=>updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value)||0)}/>
-                        <p className="text-[10px] text-zinc-500 mt-1">Global target for the current selected month. Used to calculate Exceed Income bonuses.</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <label className={labelCls}>Staff Exceed Income Bonus (LKR) — Month: {selectedMonth}</label>
+                            <p className="text-[10px] text-zinc-500">Manually set the exceed income bonus for each person for {selectedMonth}.</p>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${isDark ? "bg-slate-800 border-slate-700 text-sky-400" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
+                            Manual Per-Person
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                          {activeEmployees.map(emp => {
+                            const personBonusKey = `${selectedMonth}_${emp.id}`;
+                            const val = monthlyExcessIncome[personBonusKey] !== undefined
+                              ? monthlyExcessIncome[personBonusKey]
+                              : "";
+                            const initial = emp.firstName.charAt(0).toUpperCase();
+
+                            return (
+                              <div
+                                key={emp.id}
+                                className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition ${
+                                  isDark ? "bg-slate-800/40 border-slate-700/60 hover:border-slate-600" : "bg-slate-50/80 border-slate-200/80 hover:border-slate-300"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#0F85B0] to-emerald-400 flex items-center justify-center text-white font-black text-xs shrink-0">
+                                    {initial}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-xs truncate">{emp.firstName} {emp.lastName}</p>
+                                    <p className="text-[10px] text-slate-400 truncate">{emp.role}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span className="text-[11px] font-bold text-slate-400">LKR</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="100"
+                                    placeholder="0"
+                                    className={`${inputCls(isDark)} w-28 py-1 px-2.5 text-xs font-mono font-bold rounded-lg text-right text-emerald-500`}
+                                    value={val}
+                                    onChange={e => updateMonthlyExcessIncome(selectedMonth, parseFloat(e.target.value) || 0, emp.id)}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
@@ -2621,24 +2787,231 @@ export default function Home() {
                     {/* ALLOWANCES */}
                     <div className="space-y-4">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">Global Allowance Categories</h3>
-                      <div className="space-y-2">
-                        {allowances.map(al=>(
-                          <div key={al.id} className={`flex items-center justify-between p-3 rounded-lg border ${isDark?"bg-zinc-950/40 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                            <div><p className="font-semibold text-xs">{al.name}</p><p className="text-[10px] text-zinc-500">LKR {al.amount.toLocaleString()} · {al.type}{al.epfApplicable?" · EPF Subject":""}</p></div>
-                            <button onClick={()=>deleteAllowance(al.id)} className="text-rose-500 hover:underline text-[10px] font-bold">Delete</button>
-                          </div>
-                        ))}
+                      <div className="space-y-2.5">
+                        {allowances.map(al => {
+                          const isEditing = editingAllowanceId === al.id;
+
+                          if (isEditing) {
+                            return (
+                              <div
+                                key={al.id}
+                                className={`p-4 rounded-xl border transition-all ${
+                                  isDark
+                                    ? "bg-zinc-900/90 border-[#0F85B0]/60 ring-1 ring-[#0F85B0]/40"
+                                    : "bg-sky-50/50 border-[#0F85B0]/60 ring-1 ring-[#0F85B0]/30 shadow-sm"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#0F85B0] animate-pulse" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#0F85B0]">
+                                      Edit Allowance Category
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-zinc-400 font-mono">ID: {al.id}</span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                  <div className="sm:col-span-2">
+                                    <label className={labelCls}>Allowance Name</label>
+                                    <input
+                                      className={inputCls(isDark)}
+                                      value={editingAllowanceForm.name}
+                                      onChange={e => setEditingAllowanceForm(p => ({ ...p, name: e.target.value }))}
+                                      placeholder="e.g. Medical Allowance"
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelCls}>Amount (LKR)</label>
+                                    <input
+                                      type="number"
+                                      className={inputCls(isDark)}
+                                      value={editingAllowanceForm.amount}
+                                      onChange={e => setEditingAllowanceForm(p => ({ ...p, amount: parseFloat(e.target.value) || 0 }))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={labelCls}>Type</label>
+                                    <select
+                                      className={inputCls(isDark)}
+                                      value={editingAllowanceForm.type}
+                                      onChange={e => setEditingAllowanceForm(p => ({ ...p, type: e.target.value }))}
+                                    >
+                                      <option value="Fixed">Fixed</option>
+                                      <option value="Monthly">Monthly</option>
+                                      <option value="Variable">Variable</option>
+                                      <option value="Session">Per Session</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div className={`flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
+                                  <div className="flex items-center gap-5">
+                                    <label className={`flex items-center gap-2 text-xs font-medium cursor-pointer ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                                      <input
+                                        type="checkbox"
+                                        checked={editingAllowanceForm.epfApplicable}
+                                        onChange={e => setEditingAllowanceForm(p => ({ ...p, epfApplicable: e.target.checked }))}
+                                        className="rounded border-zinc-300 text-[#0F85B0] focus:ring-[#0F85B0]"
+                                      />
+                                      EPF Applicable
+                                    </label>
+                                    <label className={`flex items-center gap-2 text-xs font-medium cursor-pointer ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
+                                      <input
+                                        type="checkbox"
+                                        checked={editingAllowanceForm.taxDeductible}
+                                        onChange={e => setEditingAllowanceForm(p => ({ ...p, taxDeductible: e.target.checked }))}
+                                        className="rounded border-zinc-300 text-[#0F85B0] focus:ring-[#0F85B0]"
+                                      />
+                                      Tax Deductible
+                                    </label>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 ml-auto">
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingAllowanceId(null)}
+                                      className={`px-3 py-1.5 text-xs font-semibold rounded transition ${
+                                        isDark
+                                          ? "text-zinc-400 hover:bg-zinc-800"
+                                          : "text-zinc-600 hover:bg-zinc-200"
+                                      }`}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        if (!editingAllowanceForm.name.trim()) return;
+                                        await updateAllowance(al.id, {
+                                          name: editingAllowanceForm.name.trim(),
+                                          amount: editingAllowanceForm.amount,
+                                          type: editingAllowanceForm.type,
+                                          epfApplicable: editingAllowanceForm.epfApplicable,
+                                          taxDeductible: editingAllowanceForm.taxDeductible,
+                                        });
+                                        setEditingAllowanceId(null);
+                                      }}
+                                      className={`px-4 py-1.5 text-xs font-bold rounded shadow transition ${
+                                        isDark
+                                          ? "bg-white text-zinc-900 hover:bg-zinc-100"
+                                          : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"
+                                      }`}
+                                    >
+                                      Save Changes
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={al.id}
+                              className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                                isDark
+                                  ? "bg-zinc-950/50 border-zinc-800/80 hover:border-zinc-700"
+                                  : "bg-white border-zinc-200/90 shadow-sm hover:border-zinc-300"
+                              }`}
+                            >
+                              <div>
+                                <p className={`font-semibold text-xs tracking-tight ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>
+                                  {al.name}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  <span className={`text-[11px] font-medium ${isDark ? "text-zinc-400" : "text-zinc-600"}`}>
+                                    LKR {al.amount.toLocaleString()}
+                                  </span>
+                                  <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>·</span>
+                                  <span className={`text-[11px] font-medium ${isDark ? "text-zinc-400" : "text-zinc-600"}`}>
+                                    {al.type}
+                                  </span>
+                                  {al.epfApplicable && (
+                                    <>
+                                      <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>·</span>
+                                      <span className={`text-[10px] px-1.5 py-0.5 font-semibold rounded ${
+                                        isDark
+                                          ? "bg-sky-500/15 text-sky-400 border border-sky-500/30"
+                                          : "bg-sky-100/70 text-sky-700 border border-sky-200"
+                                      }`}>
+                                        EPF Subject
+                                      </span>
+                                    </>
+                                  )}
+                                  {al.taxDeductible && (
+                                    <>
+                                      <span className={isDark ? "text-zinc-600" : "text-zinc-400"}>·</span>
+                                      <span className={`text-[10px] px-1.5 py-0.5 font-semibold rounded ${
+                                        isDark
+                                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                          : "bg-emerald-100/70 text-emerald-700 border border-emerald-200"
+                                      }`}>
+                                        Tax Deductible
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingAllowanceId(al.id);
+                                    setEditingAllowanceForm({
+                                      name: al.name,
+                                      amount: al.amount,
+                                      epfApplicable: al.epfApplicable,
+                                      taxDeductible: al.taxDeductible,
+                                      type: al.type,
+                                    });
+                                  }}
+                                  className={`px-2.5 py-1 text-xs font-semibold rounded transition flex items-center gap-1 ${
+                                    isDark
+                                      ? "text-sky-400 hover:bg-sky-950/40"
+                                      : "text-[#0F85B0] hover:bg-sky-50"
+                                  }`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteAllowance(al.id)}
+                                  className={`px-2.5 py-1 text-xs font-semibold rounded transition ${
+                                    isDark
+                                      ? "text-rose-400 hover:bg-rose-950/40"
+                                      : "text-rose-600 hover:bg-rose-50"
+                                  }`}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className={`p-4 rounded-lg border ${isDark?"border-zinc-800":"border-zinc-200"}`}>
+                      <div className={`p-4 rounded-xl border ${isDark?"bg-zinc-900/40 border-zinc-800":"bg-zinc-50/70 border-zinc-200"}`}>
                         <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Add Allowance</h4>
-                        <div className="grid grid-cols-4 gap-3">
-                          <div className="col-span-2"><label className={labelCls}>Name</label><input className={inputCls(isDark)} value={newAllowance.name} onChange={e=>setNewAllowance(p=>({...p,name:e.target.value}))}/></div>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                          <div className="sm:col-span-2"><label className={labelCls}>Name</label><input className={inputCls(isDark)} placeholder="e.g. Attendance Bonus" value={newAllowance.name} onChange={e=>setNewAllowance(p=>({...p,name:e.target.value}))}/></div>
                           <div><label className={labelCls}>Amount (LKR)</label><input type="number" className={inputCls(isDark)} value={newAllowance.amount} onChange={e=>setNewAllowance(p=>({...p,amount:parseFloat(e.target.value)||0}))}/></div>
-                          <div><label className={labelCls}>Type</label><select className={inputCls(isDark)} value={newAllowance.type} onChange={e=>setNewAllowance(p=>({...p,type:e.target.value as "Fixed"|"Variable"}))}><option>Fixed</option><option>Variable</option></select></div>
+                          <div>
+                            <label className={labelCls}>Type</label>
+                            <select className={inputCls(isDark)} value={newAllowance.type} onChange={e=>setNewAllowance(p=>({...p,type:e.target.value}))}>
+                              <option value="Fixed">Fixed</option>
+                              <option value="Monthly">Monthly</option>
+                              <option value="Variable">Variable</option>
+                              <option value="Session">Per Session</option>
+                            </select>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-5 mt-3">
-                          <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.epfApplicable} onChange={e=>setNewAllowance(p=>({...p,epfApplicable:e.target.checked}))} className="rounded"/>EPF Applicable</label>
-                          <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newAllowance.taxDeductible} onChange={e=>setNewAllowance(p=>({...p,taxDeductible:e.target.checked}))} className="rounded"/>Tax Deductible</label>
+                        <div className="flex flex-wrap items-center gap-5 mt-3 pt-2">
+                          <label className="flex items-center gap-2 text-xs font-medium cursor-pointer"><input type="checkbox" checked={newAllowance.epfApplicable} onChange={e=>setNewAllowance(p=>({...p,epfApplicable:e.target.checked}))} className="rounded"/>EPF Applicable</label>
+                          <label className="flex items-center gap-2 text-xs font-medium cursor-pointer"><input type="checkbox" checked={newAllowance.taxDeductible} onChange={e=>setNewAllowance(p=>({...p,taxDeductible:e.target.checked}))} className="rounded"/>Tax Deductible</label>
                           <button onClick={()=>{if(newAllowance.name.trim()){addAllowance(newAllowance);setNewAllowance({name:"",amount:10000,epfApplicable:false,taxDeductible:true,type:"Fixed"});}}} className={`ml-auto px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>Add Allowance</button>
                         </div>
                       </div>
@@ -3299,92 +3672,103 @@ export default function Home() {
         const epfBase = calc.basicEarnings + empAllowances.filter(a => a.epfApplicable).reduce((sum, a) => sum + a.amount, 0);
         
         return (
-          <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm print:bg-white print:inset-0 ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-            <div className="bg-white text-zinc-900 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col print:max-h-none print:shadow-none print:rounded-none">
-              <div className="p-6 overflow-y-auto print:overflow-visible">
-                <div className="text-center mb-4 pb-4 border-b-2 border-dashed border-zinc-300">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo.png" alt="MedSync Logo" className="w-8 h-8 object-contain mx-auto mb-2" />
+          <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm print:relative print:inset-auto print:p-0 print:m-0 print:bg-white print:block ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
+            <div id="printable-payslip" className="bg-white text-zinc-900 w-full max-w-[480px] rounded-2xl shadow-2xl flex flex-col print:shadow-none print:rounded-none print:border print:border-zinc-300 print:mx-auto">
+              <div className="p-6">
+                <div className="text-center mb-3 pb-3 border-b-2 border-dashed border-zinc-300">
+                  {/* Clinic Logo */}
+                  {companyProfile.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={companyProfile.logoUrl} alt={`${companyProfile.name} Logo`} className="max-h-12 max-w-[180px] object-contain mx-auto mb-1.5" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src="/logo.png" alt="MedSync Logo" className="w-8 h-8 object-contain mx-auto mb-1.5" />
+                  )}
                   <p className="font-extrabold text-base tracking-wider uppercase text-zinc-900">{companyProfile.name}</p>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{companyProfile.address}</p>
-                  <p className="text-[10px] font-mono text-zinc-500 mt-1">EPF Reg: {""} · Salary Period: {dateRange.startDate} → {dateRange.endDate}</p>
+                  <p className="text-[10px] text-zinc-500">{companyProfile.address}</p>
+                  <p className="text-[10px] font-mono text-zinc-500 mt-0.5">EPF Reg: {companyProfile.epfRegNo || epfSettings.epfRegNo || "—"} · Salary Period: {dateRange.startDate} → {dateRange.endDate}</p>
                 </div>
-                <div className="text-center mb-4">
+                <div className="text-center mb-3">
                   <p className="font-extrabold text-base">{emp.firstName} {emp.lastName}</p>
                   <p className="text-[10px] text-zinc-500">{emp.role} · Biometric ID: {emp.biometricId}</p>
                 </div>
                 
-                <div className="space-y-2 text-xs border-t border-dashed border-zinc-300 pt-4 mb-4">
-                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                <div className="space-y-1.5 text-xs border-t border-dashed border-zinc-300 pt-3 mb-3">
+                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500">Basic / Session Pay</span>
                     <span className="font-mono font-semibold">LKR {calc.basicEarnings.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
-                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500">Total Worked Hours</span>
                     <span className="font-mono font-semibold">{formatHoursAndMins(calc.totalWorkHours || 0)}</span>
                   </div>
                   
                   {empAllowances.map((a, i) => (
-                    <div key={i} className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                    <div key={i} className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">{a.name}</span>
                       <span className="font-mono font-semibold">LKR {a.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                   ))}
 
-                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500 flex items-center gap-1">Worked Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.sessionCount} × {calc.attBonusRate})</span></span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.workedDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
-                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500 flex items-center gap-1">Punctual Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.punctualCount} × {calc.puncBonusRate})</span></span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.punctualDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
-                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500 flex items-center gap-1">Overtime Pay <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({formatHoursAndMins(calc.totalOtHours)} × {Math.round(calc.otPay / (calc.totalOtHours || 1))})</span></span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {calc.otPay.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
-                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
-                    <span className="text-zinc-500 flex items-center gap-1">Exceed Income Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.incBonusPct}% of target)</span></span>
+                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
+                    <span className="text-zinc-500">Exceed Income Bonus</span>
                     <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.exceedIncomeBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
                   {calc.manualBonus > 0 && (
-                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">Manual Addition / Bonus</span>
                       <span className="font-mono font-semibold text-emerald-600">+LKR {calc.manualBonus.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                   )}
 
                   {calc.noPayDeduction > 0 && (
-                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500 flex items-center gap-1">No-Pay Deduction <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.absentCount} days absent)</span></span>
                       <span className="font-mono font-semibold text-rose-600">-LKR {Math.round(calc.noPayDeduction).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                   )}
 
                   {calc.manualDeduction > 0 && (
-                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">Manual Deduction</span>
                       <span className="font-mono font-semibold text-rose-600">-LKR {calc.manualDeduction.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                   )}
 
-                  <div className="flex justify-between border-b-2 border-dashed border-zinc-300 pb-2 pt-2 mb-2 mt-2">
+                  <div className="flex justify-between border-b-2 border-dashed border-zinc-300 pb-1.5 pt-1.5 mb-1.5 mt-1.5">
                     <span className="font-extrabold text-zinc-700">GROSS EARNINGS</span>
                     <span className="font-mono font-extrabold">LKR {calc.grossEarnings.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                   </div>
 
-                  <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
-                    <span className="text-zinc-500 flex items-center gap-1">EPF Deduction (Employee 8%) <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">(Base: {epfBase.toLocaleString()})</span></span>
-                    <span className="font-mono font-semibold text-rose-600">{calc.employee.epfEligible ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString(undefined, {minimumFractionDigits: 2})}` : "Exempt"}</span>
+                  <div className="flex justify-between items-center border-b border-dotted border-zinc-200 pb-1">
+                    <span className="text-zinc-500 flex items-center gap-1.5">
+                      <span>EPF Deduction (Employee 8%)</span>
+                      <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded whitespace-nowrap">(Base: {epfBase.toLocaleString()})</span>
+                    </span>
+                    <span className="font-mono font-semibold text-rose-600 whitespace-nowrap">
+                      {calc.employee.epfEligible ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString(undefined, {minimumFractionDigits: 2})}` : "Exempt"}
+                    </span>
                   </div>
 
                   {calc.apitMonthly > 0 && (
-                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1.5">
+                    <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">APIT Tax</span>
                       <span className="font-mono font-semibold text-rose-600">-LKR {Math.round(calc.apitMonthly).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
@@ -3392,27 +3776,43 @@ export default function Home() {
                 </div>
 
                 {calc.payslipNote && (
-                  <div className="p-2.5 rounded bg-zinc-50 border border-zinc-200 text-[10px] text-zinc-600 mb-4 italic">
+                  <div className="p-2 rounded bg-zinc-50 border border-zinc-200 text-[10px] text-zinc-600 mb-3 italic">
                     <span className="font-bold not-italic text-zinc-800">Remark: </span>{calc.payslipNote}
                   </div>
                 )}
 
-                <div className="flex justify-between border-t-2 border-dashed border-zinc-300 pt-3 mb-5 mt-4">
+                <div className="flex justify-between items-baseline border-t-2 border-dashed border-zinc-300 pt-2.5 mb-3 mt-2.5">
                   <span className="font-extrabold text-sm">NET SALARY</span>
                   <span className="font-extrabold text-xl text-[#0c6c8f]">LKR {Math.round(calc.netSalary).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                 </div>
                 
-                <div className="flex justify-between text-[10px] text-zinc-400 border-t border-dashed border-zinc-200 pt-4 mt-8">
-                  <div><p className="mb-4 text-zinc-300">___________________</p><p>Authorized Signature</p></div>
-                  <div className="text-right"><p className="mb-4 text-zinc-300">___________________</p><p>Employee Signature</p></div>
+                <div className="flex justify-between items-end border-t border-dashed border-zinc-200 pt-2 mt-2.5">
+                  <div>
+                    <div className="h-6 flex items-end">
+                      <div className="w-32 border-b border-zinc-300" />
+                    </div>
+                    <p className="text-[10px] font-semibold text-zinc-500 mt-1">Authorized Signature</p>
+                  </div>
+                  <div className="flex flex-col items-end text-right">
+                    <div className="h-6 flex items-end">
+                      <div className="w-32 border-b border-zinc-300" />
+                    </div>
+                    <p className="text-[10px] font-semibold text-zinc-500 mt-1">Employee Signature</p>
+                  </div>
+                </div>
+
+                <div className="text-center pt-2.5 mt-2.5 border-t border-dotted border-zinc-200">
+                  <p className="text-[9px] tracking-wider uppercase text-zinc-400 font-medium">
+                    Powered by <span className="font-bold text-zinc-600">CODEKNOX (PVT) LTD</span>
+                  </p>
                 </div>
               </div>
-              <div className="flex gap-3 px-6 pb-6">
-                <button onClick={() => window.print()} className="flex-1 py-2 text-xs font-bold bg-zinc-900 text-white rounded shadow flex items-center justify-center gap-1.5 hover:bg-zinc-800 transition">
+              <div className="flex gap-3 px-6 pb-5 pt-0 print:hidden">
+                <button onClick={() => window.print()} className="flex-1 py-2.5 text-xs font-bold bg-zinc-900 text-white rounded-xl shadow flex items-center justify-center gap-1.5 hover:bg-zinc-800 transition">
                   <Icons.Printer className="w-4 h-4" />
                   <span>Print Payslip</span>
                 </button>
-                <button onClick={() => setSelectedPaySlip(null)} className="flex-1 py-2 text-xs font-bold border border-zinc-200 text-zinc-600 rounded hover:bg-zinc-50">Close</button>
+                <button onClick={() => setSelectedPaySlip(null)} className="flex-1 py-2.5 text-xs font-bold border border-zinc-200 text-zinc-600 rounded-xl hover:bg-zinc-50 transition">Close</button>
               </div>
             </div>
           </div>
@@ -3444,6 +3844,7 @@ export default function Home() {
                     deductionAmount: manualDeductionInput,
                     note: payslipNoteInput.trim(),
                   });
+                  updateMonthlyExcessIncome(selectedMonth, manualExceedIncomeInput, emp.id);
                   setAdjustingPayslipEmpId(null);
                 }}
                 className="p-6 space-y-4 text-xs"
@@ -3469,6 +3870,20 @@ export default function Home() {
                       onChange={e => setManualDeductionInput(parseFloat(e.target.value) || 0)}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className={labelCls}>Exceed Income Bonus (LKR)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    className={`${inputCls(isDark)} font-mono font-bold text-emerald-500`}
+                    value={manualExceedIncomeInput}
+                    onChange={e => setManualExceedIncomeInput(parseFloat(e.target.value) || 0)}
+                    placeholder="e.g. 5000"
+                  />
+                  <p className="text-[10px] text-zinc-500 mt-1">Manual exceed income bonus for this employee for {selectedMonth}.</p>
                 </div>
 
                 <div>

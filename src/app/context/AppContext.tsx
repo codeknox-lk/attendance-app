@@ -71,7 +71,7 @@ export interface Allowance {
   amount: number;
   epfApplicable: boolean;
   taxDeductible: boolean;
-  type: "Fixed" | "Variable";
+  type: "Fixed" | "Variable" | "Monthly" | "Session" | string;
 }
 
 export interface EmployeeAllowance {
@@ -195,6 +195,9 @@ export interface CompanyProfile {
   address: string;
   phone?: string;
   email?: string;
+  logoUrl?: string;
+  epfRegNo?: string;
+  etfRegNo?: string;
 }
 
 export interface UserAccount {
@@ -239,9 +242,9 @@ export interface AppContextProps {
   addAttendanceLog: (log: Omit<AttendanceLog, "id">) => void;
   updateAttendanceLog: (id: string, log: Partial<AttendanceLog>) => void;
   deleteAttendanceLog: (id: string) => void;
-  addAllowance: (allowance: Omit<Allowance, "id">) => void;
-  updateAllowance: (id: string, allowance: Partial<Allowance>) => void;
-  deleteAllowance: (id: string) => void;
+  addAllowance: (allowance: Omit<Allowance, "id">) => Promise<void> | void;
+  updateAllowance: (id: string, allowance: Partial<Allowance>) => Promise<void> | void;
+  deleteAllowance: (id: string) => Promise<void> | void;
   assignAllowanceToEmployee: (employeeId: string, allowanceId: string, overrideAmount?: number) => void;
   removeAllowanceFromEmployee: (employeeId: string, allowanceId: string) => void;
   
@@ -272,7 +275,7 @@ export interface AppContextProps {
   salarySettings: SalarySettings;
   updateSalarySettings: (settings: Partial<SalarySettings>) => void;
   monthlyExcessIncome: Record<string, number>;
-  updateMonthlyExcessIncome: (month: string, amount: number) => void;
+  updateMonthlyExcessIncome: (month: string, amount: number, employeeId?: string) => void;
   machinePersons: MachinePerson[];
   fetchMachinePersons: () => Promise<void>;
   importMachinePersonsToStaff: () => Promise<void>;
@@ -672,6 +675,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             address: clnData.clinic.address || prev.address,
             phone: clnData.clinic.phone || prev.phone,
             email: clnData.clinic.email || prev.email,
+            logoUrl: clnData.clinic.logoUrl ?? prev.logoUrl,
+            epfRegNo: clnData.clinic.epfRegNo || prev.epfRegNo,
+            etfRegNo: clnData.clinic.etfRegNo || prev.etfRegNo,
           }));
           setEpfSettings(prev => ({
             ...prev,
@@ -850,19 +856,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addAllowance = async (a: Omit<Allowance,"id">) => {
-    const na: Allowance = { ...a, id: `ALL-${String(Date.now()).slice(-4)}` };
+    const tempId = `ALL-${String(Date.now()).slice(-4)}`;
+    const na: Allowance = { ...a, id: tempId };
     setAllowances(p => [...p, na]);
     pushAudit({ action: "CREATE", entity: "Allowance", entityId: na.id, details: `Added: ${na.name}` });
     try {
-      await apiFetch("/api/allowances", {
+      const res = await apiFetch("/api/allowances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(na),
+        body: JSON.stringify(a),
       });
-    } catch {}
+      const data = await res.json();
+      if (data.success && data.allowance?.id) {
+        setAllowances(p => p.map(item => item.id === tempId ? { ...item, id: data.allowance.id } : item));
+      }
+    } catch (err) {
+      console.error("Failed to persist allowance creation:", err);
+    }
   };
 
-  const updateAllowance = (id: string, f: Partial<Allowance>) => setAllowances(p => p.map(a => a.id===id ? {...a,...f} : a));
+  const updateAllowance = async (id: string, f: Partial<Allowance>) => {
+    setAllowances(p => p.map(a => a.id === id ? { ...a, ...f } : a));
+    pushAudit({ action: "UPDATE", entity: "Allowance", entityId: id, details: `Updated allowance ${f.name || id}` });
+    try {
+      await apiFetch("/api/allowances", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...f }),
+      });
+    } catch (err) {
+      console.error("Failed to persist allowance update:", err);
+    }
+  };
   
   const deleteAllowance = async (id: string) => {
     setAllowances(p => p.filter(a => a.id !== id));
@@ -1011,9 +1036,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     } catch {}
   };
-  const updateMonthlyExcessIncome = (month: string, amount: number) => {
+  const updateMonthlyExcessIncome = (month: string, amount: number, employeeId?: string) => {
     setMonthlyExcessIncome(p => {
-      const next = { ...p, [month]: amount };
+      const key = employeeId ? `${month}_${employeeId}` : month;
+      const next = { ...p, [key]: amount };
       if (typeof window !== "undefined") localStorage.setItem("medicflow_monthly_excess_income", JSON.stringify(next));
       return next;
     });
