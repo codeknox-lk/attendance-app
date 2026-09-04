@@ -5154,21 +5154,31 @@ export default function Home() {
                                 key={emp.id}
                                 className={`p-3 rounded-xl border ${
                                   isDark ? "bg-slate-900/80 border-slate-800" : "bg-white border-slate-200/80"
-                                } flex items-center justify-between gap-3`}
+                                } flex items-center justify-between gap-3 group`}
                               >
-                                <div>
-                                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                    {emp.firstName} {emp.lastName}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">
-                                    Basic: LKR {emp.basicSalary.toLocaleString()} {emp.hourlyRate ? `• Profile: LKR ${emp.hourlyRate}/h` : ""}
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                      {emp.firstName} {emp.lastName}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditEmp(emp)}
+                                      className="p-1 rounded-md text-slate-400 hover:text-[#0F85B0] dark:hover:text-[#38bdf8] hover:bg-sky-50 dark:hover:bg-sky-950/50 transition opacity-70 group-hover:opacity-100"
+                                      title={`Edit ${emp.firstName}'s Hourly Rate / Profile`}
+                                    >
+                                      <Icons.Edit className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 truncate">
+                                    Basic: LKR {emp.basicSalary.toLocaleString()} {emp.hourlyRate ? `• Profile: LKR ${emp.hourlyRate}/h` : "• Profile: Not Set"}
                                   </p>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right shrink-0">
                                   <p className="text-sm font-mono font-black text-[#0F85B0] dark:text-[#38bdf8]">
                                     LKR {effectiveOtRate.toFixed(2)}
                                   </p>
-                                  <span className="text-[9px] font-bold text-emerald-500">per OT hour</span>
+                                  <span className="text-[9px] font-bold text-emerald-500 block">per OT hour</span>
                                 </div>
                               </div>
                             );
