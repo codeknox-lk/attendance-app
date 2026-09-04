@@ -22,7 +22,7 @@ const NAV_TABS = [
 type TabId = typeof NAV_TABS[number]["id"];
 
 const SETTINGS_TABS = [
-  { id: "biometric", label: "Biometric" },
+  { id: "biometric", label: "Biometric Hardware" },
   { id: "company", label: "Clinic Profile" },
   { id: "security", label: "Security & PIN" },
   { id: "epf", label: "Salary & Dynamic Bonuses" },
@@ -254,6 +254,16 @@ const Icons = {
   Edit: ({ className = "w-4 h-4" }: { className?: string }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    </svg>
+  ),
+  Pencil: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    </svg>
+  ),
+  Trash: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   ),
   Search: ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -3682,82 +3692,194 @@ export default function Home() {
 
           {/* ═══════════════ SETTINGS ═══════════════ */}
           {activeTab==="settings" && (
-            <div className={`rounded-xl border overflow-hidden ${isDark?"bg-zinc-900 border-zinc-800":"bg-white border-zinc-200 shadow-sm"}`}>
-              <div className={`flex border-b overflow-x-auto ${isDark?"border-zinc-800":"border-zinc-200"}`}>
-                {SETTINGS_TABS.map(t=>(
-                  <button key={t.id} onClick={()=>setSettingsTab(t.id as SettingsTabId)} className={`px-4 py-3 text-xs font-bold border-b-2 transition whitespace-nowrap ${settingsTab===t.id?(isDark?"border-white text-white":"border-zinc-800 text-zinc-900"):"border-transparent text-zinc-400 hover:text-zinc-600"}`}>{t.label}</button>
-                ))}
+            <div className="space-y-6">
+              {/* Settings Page Header Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wide mb-2 border transition ${
+                    isDark ? "bg-[#042633]/70 border-[#09526e] text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0c6c8f] shadow-xs"
+                  }`}>
+                    <Icons.Shield className="w-3.5 h-3.5 text-[#0ea5e9]" />
+                    <span>Clinic Administration &amp; System Configuration</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                    Settings &amp; Preferences
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure hardware biometric synchronization, salary bonus policies, clinic identity branding, staff directory, and schedule operating hours.
+                  </p>
+                </div>
               </div>
-              <div className="p-4 sm:p-6">
+
+              {/* Segmented Pill Navigation Bar */}
+              <div className={`p-1.5 rounded-2xl border flex items-center gap-1.5 overflow-x-auto backdrop-blur-xl ${
+                isDark
+                  ? "bg-slate-900/80 border-slate-800 shadow-lg"
+                  : "bg-white/80 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
+              }`}>
+                {SETTINGS_TABS.map(t => {
+                  const active = settingsTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setSettingsTab(t.id as SettingsTabId)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                        active
+                          ? "bg-[#0F85B0] text-white shadow-md shadow-[#0F85B0]/25 scale-[1.01]"
+                          : isDark
+                            ? "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                      }`}
+                    >
+                      {t.id === "biometric" && <Icons.Camera className="w-4 h-4 shrink-0" />}
+                      {t.id === "company" && <Icons.FileText className="w-4 h-4 shrink-0" />}
+                      {t.id === "security" && <Icons.Shield className="w-4 h-4 shrink-0" />}
+                      {t.id === "epf" && <Icons.TrendingUp className="w-4 h-4 shrink-0" />}
+                      {t.id === "staff" && <Icons.Users className="w-4 h-4 shrink-0" />}
+                      {t.id === "operating-hours" && <Icons.Clock className="w-4 h-4 shrink-0" />}
+                      {t.id === "holidays" && <Icons.Calendar className="w-4 h-4 shrink-0" />}
+                      <span>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sub-tab Content Area */}
+              <div className={`p-6 sm:p-8 rounded-3xl border transition-smooth backdrop-blur-xl ${
+                isDark
+                  ? "bg-slate-900/60 border-slate-800 shadow-2xl"
+                  : "bg-white border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)]"
+              }`}>
 
                 {/* BIOMETRIC & HIKVISION CLOUD SETTINGS */}
                 {settingsTab==="biometric" && (
-                  <div className="space-y-6 max-w-2xl">
+                  <div className="space-y-6 max-w-3xl">
                     {/* Featured Device Card */}
-                    <div className={`p-5 rounded-xl border relative overflow-hidden ${isDark ? "bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 border-zinc-800" : "bg-gradient-to-br from-zinc-50 via-white to-zinc-100 border-zinc-200 shadow-sm"}`}>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide bg-rose-500/10 text-rose-500 rounded border border-rose-500/20">Active Cloud Hardware</span>
-                            <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20">ISUP 5.0 Wi-Fi</span>
+                    <div className={`p-6 rounded-3xl border relative overflow-hidden backdrop-blur-xl ${
+                      isDark
+                        ? "bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950 border-slate-800 shadow-xl"
+                        : "bg-gradient-to-br from-sky-50/50 via-white to-sky-50/20 border-slate-200/80 shadow-sm"
+                    }`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0F85B0] via-sky-500 to-teal-400 p-0.5 shadow-md shadow-[#0F85B0]/20 shrink-0">
+                            <div className={`w-full h-full rounded-[14px] flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-white"}`}>
+                              <Icons.Camera className="w-7 h-7 text-[#0ea5e9]" />
+                            </div>
                           </div>
-                          <h3 className="text-base font-bold mt-2">Hikvision DS-K1T320MFWX Face Terminal</h3>
-                          <p className="text-xs text-zinc-500 mt-0.5">Touchless Facial & Biometric Time Attendance — IP: 192.168.8.135</p>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide bg-rose-500/10 text-rose-500 rounded-md border border-rose-500/20">
+                                Active Cloud Hardware
+                              </span>
+                              <span className="px-2.5 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 rounded-md border border-emerald-500/20 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                <span>ISUP 5.0 Live Push</span>
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                              Hikvision DS-K1T320MFWX Face Terminal
+                            </h3>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Touchless Facial &amp; Biometric Time Attendance · Port 8000 / HTTP Push
+                            </p>
+                          </div>
                         </div>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? "bg-slate-800/80 border border-slate-700" : "bg-[#f0f9ff] border border-[#bae6fd] shadow-sm"}`}>
-                          <Icons.Camera className={`w-5 h-5 ${isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"}`} />
-                        </div>
+
+                        <span className={`px-3 py-1 text-xs font-mono font-bold rounded-xl border self-start sm:self-auto ${
+                          isDark ? "bg-emerald-950/40 border-emerald-800/40 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                        }`}>
+                          ● 192.168.8.135 (Online)
+                        </span>
                       </div>
 
-                      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t text-xs ${isDark ? "border-zinc-800/40" : "border-zinc-200"}`}>
-                        <div>
-                          <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">Authentication</span>
-                          <span className="font-semibold">Face / Fingerprint / Card</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 pt-6 border-t border-slate-200/80 dark:border-slate-800/80 text-xs">
+                        <div className={`p-3 rounded-2xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-white/80 border-slate-200/80"}`}>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Authentication</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block">Face · Fingerprint · Card</span>
                         </div>
-                        <div>
-                          <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">Terminal IP</span>
-                          <span className="font-semibold text-emerald-500">192.168.8.135 (Online)</span>
+                        <div className={`p-3 rounded-2xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-white/80 border-slate-200/80"}`}>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Local Network IP</span>
+                          <span className="font-mono font-bold text-emerald-500 mt-0.5 block">192.168.8.135:80</span>
                         </div>
-                        <div>
-                          <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">Connection</span>
-                          <span className="font-semibold text-emerald-400">HTTP Event Push</span>
+                        <div className={`p-3 rounded-2xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-white/80 border-slate-200/80"}`}>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Sync Protocol</span>
+                          <span className="font-semibold text-[#0ea5e9] mt-0.5 block">HTTP Real-time Push</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Machine Settings */}
-                    <div className={`p-5 rounded-xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"} space-y-4`}>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Cloud Webhook &amp; Listener Endpoint</h4>
+                    <div className={`p-6 rounded-3xl border ${isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"} space-y-5`}>
+                      <div>
+                        <h4 className="text-sm font-black tracking-tight text-slate-900 dark:text-white">
+                          Cloud Webhook &amp; Listener Endpoint
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Endpoint configured inside Hikvision Web Client (<code className="text-[#0ea5e9]">Network → Advanced → Event Notification</code>).
+                        </p>
+                      </div>
+
                       <div>
                         <label className={labelCls}>Hikvision HTTP Notification / ISUP Server URL</label>
                         <div className="flex gap-2">
-                          <input readOnly className={`${inputCls(isDark)} font-mono text-[11px] ${isDark ? "text-emerald-400 bg-zinc-950/80 border-emerald-900/40" : "text-emerald-700 bg-emerald-50/80 border-emerald-300 font-semibold"}`} value="/api/biometric/hikvision" />
-                          <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/biometric/hikvision`)} className={`px-3 py-1.5 text-xs font-bold rounded whitespace-nowrap flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}>
-                            <Icons.Clipboard className="w-3.5 h-3.5" />
+                          <input
+                            readOnly
+                            className={`${inputCls(isDark)} font-mono text-xs font-semibold ${
+                              isDark ? "text-emerald-400 bg-slate-900 border-slate-800" : "text-emerald-700 bg-emerald-50/80 border-emerald-300"
+                            }`}
+                            value="/api/biometric/hikvision"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/api/biometric/hikvision`);
+                              setSettingsSaveMsg("Webhook URL copied to clipboard!");
+                              setTimeout(() => setSettingsSaveMsg(""), 3000);
+                            }}
+                            className={`px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap flex items-center gap-1.5 transition active:scale-95 ${
+                              isDark ? "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700" : "bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 shadow-xs"
+                            }`}
+                          >
+                            <Icons.Clipboard className="w-3.5 h-3.5 text-[#0ea5e9]" />
                             <span>Copy Webhook</span>
                           </button>
                         </div>
-                        <p className="text-[10px] text-zinc-500 mt-1">Enter this URL in Hikvision Web Client under <code className={isDark ? "text-zinc-400" : "text-zinc-700 font-semibold"}>Network -&gt; Advanced -&gt; Event Notification</code>.</p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                         <div>
-                          <label className={labelCls}>Device Model &amp; Mode</label>
-                          <select className={inputCls(isDark)} value={bioForm.deviceType} onChange={e => setBioForm(p => ({ ...p, deviceType: e.target.value as BiometricSettings["deviceType"] }))}>
-                            {["Hikvision DS-K1T320EFWX (ISUP 5.0 Cloud)", "ZKTeco TCP", "Cloud ADMS", "Hikvision Web"].map(d => <option key={d}>{d}</option>)}
+                          <label className={labelCls}>Device Model &amp; Firmware Mode</label>
+                          <select
+                            className={inputCls(isDark)}
+                            value={bioForm.deviceType}
+                            onChange={e => setBioForm(p => ({ ...p, deviceType: e.target.value as BiometricSettings["deviceType"] }))}
+                          >
+                            {["Hikvision DS-K1T320EFWX (ISUP 5.0 Cloud)", "ZKTeco TCP", "Cloud ADMS", "Hikvision Web"].map(d => (
+                              <option key={d}>{d}</option>
+                            ))}
                           </select>
                         </div>
                         <div>
-                          <label className={labelCls}>Sync Protocol</label>
-                          <select className={inputCls(isDark)} value={bioForm.pollInterval} onChange={e => setBioForm(p => ({ ...p, pollInterval: e.target.value as BiometricSettings["pollInterval"] }))}>
-                            {["Real-time Push (ISUP)", "Every 15 mins", "Hourly", "Daily", "Manual"].map(d => <option key={d}>{d}</option>)}
+                          <label className={labelCls}>Sync Protocol Schedule</label>
+                          <select
+                            className={inputCls(isDark)}
+                            value={bioForm.pollInterval}
+                            onChange={e => setBioForm(p => ({ ...p, pollInterval: e.target.value as BiometricSettings["pollInterval"] }))}
+                          >
+                            {["Real-time Push (ISUP)", "Every 15 mins", "Hourly", "Daily", "Manual"].map(d => (
+                              <option key={d}>{d}</option>
+                            ))}
                           </select>
                         </div>
                       </div>
 
                       <div className="pt-2 flex items-center justify-between">
                         {settingsSaveMsg && settingsTab === "biometric" ? (
-                          <span className="text-xs font-bold text-emerald-400">{settingsSaveMsg}</span>
+                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                            <Icons.Check className="w-3.5 h-3.5" />
+                            <span>{settingsSaveMsg}</span>
+                          </span>
                         ) : <span />}
                         <button
                           type="button"
@@ -3766,27 +3888,40 @@ export default function Home() {
                             setSettingsSaveMsg("Biometric settings updated successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
-                          className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition"
+                          className="px-5 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
                         >
-                          Save Biometric Settings
+                          <Icons.Check className="w-3.5 h-3.5" />
+                          <span>Save Biometric Settings</span>
                         </button>
                       </div>
                     </div>
 
                     {/* Hardware Test & Simulation Box */}
-                    <div className={`p-5 rounded-xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"} space-y-4`}>
+                    <div className={`p-6 rounded-3xl border ${isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"} space-y-4`}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Live Hardware Simulator</h4>
-                          <p className="text-[11px] text-zinc-500">Test incoming face / fingerprint scan payloads as if sent by the Hikvision DS-K1T320EFWX terminal.</p>
+                          <h4 className="text-sm font-black tracking-tight text-slate-900 dark:text-white">
+                            Live Hardware Simulator
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Test real-time event push payloads as if sent by the Hikvision DS-K1T320EFWX terminal.
+                          </p>
                         </div>
-                        <span className={`px-2 py-1 text-[10px] font-bold rounded border ${isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border-[#bae6fd]"}`}>Cloud API Tester</span>
+                        <span className={`px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide rounded-lg border ${
+                          isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border-[#bae6fd]"
+                        }`}>
+                          Cloud API Tester
+                        </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         <div>
-                          <label className={labelCls}>Target Employee (Biometric ID)</label>
-                          <select className={inputCls(isDark)} value={selectedSimEmpId} onChange={e => setSelectedSimEmpId(e.target.value)}>
+                          <label className={labelCls}>Target Staff Member (Biometric ID)</label>
+                          <select
+                            className={inputCls(isDark)}
+                            value={selectedSimEmpId}
+                            onChange={e => setSelectedSimEmpId(e.target.value)}
+                          >
                             {employees.map(e => (
                               <option key={e.id} value={e.biometricId}>
                                 #{e.biometricId} - {e.firstName} {e.lastName} ({e.role})
@@ -3794,8 +3929,9 @@ export default function Home() {
                             ))}
                           </select>
                         </div>
-                        <div className="flex items-end gap-2">
+                        <div className="flex items-end">
                           <button
+                            type="button"
                             onClick={async () => {
                               setSimulatingScan(true);
                               setSimResult(null);
@@ -3809,17 +3945,20 @@ export default function Home() {
                               }
                             }}
                             disabled={simulatingScan}
-                            className="w-full py-2 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs font-bold rounded shadow transition flex items-center justify-center gap-1.5"
+                            className="w-full py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-600/20 transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
                           >
                             <Icons.Bolt className="w-4 h-4" />
-                            <span>{simulatingScan ? "Processing..." : "Simulate Face Scan"}</span>
+                            <span>{simulatingScan ? "Transmitting payload..." : "Simulate Face Scan"}</span>
                           </button>
                         </div>
                       </div>
 
                       {simResult && (
-                        <div className={`p-2.5 rounded text-xs font-mono border ${isDark ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold"}`}>
-                          {simResult}
+                        <div className={`p-3 rounded-xl text-xs font-mono border flex items-center gap-2 ${
+                          isDark ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold"
+                        }`}>
+                          <Icons.CheckCircle className="w-4 h-4 shrink-0" />
+                          <span>{simResult}</span>
                         </div>
                       )}
                     </div>
@@ -3828,20 +3967,26 @@ export default function Home() {
 
                 {/* CLINIC COMPANY PROFILE */}
                 {settingsTab === "company" && (
-                  <div className="space-y-5 max-w-xl">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Clinic / Organization Details</h3>
-                    <p className="text-xs text-zinc-500">These details and custom logo will appear on all printed Salary Statements, Payslips, and EPF Form C-3 reports.</p>
-                    
+                  <div className="space-y-6 max-w-3xl">
+                    <div className="border-b border-slate-200/80 dark:border-slate-800/80 pb-4">
+                      <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                        Clinic Identity &amp; Organization Profile
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        These credentials, address details, and official logo appear automatically on all printed Payslips, Monthly Statements, and EPF Form C-3 reports.
+                      </p>
+                    </div>
+
                     {/* Official Clinic Logo Upload */}
-                    <div className={`p-4 sm:p-5 rounded-2xl border transition-smooth ${
-                      isDark ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50/80 border-slate-200/80"
+                    <div className={`p-6 rounded-3xl border ${
+                      isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"
                     }`}>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
                         Official Clinic Logo
                       </label>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
                         {/* Logo Preview box */}
-                        <div className={`w-20 h-20 rounded-2xl border-2 border-dashed flex items-center justify-center p-2 shrink-0 relative overflow-hidden transition ${
+                        <div className={`w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center p-2.5 shrink-0 relative overflow-hidden transition ${
                           profileForm.logoUrl
                             ? (isDark ? "bg-slate-800 border-sky-500/50 shadow-md" : "bg-white border-[#0F85B0]/40 shadow-sm")
                             : (isDark ? "bg-slate-900/60 border-slate-700 text-slate-500" : "bg-white border-slate-200 text-slate-400 shadow-sm")
@@ -3852,16 +3997,16 @@ export default function Home() {
                           ) : (
                             <div className="flex flex-col items-center justify-center text-center">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src="/logo.png" alt="Default Logo" className="w-8 h-8 object-contain opacity-40 grayscale mb-1" />
+                              <img src="/logo.png" alt="Default Logo" className="w-10 h-10 object-contain opacity-40 grayscale mb-1" />
                               <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Default</span>
                             </div>
                           )}
                         </div>
 
                         {/* Upload Controls & Guidance */}
-                        <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex-1 min-w-0 space-y-3">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0F85B0] to-[#0ea5e9] hover:opacity-95 text-white text-xs font-bold shadow-sm transition">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold shadow-md shadow-[#0F85B0]/20 transition active:scale-95">
                               <Icons.Printer className="w-3.5 h-3.5" />
                               <span>{profileForm.logoUrl ? "Change Clinic Logo" : "Upload Clinic Logo"}</span>
                               <input
@@ -3889,60 +4034,58 @@ export default function Home() {
                               <button
                                 type="button"
                                 onClick={() => setProfileForm(p => ({ ...p, logoUrl: "" }))}
-                                className="px-2.5 py-1.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 text-xs font-bold transition"
+                                className="px-3 py-2 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 text-xs font-bold transition"
                               >
                                 Remove Custom Logo
                               </button>
                             )}
                           </div>
 
-                          {/* Guidance */}
-                          <div className={`p-2.5 rounded-xl border text-[11px] space-y-1 ${
-                            isDark ? "bg-slate-900/40 border-slate-800 text-slate-400" : "bg-white/80 border-slate-200/80 text-slate-500 shadow-sm"
+                          <div className={`p-3 rounded-2xl border text-[11px] space-y-1 ${
+                            isDark ? "bg-slate-900/60 border-slate-800 text-slate-400" : "bg-white border-slate-200 text-slate-500 shadow-xs"
                           }`}>
-                            <p className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <p className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                              Recommended Logo Guidelines:
+                              Logo Requirements for Payslip Rendering:
                             </p>
-                            <ul className="list-disc list-inside space-y-0.5 text-[10px] pl-1 text-slate-500 dark:text-slate-400">
-                              <li><strong>Format:</strong> Transparent PNG, SVG, or JPG (transparent background looks best on printed slips).</li>
-                              <li><strong>Size &amp; Shape:</strong> Square or horizontal icon (e.g. 250×250px up to 600×600px).</li>
-                              <li><strong>File Weight:</strong> Under 1.5 MB for sharp PDF/print generation.</li>
-                              <li><strong>Where it appears:</strong> Automatically rendered at the top of all printed Payslips &amp; Salary Statements!</li>
-                            </ul>
+                            <p className="text-[10px] text-slate-400">
+                              Transparent PNG or SVG with square/horizontal proportions (250×250px up to 600×600px).
+                            </p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-3 pt-2">
+                    <div className={`p-6 rounded-3xl border ${
+                      isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"
+                    } space-y-4`}>
                       <div>
-                        <label className={labelCls}>Clinic / Company Name</label>
+                        <label className={labelCls}>Clinic / Entity Name</label>
                         <input
                           className={inputCls(isDark)}
                           value={profileForm.name || ""}
                           onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
-                          placeholder="e.g. MedicFlow Primary Clinic"
+                          placeholder="e.g. Smile Hub Premium Dental Care"
                         />
                       </div>
                       <div>
-                        <label className={labelCls}>Official Address</label>
+                        <label className={labelCls}>Official Registered Address</label>
                         <textarea
                           rows={2}
                           className={inputCls(isDark)}
                           value={profileForm.address || ""}
                           onChange={e => setProfileForm(p => ({ ...p, address: e.target.value }))}
-                          placeholder="e.g. Colombo, Sri Lanka"
+                          placeholder="e.g. 951, 1st Floor, Art Lanka Building, Peradeniya Road, Kandy"
                         />
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className={labelCls}>Contact Phone Number</label>
                           <input
                             className={inputCls(isDark)}
                             value={profileForm.phone || ""}
                             onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))}
-                            placeholder="+94 11 234 5678"
+                            placeholder="+94 81 223 4567"
                           />
                         </div>
                         <div>
@@ -3952,18 +4095,18 @@ export default function Home() {
                             className={inputCls(isDark)}
                             value={profileForm.email || ""}
                             onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
-                            placeholder="info@clinic.com"
+                            placeholder="contact@smilehub.lk"
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className={labelCls}>EPF Registration No.</label>
                           <input
                             className={inputCls(isDark)}
                             value={profileForm.epfRegNo || ""}
                             onChange={e => setProfileForm(p => ({ ...p, epfRegNo: e.target.value }))}
-                            placeholder="e.g. EPF/A/98765"
+                            placeholder="e.g. EPF 24345/D"
                           />
                         </div>
                         <div>
@@ -3972,14 +4115,17 @@ export default function Home() {
                             className={inputCls(isDark)}
                             value={profileForm.etfRegNo || ""}
                             onChange={e => setProfileForm(p => ({ ...p, etfRegNo: e.target.value }))}
-                            placeholder="e.g. ETF/B/43210"
+                            placeholder="e.g. ETF 24345/D"
                           />
                         </div>
                       </div>
 
                       <div className="pt-3 flex items-center justify-between">
                         {settingsSaveMsg && settingsTab === "company" ? (
-                          <span className="text-xs font-bold text-emerald-400">{settingsSaveMsg}</span>
+                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                            <Icons.Check className="w-3.5 h-3.5" />
+                            <span>{settingsSaveMsg}</span>
+                          </span>
                         ) : <span />}
                         <button
                           type="button"
@@ -3991,9 +4137,10 @@ export default function Home() {
                             setSettingsSaveMsg("Clinic profile saved successfully!");
                             setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
-                          className="px-4 py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] text-white text-xs font-bold rounded shadow transition"
+                          className="px-5 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
                         >
-                          Save Clinic Profile
+                          <Icons.Check className="w-3.5 h-3.5" />
+                          <span>Save Clinic Profile</span>
                         </button>
                       </div>
                     </div>
@@ -4002,12 +4149,18 @@ export default function Home() {
 
                 {/* SECURITY & ADMIN PIN */}
                 {settingsTab === "security" && (
-                  <div className="space-y-5 max-w-md">
-                    <div className="flex items-center gap-2">
-                      <Icons.LockClosed className="w-5 h-5 text-[#38bdf8]" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Admin Security Settings</h3>
+                  <div className="space-y-6 max-w-lg">
+                    <div className="border-b border-slate-200/80 dark:border-slate-800/80 pb-4">
+                      <div className="flex items-center gap-2">
+                        <Icons.Shield className="w-5 h-5 text-[#0ea5e9]" />
+                        <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                          Administrator PIN &amp; Access Security
+                        </h3>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Authorize unlocks for sensitive payroll remittances, staff salary adjustments, and system hardware configuration.
+                      </p>
                     </div>
-                    <p className="text-xs text-zinc-500">Customize the 4-digit PIN required to unlock sensitive Payroll Engine &amp; System Configuration tabs.</p>
 
                     <form
                       onSubmit={(e) => {
@@ -4019,14 +4172,18 @@ export default function Home() {
                           setPinChangeMsg("PIN must be exactly 4 digits");
                         }
                       }}
-                      className={`p-5 rounded-xl border space-y-4 text-xs ${isDark ? "border-zinc-800 bg-zinc-950/40" : "border-zinc-200 bg-white shadow-sm"}`}
+                      className={`p-6 rounded-3xl border space-y-4 ${
+                        isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"
+                      }`}
                     >
                       <div>
                         <label className={labelCls}>Current Active PIN</label>
                         <input
                           disabled
                           readOnly
-                          className={`${inputCls(isDark)} font-mono tracking-widest ${isDark ? "bg-zinc-900 text-zinc-400" : "bg-zinc-100 text-zinc-600"}`}
+                          className={`${inputCls(isDark)} font-mono tracking-widest text-center text-sm ${
+                            isDark ? "bg-slate-900 text-slate-400" : "bg-slate-100 text-slate-600"
+                          }`}
                           value={`•••• (Active: ${adminPin})`}
                         />
                       </div>
@@ -4036,7 +4193,7 @@ export default function Home() {
                           type="password"
                           maxLength={4}
                           placeholder="e.g. 5678"
-                          className={`${inputCls(isDark)} font-mono text-center tracking-[0.5em] text-base`}
+                          className={`${inputCls(isDark)} font-mono text-center tracking-[0.5em] text-lg font-bold`}
                           value={newPinInput}
                           onChange={e => {
                             setNewPinInput(e.target.value);
@@ -4061,9 +4218,10 @@ export default function Home() {
                       <button
                         type="submit"
                         disabled={newPinInput.length !== 4}
-                        className="w-full py-2 bg-[#0F85B0] hover:bg-[#0ea5e9] disabled:opacity-50 text-white font-bold rounded shadow transition"
+                        className="w-full py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 text-xs flex items-center justify-center gap-1.5"
                       >
-                        Update Security PIN
+                        <Icons.LockClosed className="w-3.5 h-3.5" />
+                        <span>Update Security PIN</span>
                       </button>
                     </form>
                   </div>
@@ -4798,14 +4956,40 @@ export default function Home() {
                           );
                         })}
                       </div>
-                      <div className={`p-4 rounded-xl border ${isDark?"bg-zinc-900/40 border-zinc-800":"bg-zinc-50/70 border-zinc-200"}`}>
-                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Add Allowance</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                          <div className="sm:col-span-2"><label className={labelCls}>Name</label><input className={inputCls(isDark)} placeholder="e.g. Attendance Bonus" value={newAllowance.name} onChange={e=>setNewAllowance(p=>({...p,name:e.target.value}))}/></div>
-                          <div><label className={labelCls}>Amount (LKR)</label><input type="number" className={inputCls(isDark)} value={newAllowance.amount} onChange={e=>setNewAllowance(p=>({...p,amount:parseFloat(e.target.value)||0}))}/></div>
+
+                      <div className={`p-5 sm:p-6 rounded-2xl border backdrop-blur-xl ${
+                        isDark ? "bg-slate-900/60 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+                      }`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Add Clinic Allowance</h4>
+                          <span className="text-[10px] text-slate-400">Custom statutory & non-statutory stipends</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                          <div className="sm:col-span-2">
+                            <label className={labelCls}>Allowance Name</label>
+                            <input
+                              className={inputCls(isDark)}
+                              placeholder="e.g. Specialist Clinic Session Allowance"
+                              value={newAllowance.name}
+                              onChange={e=>setNewAllowance(p=>({...p,name:e.target.value}))}
+                            />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Amount (LKR)</label>
+                            <input
+                              type="number"
+                              className={inputCls(isDark)}
+                              value={newAllowance.amount}
+                              onChange={e=>setNewAllowance(p=>({...p,amount:parseFloat(e.target.value)||0}))}
+                            />
+                          </div>
                           <div>
                             <label className={labelCls}>Type</label>
-                            <select className={inputCls(isDark)} value={newAllowance.type} onChange={e=>setNewAllowance(p=>({...p,type:e.target.value}))}>
+                            <select
+                              className={inputCls(isDark)}
+                              value={newAllowance.type}
+                              onChange={e=>setNewAllowance(p=>({...p,type:e.target.value}))}
+                            >
                               <option value="Fixed">Fixed</option>
                               <option value="Monthly">Monthly</option>
                               <option value="Variable">Variable</option>
@@ -4813,46 +4997,112 @@ export default function Home() {
                             </select>
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-5 mt-3 pt-2">
-                          <label className="flex items-center gap-2 text-xs font-medium cursor-pointer"><input type="checkbox" checked={newAllowance.epfApplicable} onChange={e=>setNewAllowance(p=>({...p,epfApplicable:e.target.checked}))} className="rounded"/>EPF Applicable</label>
-                          <label className="flex items-center gap-2 text-xs font-medium cursor-pointer"><input type="checkbox" checked={newAllowance.taxDeductible} onChange={e=>setNewAllowance(p=>({...p,taxDeductible:e.target.checked}))} className="rounded"/>Tax Deductible</label>
-                          <button onClick={()=>{if(newAllowance.name.trim()){addAllowance(newAllowance);setNewAllowance({name:"",amount:10000,epfApplicable:false,taxDeductible:true,type:"Fixed"});}}} className={`ml-auto px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>Add Allowance</button>
+                        <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
+                          <div className="flex items-center gap-5">
+                            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer text-slate-700 dark:text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={newAllowance.epfApplicable}
+                                onChange={e=>setNewAllowance(p=>({...p,epfApplicable:e.target.checked}))}
+                                className="w-4 h-4 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                              />
+                              <span>EPF Applicable</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer text-slate-700 dark:text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={newAllowance.taxDeductible}
+                                onChange={e=>setNewAllowance(p=>({...p,taxDeductible:e.target.checked}))}
+                                className="w-4 h-4 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                              />
+                              <span>Tax Deductible</span>
+                            </label>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={()=>{
+                              if(newAllowance.name.trim()){
+                                addAllowance(newAllowance);
+                                setNewAllowance({name:"",amount:10000,epfApplicable:false,taxDeductible:true,type:"Fixed"});
+                              }
+                            }}
+                            className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                          >
+                            <Icons.Plus className="w-3.5 h-3.5" />
+                            <span>Add Allowance</span>
+                          </button>
                         </div>
                       </div>
                     </div>
 
                     {/* APIT */}
                     <div className="space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b pb-2 dark:border-zinc-800">APIT / PAYE Tax Slabs (Annual Income)</h3>
-                      <div className={`rounded-lg border overflow-hidden ${isDark?"border-zinc-800":"border-zinc-200"}`}>
+                      <div className="border-b border-slate-200/80 dark:border-slate-800/80 pb-3">
+                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                          APIT / PAYE Tax Slabs (Annual Income)
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Follows Sri Lanka Inland Revenue Department guidelines. Monthly APIT is computed as 1/12th of projected annual tax.
+                        </p>
+                      </div>
+                      <div className={`rounded-2xl border overflow-hidden backdrop-blur-xl ${
+                        isDark ? "border-slate-800 bg-slate-900/60" : "border-slate-200/80 bg-white shadow-sm"
+                      }`}>
                         <table className="w-full text-xs">
-                          <thead className={`border-b ${isDark?"bg-zinc-900 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                            <tr>{["From (LKR)","To (LKR)","Rate (%)"].map(h=><th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400">{h}</th>)}</tr>
+                          <thead className={`border-b ${isDark ? "bg-slate-900/90 border-slate-800" : "bg-slate-50/80 border-slate-200/80"}`}>
+                            <tr>
+                              {["From (LKR)","To (LKR)","Rate (%)"].map(h=>(
+                                <th key={h} className="px-5 py-3.5 text-left font-black text-[10px] uppercase tracking-wider text-slate-400">
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
                           </thead>
-                          <tbody className={`divide-y ${isDark?"divide-zinc-800":"divide-zinc-100"}`}>
+                          <tbody className={`divide-y ${isDark ? "divide-slate-800/60" : "divide-slate-100"}`}>
                             {apitSlabs.map((slab,idx)=>(
-                              <tr key={idx}>
-                                <td className="px-4 py-3 font-mono">LKR {slab.minIncome.toLocaleString()}</td>
-                                <td className="px-4 py-3 font-mono">{slab.maxIncome?`LKR ${slab.maxIncome.toLocaleString()}`:"No limit"}</td>
-                                <td className="px-4 py-3 font-bold text-amber-500">{slab.rate}%</td>
+                              <tr key={idx} className={isDark ? "hover:bg-slate-800/30" : "hover:bg-slate-50/60"}>
+                                <td className="px-5 py-3 font-mono font-bold text-slate-700 dark:text-slate-200">
+                                  LKR {slab.minIncome.toLocaleString()}
+                                </td>
+                                <td className="px-5 py-3 font-mono text-slate-500">
+                                  {slab.maxIncome ? `LKR ${slab.maxIncome.toLocaleString()}` : "No limit"}
+                                </td>
+                                <td className="px-5 py-3">
+                                  <span className="px-2.5 py-1 rounded-md text-xs font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                    {slab.rate}%
+                                  </span>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                      <p className="text-[10px] text-zinc-500">These slabs follow the Sri Lanka Inland Revenue Act. APIT is computed monthly as 1/12 of the projected annual tax on each employee&apos;s annualised net salary.</p>
                     </div>
 
                   </div>
                 )}
 
-                {/* STAFF */}
+                {/* STAFF DIRECTORY */}
                 {settingsTab==="staff" && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Staff Directory</h3>
-                      <div className="flex gap-2">
+                  <div className="space-y-6 max-w-4xl">
+                    {/* Header Banner */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                            Staff &amp; Personnel Directory
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#0ea5e9]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0ea5e9]/20">
+                            {activeEmployees.length} Registered Members
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Manage personnel profiles, pay rates, dynamic attendance bonus multipliers, and terminal biometric associations.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2.5">
                         <button
+                          type="button"
                           onClick={() => {
                             const maxBioId = Math.max(...employees.map(e => parseInt(e.biometricId) || 0), 0);
                             const nextBioId = String(maxBioId >= 1 ? maxBioId + 1 : 3);
@@ -4869,7 +5119,6 @@ export default function Home() {
                               biometricId: nextBioId,
                               epfEligible: true,
                               taxable: false,
-                              
                               branchId: null,
                               allowanceIds: [],
                               leaveBalances: { annual: 14, sick: 7, casual: 3 },
@@ -4879,78 +5128,186 @@ export default function Home() {
                             });
                             setShowAddEmpModal(true);
                           }}
-                          className={`px-3 py-1.5 text-xs font-bold rounded border shadow transition flex items-center gap-1.5 ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200"}`}
+                          className={`px-3.5 py-2 text-xs font-bold rounded-xl border shadow-xs transition flex items-center gap-2 ${
+                            isDark
+                              ? "bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700"
+                              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                          }`}
                         >
                           <Icons.Refresh className="w-3.5 h-3.5 text-[#38bdf8]" />
-                          <span>Import Staff from Terminal</span>
+                          <span>Import from Terminal</span>
                         </button>
-                        <button onClick={()=>{setEditingEmpId(null);setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]});setShowAddEmpModal(true);}} className={`px-3 py-1.5 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>+ Register Member</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingEmpId(null);
+                            setNewEmp({
+                              firstName: "",
+                              lastName: "",
+                              role: "Nurse",
+                              payType: "Fixed Monthly",
+                              basicSalary: 50000,
+                              hourlyRate: 300,
+                              sessionRate: 0,
+                              commissionRate: 0,
+                              biometricId: "",
+                              epfEligible: true,
+                              taxable: false,
+                              branchId: null,
+                              allowanceIds: [],
+                              leaveBalances: { annual: 14, sick: 7, casual: 3 },
+                              attendanceBonusRate: 0,
+                              punctualBonusRate: 0,
+                              incomeBonusPercentage: 0,
+                              customOperatingHours: []
+                            });
+                            setShowAddEmpModal(true);
+                          }}
+                          className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                        >
+                          <Icons.Plus className="w-3.5 h-3.5" />
+                          <span>Register Member</span>
+                        </button>
                       </div>
                     </div>
-                    <div className="space-y-2 max-w-3xl">
-                      {activeEmployees.map(emp=>{
+
+                    {/* Employee Cards List */}
+                    <div className="grid grid-cols-1 gap-3">
+                      {activeEmployees.map(emp => {
                         const initials = `${emp.firstName[0] || ""}${emp.lastName[0] || ""}`.toUpperCase();
+                        const workedRate = emp.attendanceBonusRate || salarySettings.globalWorkedDayBonus || 0;
+                        const punctualRate = emp.punctualBonusRate || salarySettings.globalPunctualBonus || 0;
                         return (
-                        <div key={emp.id} className={`flex items-center justify-between p-3.5 rounded-xl border hover:border-zinc-300 dark:hover:border-zinc-700 transition ${isDark?"bg-zinc-950/20 border-zinc-800":"bg-white border-zinc-200"}`}>
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-xs flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
-                              {initials}
-                            </div>
-                            <div>
-                              <p className="font-bold text-xs">{emp.firstName} {emp.lastName}</p>
-                              <p className="text-[10px] text-zinc-500">{emp.role} · {emp.payType} · Biometric: {emp.biometricId}</p>
-                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
-                                  isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                                }`}>
-                                  <Icons.Calendar className="w-2.5 h-2.5 shrink-0" />
-                                  <span>Worked: LKR {(emp.attendanceBonusRate || salarySettings.globalWorkedDayBonus || 0).toLocaleString()}/day</span>
-                                  {emp.attendanceBonusRate > 0 && <span className="text-[8px] opacity-75 font-bold">(Custom)</span>}
-                                </span>
-                                <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
-                                  isDark ? "bg-sky-500/10 border-sky-500/30 text-sky-400" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
-                                }`}>
-                                  <Icons.Clock className="w-2.5 h-2.5 shrink-0" />
-                                  <span>Punctual: LKR {(emp.punctualBonusRate || salarySettings.globalPunctualBonus || 0).toLocaleString()}/day</span>
-                                  {emp.punctualBonusRate > 0 && <span className="text-[8px] opacity-75 font-bold">(Custom)</span>}
-                                </span>
+                          <div
+                            key={emp.id}
+                            className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                              isDark
+                                ? "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
+                                : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-md"
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              <div className="flex items-start sm:items-center gap-3.5">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-black text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                                  {initials}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-black text-sm tracking-tight text-slate-900 dark:text-white">
+                                      {emp.firstName} {emp.lastName}
+                                    </h4>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                                      isDark ? "bg-[#042633]/60 border border-[#09526e]/50 text-[#7dd3fc]" : "bg-[#f0f9ff] border border-[#bae6fd] text-[#0c6c8f]"
+                                    }`}>
+                                      {emp.role}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 ${
+                                      isDark ? "bg-slate-800 text-slate-300 border border-slate-700" : "bg-slate-100 text-slate-700 border border-slate-200"
+                                    }`}>
+                                      <Icons.Camera className="w-2.5 h-2.5 text-[#0ea5e9]" />
+                                      <span>Biometric #{emp.biometricId || "Unlinked"}</span>
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border flex items-center gap-1.5 ${
+                                      isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                    }`}>
+                                      <Icons.Calendar className="w-3 h-3 shrink-0" />
+                                      <span>Worked: LKR {workedRate.toLocaleString()}/day</span>
+                                      {emp.attendanceBonusRate > 0 && <span className="text-[8px] opacity-75 font-black uppercase">(Custom)</span>}
+                                    </span>
+                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border flex items-center gap-1.5 ${
+                                      isDark ? "bg-sky-500/10 border-sky-500/30 text-sky-400" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                                    }`}>
+                                      <Icons.Clock className="w-3 h-3 shrink-0" />
+                                      <span>Punctual: LKR {punctualRate.toLocaleString()}/day</span>
+                                      {emp.punctualBonusRate > 0 && <span className="text-[8px] opacity-75 font-black uppercase">(Custom)</span>}
+                                    </span>
+                                    {emp.allowanceIds.map(aid => {
+                                      const al = allowances.find(a => a.id === aid);
+                                      return al ? (
+                                        <span key={aid} className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium ${
+                                          isDark ? "border-slate-800 bg-slate-800/40 text-slate-400" : "border-slate-200 bg-slate-50 text-slate-600"
+                                        }`}>
+                                          {al.name}
+                                        </span>
+                                      ) : null;
+                                    })}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex gap-1 mt-1 flex-wrap">
-                                {emp.allowanceIds.map(aid=>{const al=allowances.find(a=>a.id===aid);return al?<span key={aid} className={`text-[9px] px-1.5 py-0.5 rounded border ${isDark?"border-zinc-700 text-zinc-500":"border-zinc-200 text-zinc-500"}`}>{al.name}</span>:null;})}
+
+                              <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/60">
+                                <div className="text-left sm:text-right">
+                                  <p className="font-black text-sm text-slate-900 dark:text-white">
+                                    {emp.payType === "Fixed Monthly"
+                                      ? `LKR ${emp.basicSalary.toLocaleString()}/mo`
+                                      : emp.payType === "Session-based"
+                                        ? `LKR ${emp.sessionRate.toLocaleString()}/session`
+                                        : `LKR ${emp.hourlyRate.toLocaleString()}/hr`}
+                                  </p>
+                                  <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                                    {emp.epfEligible ? "EPF Subject" : "EPF Exempt"}
+                                    {emp.taxable ? " · APIT" : ""} · {emp.payType}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200 dark:border-slate-800">
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditEmp(emp)}
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
+                                      isDark
+                                        ? "border-slate-700 bg-slate-800/60 text-slate-300 hover:text-white hover:bg-slate-700"
+                                        : "border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs"
+                                    }`}
+                                    title="Edit Staff Member"
+                                  >
+                                    <Icons.Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Delete ${emp.firstName} ${emp.lastName}?`)) {
+                                        deleteEmployee(emp.id);
+                                      }
+                                    }}
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
+                                      isDark
+                                        ? "border-rose-900/40 bg-rose-950/20 text-rose-400 hover:bg-rose-900/40"
+                                        : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-xs"
+                                    }`}
+                                    title="Delete Member"
+                                  >
+                                    <Icons.Trash className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <p className="font-bold text-xs">{emp.payType==="Fixed Monthly"?`LKR ${emp.basicSalary.toLocaleString()}/mo`:emp.payType==="Session-based"?`LKR ${emp.sessionRate.toLocaleString()}/session`:`LKR ${emp.hourlyRate.toLocaleString()}/hr`}</p>
-                              <p className="text-[10px] text-zinc-500">{emp.epfEligible?"EPF Subject":"EPF Exempt"}{emp.taxable?" · APIT":""}</p>
-                            </div>
-                            <div className="flex items-center gap-1 pl-3 border-l border-zinc-200 dark:border-zinc-800">
-                              <button onClick={()=>openEditEmp(emp)} className={`p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-zinc-400 hover:text-zinc-800 dark:hover:text-white`} title="Edit">
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                              </button>
-                              <button onClick={()=>{if(confirm(`Delete ${emp.firstName} ${emp.lastName}?`))deleteEmployee(emp.id);}} className="p-1.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition text-zinc-400 hover:text-rose-600" title="Delete">
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                     </div>
 
                     {/* Machine Enrolled Persons Section */}
-                    <div className={`p-5 rounded-xl border mt-6 ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200 shadow-sm"} space-y-4 max-w-3xl`}>
-                      <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className={`p-6 rounded-3xl border transition-smooth ${
+                      isDark ? "bg-slate-900/70 border-slate-800 shadow-xl" : "bg-white border-slate-200/90 shadow-sm"
+                    } space-y-5`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Terminal Enrolled Persons ({machinePersons.length} / 500)</h4>
-                            <span className="px-2 py-0.5 text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded flex items-center gap-1">
+                          <div className="flex items-center gap-2.5">
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                              Terminal Enrolled Persons ({machinePersons.length} / 500)
+                            </h4>
+                            <span className="px-2.5 py-0.5 text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                              Push Connected
+                              Push Protocol Connected
                             </span>
                           </div>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">Hardware PUSH listener active — incoming biometric scans &amp; users automatically sync in real-time.</p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Hardware HTTP Push listener active — biometric scans &amp; users automatically sync in real-time.
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
@@ -4970,7 +5327,6 @@ export default function Home() {
                                 epfEligible: true,
                                 taxable: false,
                                 active: true,
-                                
                                 branchId: null,
                                 allowanceIds: [],
                                 leaveBalances: { annual: 14, sick: 7, casual: 3 },
@@ -4979,9 +5335,10 @@ export default function Home() {
                                 incomeBonusPercentage: 0,
                               });
                             }}
-                            className="px-3 py-1.5 text-xs font-bold rounded bg-[#0F85B0] hover:bg-[#0ea5e9] text-white shadow transition flex items-center gap-1.5"
+                            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white shadow-md shadow-[#0F85B0]/20 transition flex items-center gap-1.5"
                           >
-                            <span>+ Link New Terminal ID</span>
+                            <Icons.Plus className="w-3.5 h-3.5" />
+                            <span>Link New Terminal ID</span>
                           </button>
                           <button
                             type="button"
@@ -4991,7 +5348,11 @@ export default function Home() {
                               setSettingsSaveMsg("Enrolled users synced via Hikvision Push protocol!");
                               setTimeout(() => setSettingsSaveMsg(""), 3000);
                             }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700" : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm"}`}
+                            className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 border transition ${
+                              isDark
+                                ? "bg-slate-800 hover:bg-slate-700 text-white border-slate-700"
+                                : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs"
+                            }`}
                           >
                             <Icons.Refresh className={`w-3.5 h-3.5 text-[#38bdf8] ${isFetchingPersons ? "animate-spin" : ""}`} />
                             <span>{isFetchingPersons ? "Syncing..." : "Sync Enrolled Persons"}</span>
@@ -4999,59 +5360,91 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className={`p-3 rounded-lg text-xs border ${isDark ? "bg-[#042633]/20 border-[#09526e]/40 text-[#7dd3fc]" : "bg-[#f0f9ff] border-[#bae6fd] text-[#09526e]"}`}>
-                        <div className="font-bold flex items-center gap-1.5 mb-1">
-                          <Icons.Shield className="w-3.5 h-3.5 text-[#38bdf8]" />
+                      <div className={`p-4 rounded-2xl text-xs border ${
+                        isDark ? "bg-[#042633]/30 border-[#09526e]/50 text-[#7dd3fc]" : "bg-[#f0f9ff] border-[#bae6fd] text-[#09526e]"
+                      }`}>
+                        <div className="font-black flex items-center gap-2 mb-1.5">
+                          <Icons.Shield className="w-4 h-4 text-[#38bdf8]" />
                           <span>Connecting Local Router IP (192.168.8.135) to Cloud App</span>
                         </div>
-                        <p className="text-[11px] leading-relaxed">
-                          Because your Hikvision terminal is on a local private Wi-Fi network (<code>192.168.8.135</code>), cloud servers cannot open inbound HTTP calls to local router IPs directly.
+                        <p className="text-[11px] leading-relaxed opacity-90">
+                          Because the Hikvision terminal is on a local private Wi-Fi network (<code>192.168.8.135</code>), cloud servers cannot open inbound HTTP calls to local router IPs directly.
                           <br />
                           <strong>To register new staff added on Hikvision browser:</strong>
                         </p>
-                        <ul className="list-disc list-inside text-[11px] mt-1 space-y-0.5 font-medium">
+                        <ul className="list-disc list-inside text-[11px] mt-2 space-y-1 font-medium opacity-90">
                           <li><strong>Option 1 (Automatic)</strong>: Have the new employee scan their face/finger on the terminal once — our server will auto-register them in real-time!</li>
-                          <li><strong>Option 2 (Manual)</strong>: Click <strong>+ Link New Terminal ID</strong> above and enter their Biometric ID (e.g. <code>3</code>, <code>4</code>).</li>
+                          <li><strong>Option 2 (Manual)</strong>: Click <strong>Link New Terminal ID</strong> above and enter their Biometric ID (e.g. <code>3</code>, <code>4</code>).</li>
                         </ul>
                       </div>
 
-                      <div className="overflow-x-auto border rounded-lg border-zinc-800/40">
+                      <div className={`overflow-x-auto rounded-2xl border ${isDark ? "border-slate-800" : "border-slate-200"}`}>
                         <table className="w-full text-xs text-left">
-                          <thead className={`text-[10px] font-extrabold uppercase tracking-wider border-b ${isDark ? "bg-zinc-950/60 border-zinc-800 text-zinc-400" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                          <thead className={`text-[10px] font-black uppercase tracking-wider border-b ${
+                            isDark ? "bg-slate-900/90 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                          }`}>
                             <tr>
-                              <th className="px-4 py-2.5">User ID</th>
-                              <th className="px-4 py-2.5">Name</th>
-                              <th className="px-4 py-2.5">Type</th>
-                              <th className="px-4 py-2.5">Biometrics Enrolled</th>
-                              <th className="px-4 py-2.5 text-right">App Status</th>
+                              <th className="px-5 py-3.5">User ID</th>
+                              <th className="px-5 py-3.5">Name</th>
+                              <th className="px-5 py-3.5">Type</th>
+                              <th className="px-5 py-3.5">Biometrics Enrolled</th>
+                              <th className="px-5 py-3.5 text-right">App Status</th>
                             </tr>
                           </thead>
-                          <tbody className={`divide-y ${isDark ? "divide-zinc-800/40" : "divide-slate-200"}`}>
+                          <tbody className={`divide-y ${isDark ? "divide-slate-800/40" : "divide-slate-100"}`}>
                             {machinePersons.map(p => {
                               const matchedEmp = employees.find(e => e.biometricId === p.employeeNo);
                               return (
-                                <tr key={p.employeeNo} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-slate-50"}>
-                                  <td className="px-4 py-3 font-mono font-bold text-[#38bdf8]">#{p.employeeNo}</td>
-                                  <td className="px-4 py-3 font-semibold">{p.name}</td>
-                                  <td className="px-4 py-3 text-zinc-400 uppercase text-[10px] font-bold">{p.userType}</td>
-                                  <td className="px-4 py-3">
+                                <tr key={p.employeeNo} className={isDark ? "hover:bg-slate-800/30" : "hover:bg-slate-50/60"}>
+                                  <td className="px-5 py-3.5 font-mono font-bold text-[#0ea5e9]">#{p.employeeNo}</td>
+                                  <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-200">{p.name}</td>
+                                  <td className="px-5 py-3.5 text-slate-400 uppercase text-[10px] font-black">{p.userType}</td>
+                                  <td className="px-5 py-3.5">
                                     <div className="flex gap-2 text-[10px]">
-                                      {p.numOfFace ? <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Face</span> : null}
-                                      {p.numOfFingerprint ? <span className="px-1.5 py-0.5 rounded bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20 font-bold">Fingerprint</span> : null}
+                                      {p.numOfFace ? (
+                                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                                          Face
+                                        </span>
+                                      ) : null}
+                                      {p.numOfFingerprint ? (
+                                        <span className="px-2 py-0.5 rounded-md bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20 font-bold">
+                                          Fingerprint
+                                        </span>
+                                      ) : null}
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3 text-right">
+                                  <td className="px-5 py-3.5 text-right">
                                     {matchedEmp ? (
-                                      <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                                      <span className="px-2.5 py-1 text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg">
                                         Linked ({matchedEmp.firstName})
                                       </span>
                                     ) : (
                                       <button
                                         type="button"
                                         onClick={() => {
-                                          openEditEmp({ id: "", firstName: p.name, lastName: "", role: "Nurse", payType: "Fixed Monthly", basicSalary: 50000, hourlyRate: 300, sessionRate: 0, commissionRate: 0, biometricId: p.employeeNo, epfEligible: true, taxable: false, active: true,  branchId: null, allowanceIds: [], leaveBalances: { annual: 14, sick: 7, casual: 3 }, attendanceBonusRate: 0, punctualBonusRate: 0, incomeBonusPercentage: 0 });
+                                          openEditEmp({
+                                            id: "",
+                                            firstName: p.name,
+                                            lastName: "",
+                                            role: "Nurse",
+                                            payType: "Fixed Monthly",
+                                            basicSalary: 50000,
+                                            hourlyRate: 300,
+                                            sessionRate: 0,
+                                            commissionRate: 0,
+                                            biometricId: p.employeeNo,
+                                            epfEligible: true,
+                                            taxable: false,
+                                            active: true,
+                                            branchId: null,
+                                            allowanceIds: [],
+                                            leaveBalances: { annual: 14, sick: 7, casual: 3 },
+                                            attendanceBonusRate: 0,
+                                            punctualBonusRate: 0,
+                                            incomeBonusPercentage: 0
+                                          });
                                         }}
-                                        className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded hover:bg-amber-500/20"
+                                        className="px-2.5 py-1 text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg hover:bg-amber-500/20 transition"
                                       >
                                         Import to Staff
                                       </button>
@@ -5069,72 +5462,284 @@ export default function Home() {
 
                 {/* OPERATING HOURS */}
                 {settingsTab==="operating-hours" && (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Clinic Operating Hours</h3>
-                      <button onClick={() => updateOperatingHours(operatingHours)} className={`px-4 py-2 text-xs font-bold rounded shadow transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}>Save Hours</button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {operatingHours.map(h => (
-                        <div key={h.id} className={`p-4 rounded-xl border ${isDark ? "bg-white/5 border-white/10" : "bg-white border-black/5 shadow-sm"}`}>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-bold text-sm">{["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][h.dayOfWeek]}</span>
-                            <label className="flex items-center cursor-pointer">
-                              <div className="relative">
-                                <input type="checkbox" className="sr-only" checked={h.isOpen} onChange={() => {
-                                  const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, isOpen: !o.isOpen } : o);
-                                  updateOperatingHours(updated);
-                                }} />
-                                <div className={`block w-10 h-6 rounded-full transition-colors ${h.isOpen ? "bg-[#0ea5e9]" : (isDark ? "bg-zinc-700" : "bg-zinc-300")}`}></div>
-                                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${h.isOpen ? "transform translate-x-4" : ""}`}></div>
-                              </div>
-                            </label>
-                          </div>
-                          {h.isOpen ? (
-                            <div className="flex gap-2">
-                              <input type="time" value={h.startTime} onChange={e => {
-                                const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, startTime: e.target.value } : o);
-                                updateOperatingHours(updated);
-                              }} className={`w-full border rounded-md px-3 py-2 text-xs focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 ${isDark ? "bg-zinc-950 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-800"}`} />
-                              <input type="time" value={h.endTime} onChange={e => {
-                                const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, endTime: e.target.value } : o);
-                                updateOperatingHours(updated);
-                              }} className={`w-full border rounded-md px-3 py-2 text-xs focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 ${isDark ? "bg-zinc-950 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-800"}`} />
-                            </div>
-                          ) : (
-                            <div className="text-xs text-zinc-500 italic py-2 text-center">Closed</div>
-                          )}
+                  <div className="space-y-6 max-w-4xl">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                            Clinic Operating Schedule &amp; Shifts
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            {operatingHours.filter(h => h.isOpen).length} Days Active
+                          </span>
                         </div>
-                      ))}
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Standard clinic hours for each day of the week. Used to calculate shift durations, punctuality grace, and overtime hours.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateOperatingHours(operatingHours);
+                          setSettingsSaveMsg("Operating hours updated successfully!");
+                          setTimeout(() => setSettingsSaveMsg(""), 3000);
+                        }}
+                        className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                      >
+                        <Icons.Check className="w-3.5 h-3.5" />
+                        <span>Save Operating Schedule</span>
+                      </button>
+                    </div>
+
+                    {/* Day Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {operatingHours.map(h => {
+                        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                        const dayName = dayNames[h.dayOfWeek];
+                        
+                        // Calculate shift duration
+                        let durationLabel = "";
+                        if (h.isOpen && h.startTime && h.endTime) {
+                          const [sH, sM] = h.startTime.split(":").map(Number);
+                          const [eH, eM] = h.endTime.split(":").map(Number);
+                          if (!isNaN(sH) && !isNaN(eH)) {
+                            let diff = (eH * 60 + eM) - (sH * 60 + sM);
+                            if (diff < 0) diff += 24 * 60;
+                            const hrs = Math.floor(diff / 60);
+                            const mins = diff % 60;
+                            durationLabel = mins > 0 ? `${hrs}h ${mins}m` : `${hrs} hrs`;
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={h.id}
+                            className={`p-5 rounded-2xl border transition-all ${
+                              h.isOpen
+                                ? isDark
+                                  ? "bg-slate-900/80 border-slate-700/80 shadow-md"
+                                  : "bg-white border-slate-200/90 shadow-xs"
+                                : isDark
+                                  ? "bg-slate-950/40 border-slate-800/60 opacity-60"
+                                  : "bg-slate-50/70 border-slate-200/60 opacity-60"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-3.5">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${h.isOpen ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`} />
+                                <span className="font-black text-sm text-slate-900 dark:text-white">{dayName}</span>
+                              </div>
+                              <label className="flex items-center cursor-pointer">
+                                <div className="relative">
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={h.isOpen}
+                                    onChange={() => {
+                                      const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, isOpen: !o.isOpen } : o);
+                                      updateOperatingHours(updated);
+                                    }}
+                                  />
+                                  <div className={`block w-10 h-6 rounded-full transition-colors ${
+                                    h.isOpen ? "bg-[#0F85B0]" : (isDark ? "bg-slate-700" : "bg-slate-300")
+                                  }`} />
+                                  <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${
+                                    h.isOpen ? "transform translate-x-4" : ""
+                                  }`} />
+                                </div>
+                              </label>
+                            </div>
+
+                            {h.isOpen ? (
+                              <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                      Opens
+                                    </label>
+                                    <input
+                                      type="time"
+                                      value={h.startTime}
+                                      onChange={e => {
+                                        const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, startTime: e.target.value } : o);
+                                        updateOperatingHours(updated);
+                                      }}
+                                      className={`w-full rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0] transition ${
+                                        isDark
+                                          ? "bg-slate-950 border border-slate-800 text-white"
+                                          : "bg-slate-50 border border-slate-200 text-slate-900"
+                                      }`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                      Closes
+                                    </label>
+                                    <input
+                                      type="time"
+                                      value={h.endTime}
+                                      onChange={e => {
+                                        const updated = operatingHours.map(o => o.dayOfWeek === h.dayOfWeek ? { ...o, endTime: e.target.value } : o);
+                                        updateOperatingHours(updated);
+                                      }}
+                                      className={`w-full rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0] transition ${
+                                        isDark
+                                          ? "bg-slate-950 border border-slate-800 text-white"
+                                          : "bg-slate-50 border border-slate-200 text-slate-900"
+                                      }`}
+                                    />
+                                  </div>
+                                </div>
+                                {durationLabel && (
+                                  <div className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-between border ${
+                                    isDark ? "bg-[#042633]/40 border-[#09526e]/40 text-[#7dd3fc]" : "bg-sky-50 border-sky-200 text-[#0c6c8f]"
+                                  }`}>
+                                    <span className="flex items-center gap-1">
+                                      <Icons.Clock className="w-3 h-3 text-[#38bdf8]" />
+                                      <span>Shift Window</span>
+                                    </span>
+                                    <span className="font-black">{durationLabel}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className={`py-4 text-center rounded-xl border border-dashed text-xs font-semibold ${
+                                isDark ? "border-slate-800 text-slate-500" : "border-slate-200 text-slate-400"
+                              }`}>
+                                Clinic Closed
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
-
-
                 {/* HOLIDAYS */}
                 {settingsTab==="holidays" && (
-                  <div className="space-y-4 max-w-2xl">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Sri Lankan Public Holidays 2026</h3>
-                      <button onClick={()=>setShowAddHolidayModal(true)} className="px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow">+ Add Holiday</button>
-                    </div>
-                    <div className="space-y-1.5">
-                      {publicHolidays.map(h=>(
-                        <div key={h.id} className={`flex items-center justify-between px-4 py-3 rounded-lg border ${isDark?"bg-zinc-950/30 border-zinc-800":"bg-zinc-50 border-zinc-200"}`}>
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono text-[10px] text-zinc-500">{h.date}</span>
-                            <span className="font-semibold text-xs">{h.name}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <label className="flex items-center gap-1.5 text-[10px] cursor-pointer">
-                              <input type="checkbox" checked={h.isDoubleOT} onChange={()=>toggleHolidayDoubleOT(h.id)} className="rounded"/>
-                              <span className="text-zinc-500">2× OT</span>
-                            </label>
-                            <button onClick={()=>deleteHoliday(h.id)} className="text-rose-500 hover:underline text-[10px] font-bold">Delete</button>
-                          </div>
+                  <div className="space-y-6 max-w-3xl">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                            Public &amp; Mercantile Holidays (2026)
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#0ea5e9]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0ea5e9]/20">
+                            {publicHolidays.length} Holidays Configured
+                          </span>
                         </div>
-                      ))}
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Sri Lankan official holidays used to compute double-rate overtime (2× OT) and special attendance bonus multipliers.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddHolidayModal(true)}
+                        className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                      >
+                        <Icons.Plus className="w-3.5 h-3.5" />
+                        <span>Add Holiday</span>
+                      </button>
+                    </div>
+
+                    {/* Holiday Cards Feed */}
+                    <div className="space-y-2.5">
+                      {publicHolidays.length === 0 ? (
+                        <div className={`p-8 text-center rounded-2xl border border-dashed ${
+                          isDark ? "border-slate-800 text-slate-500" : "border-slate-200 text-slate-400"
+                        }`}>
+                          <Icons.Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="font-bold text-sm">No holidays registered</p>
+                          <p className="text-xs mt-0.5">Click &quot;Add Holiday&quot; above to create a holiday entry.</p>
+                        </div>
+                      ) : (
+                        publicHolidays.map(h => {
+                          let monthStr = "CAL";
+                          let dayStr = "--";
+                          let weekdayStr = "";
+                          try {
+                            const d = new Date(h.date + "T00:00:00");
+                            monthStr = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+                            dayStr = d.toLocaleDateString("en-US", { day: "2-digit" });
+                            weekdayStr = d.toLocaleDateString("en-US", { weekday: "short" });
+                          } catch {
+                            // fallback
+                          }
+
+                          return (
+                            <div
+                              key={h.id}
+                              className={`flex items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                                isDark
+                                  ? "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
+                                  : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-xs"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3.5">
+                                {/* Calendar Tear-off Icon */}
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#0F85B0]/15 via-sky-500/10 to-teal-400/15 border border-[#0F85B0]/30 flex flex-col items-center justify-center shrink-0">
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-[#0F85B0] dark:text-[#38bdf8] leading-none">
+                                    {monthStr}
+                                  </span>
+                                  <span className="text-base font-black text-slate-900 dark:text-white leading-none mt-0.5">
+                                    {dayStr}
+                                  </span>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                                      {h.name}
+                                    </h4>
+                                    {weekdayStr && (
+                                      <span className="text-[10px] font-medium text-slate-400">
+                                        ({weekdayStr})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="font-mono text-[10px] text-slate-400 mt-0.5">{h.date}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 sm:gap-4">
+                                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition ${
+                                  h.isDoubleOT
+                                    ? isDark
+                                      ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                                      : "bg-amber-50 border-amber-200 text-amber-700"
+                                    : isDark
+                                      ? "border-slate-800 text-slate-500 hover:bg-slate-800"
+                                      : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                                }`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={h.isDoubleOT}
+                                    onChange={() => toggleHolidayDoubleOT(h.id)}
+                                    className="w-3.5 h-3.5 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                                  />
+                                  <span className="whitespace-nowrap">2× Overtime</span>
+                                </label>
+
+                                <button
+                                  type="button"
+                                  onClick={() => deleteHoliday(h.id)}
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
+                                    isDark
+                                      ? "border-rose-900/40 bg-rose-950/20 text-rose-400 hover:bg-rose-900/40"
+                                      : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-xs"
+                                  }`}
+                                  title="Delete Holiday"
+                                >
+                                  <Icons.Trash className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 )}
