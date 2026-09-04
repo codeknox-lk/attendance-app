@@ -265,6 +265,7 @@ export interface AppContextProps {
   addHoliday: (holiday: Omit<PublicHoliday, "id">) => void;
   deleteHoliday: (id: string) => void;
   toggleHolidayDoubleOT: (id: string) => void;
+  syncSriLankanHolidays: (year?: number) => Promise<number>;
   updateBiometricSettings: (settings: Partial<BiometricSettings>) => void;
   updateEpfSettings: (settings: Partial<EpfSettings>) => void;
   simulateHikvisionScan: (biometricId?: string, authMethod?: string) => Promise<Record<string, unknown> | undefined>;
@@ -1022,12 +1023,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     } catch {}
   };
-  const toggleHolidayDoubleOT = (id: string) => {
+  const toggleHolidayDoubleOT = async (id: string) => {
+    let nextVal = false;
     setPublicHolidays(p => {
-      const list = p.map(h => h.id === id ? { ...h, isDoubleOT: !h.isDoubleOT } : h);
+      const list = p.map(h => {
+        if (h.id === id) {
+          nextVal = !h.isDoubleOT;
+          return { ...h, isDoubleOT: nextVal };
+        }
+        return h;
+      });
       if (typeof window !== "undefined") { try { localStorage.setItem("medicflow_public_holidays", JSON.stringify(list)); } catch {} }
       return list;
     });
+    try {
+      await apiFetch("/api/holidays", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isDoubleOT: nextVal }),
+      });
+    } catch {}
+  };
+
+  const syncSriLankanHolidays = async (year: number = 2026): Promise<number> => {
+    try {
+      const res = await apiFetch("/api/holidays", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync", year }),
+      });
+      const data = await res.json();
+      if (data.success && data.holidays) {
+        const sorted = data.holidays.map((h: Record<string, unknown>) => ({
+          id: String(h.id),
+          date: String(h.date),
+          name: String(h.name),
+          isDoubleOT: Boolean(h.isDoubleOT),
+        })).sort((a: PublicHoliday, b: PublicHoliday) => a.date.localeCompare(b.date));
+        setPublicHolidays(sorted);
+        return data.syncedCount || sorted.length;
+      }
+    } catch {}
+    return 0;
   };
 
   const updateBiometricSettings = (s: Partial<BiometricSettings>) => {
@@ -1265,7 +1302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateOperatingHours,
       addLeaveRequest, updateLeaveRequest, approveLeave, rejectLeave,
       finalizePayroll, addBranch, updateBranch, deleteBranch,
-      addHoliday, deleteHoliday, toggleHolidayDoubleOT,
+      addHoliday, deleteHoliday, toggleHolidayDoubleOT, syncSriLankanHolidays,
       updateBiometricSettings, updateEpfSettings, updatePayrollCycleStartDay, updateApitSlabs, updateMonthlyExcessIncome,
       triggerSync, simulateHikvisionScan,
       isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,

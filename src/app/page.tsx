@@ -216,6 +216,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
     </svg>
   ),
+  Globe: ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+    </svg>
+  ),
   Download: ({ className = "w-4 h-4" }: { className?: string }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -641,7 +646,7 @@ export default function Home() {
     updateOperatingHours,
     addLeaveRequest, approveLeave, rejectLeave,
     finalizePayroll,
-    addHoliday, deleteHoliday, toggleHolidayDoubleOT,
+    addHoliday, deleteHoliday, toggleHolidayDoubleOT, syncSriLankanHolidays,
     updateBiometricSettings, updateEpfSettings, updatePayrollCycleStartDay,
     triggerSync, simulateHikvisionScan,
     isAdminAuthenticated, verifyAdminPin, updateAdminPin, logoutAdmin,
@@ -760,6 +765,32 @@ export default function Home() {
 
   const [showAddHolidayModal, setShowAddHolidayModal] = useState(false);
   const [newHoliday, setNewHoliday] = useState<Omit<PublicHoliday,"id">>({ date:"", name:"", isDoubleOT:false });
+  const [selectedHolidayYear, setSelectedHolidayYear] = useState<number | "All">(2026);
+  const [isSyncingHolidays, setIsSyncingHolidays] = useState(false);
+  const [holidaySyncFeedback, setHolidaySyncFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const handleSyncHolidays = async (targetYear?: number) => {
+    const yr = targetYear ?? (typeof selectedHolidayYear === "number" ? selectedHolidayYear : 2026);
+    setIsSyncingHolidays(true);
+    setHolidaySyncFeedback(null);
+    try {
+      const count = await syncSriLankanHolidays(yr);
+      setHolidaySyncFeedback({
+        type: "success",
+        message: `Successfully synchronized ${count} official Sri Lankan gazetted holidays for ${yr}!`,
+      });
+      if (typeof selectedHolidayYear === "number" && selectedHolidayYear !== yr) {
+        setSelectedHolidayYear(yr);
+      }
+    } catch (err: any) {
+      setHolidaySyncFeedback({
+        type: "error",
+        message: err?.message || "Failed to synchronize holidays. Please try again.",
+      });
+    } finally {
+      setIsSyncingHolidays(false);
+    }
+  };
 
   const [selfServicePin, setSelfServicePin] = useState("");
   const [selfServiceEmp, setSelfServiceEmp] = useState<Employee|null>(null);
@@ -6277,126 +6308,270 @@ export default function Home() {
                 {settingsTab==="holidays" && (
                   <div className="space-y-6 w-full">
                     {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
-                            Public &amp; Mercantile Holidays (2026)
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                            <Icons.Calendar className="w-5 h-5 text-[#0F85B0] dark:text-[#38bdf8]" />
+                            <span>Public &amp; Mercantile Holidays (Sri Lanka)</span>
                           </h3>
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#0ea5e9]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0ea5e9]/20">
-                            {publicHolidays.length} Holidays Configured
+                            {publicHolidays.length} Total Configured
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Sri Lankan official holidays used to compute double-rate overtime (2× OT) and special attendance bonus multipliers.
+                        <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">
+                          Official Sri Lankan gazetted holidays and Full Moon Poya calendar. Synchronizes automatically for current and upcoming years (2026, 2027, 2028+) to accurately compute 2× Overtime rates and attendance allowances.
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddHolidayModal(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
-                      >
-                        <Icons.Plus className="w-3.5 h-3.5" />
-                        <span>Add Holiday</span>
-                      </button>
+
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <button
+                          type="button"
+                          disabled={isSyncingHolidays}
+                          onClick={() => handleSyncHolidays(typeof selectedHolidayYear === "number" ? selectedHolidayYear : 2026)}
+                          className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold rounded-xl transition active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                          title="Fetch and import official Sri Lankan gazetted holidays"
+                        >
+                          <Icons.Refresh className={`w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8] ${isSyncingHolidays ? "animate-spin" : ""}`} />
+                          <span>
+                            {isSyncingHolidays
+                              ? "Syncing Calendar..."
+                              : `Auto-Sync ${typeof selectedHolidayYear === "number" ? selectedHolidayYear : "LK"} Holidays`}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowAddHolidayModal(true)}
+                          className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                        >
+                          <Icons.Plus className="w-3.5 h-3.5" />
+                          <span>Add Holiday</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Feedback Alert Banner */}
+                    {holidaySyncFeedback && (
+                      <div className={`p-3.5 rounded-2xl border text-xs font-semibold flex items-center justify-between gap-3 animate-in fade-in transition-all ${
+                        holidaySyncFeedback.type === "success"
+                          ? isDark
+                            ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-300"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                          : isDark
+                            ? "bg-rose-950/40 border-rose-800/60 text-rose-300"
+                            : "bg-rose-50 border-rose-200 text-rose-800"
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          {holidaySyncFeedback.type === "success" ? (
+                            <Icons.Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Icons.X className="w-4 h-4 text-rose-500 shrink-0" />
+                          )}
+                          <span>{holidaySyncFeedback.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setHolidaySyncFeedback(null)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+                        >
+                          <Icons.X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Year Selector Tabs Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {([2026, 2027, 2028, "All"] as const).map(yr => {
+                          const isSelected = selectedHolidayYear === yr;
+                          const count = yr === "All"
+                            ? publicHolidays.length
+                            : publicHolidays.filter(h => h.date.startsWith(String(yr))).length;
+                          return (
+                            <button
+                              key={String(yr)}
+                              type="button"
+                              onClick={() => setSelectedHolidayYear(yr)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                                isSelected
+                                  ? "bg-gradient-to-r from-[#0F85B0] to-sky-500 text-white shadow-xs"
+                                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"
+                              }`}
+                            >
+                              <span>{yr === "All" ? "All Years" : `${yr}${yr === 2026 || yr === 2027 ? " (Gazetted)" : " (Auto-Sync)"}`}</span>
+                              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                                isSelected
+                                  ? "bg-white/20 text-white"
+                                  : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                              }`}>
+                                {count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {typeof selectedHolidayYear === "number" && (
+                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 px-2">
+                          <Icons.Globe className="w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8]" />
+                          <span>Sri Lanka Statutory Calendar</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Holiday Cards Feed */}
-                    <div className="space-y-2.5">
-                      {publicHolidays.length === 0 ? (
-                        <div className={`p-8 text-center rounded-2xl border border-dashed ${
-                          isDark ? "border-slate-800 text-slate-500" : "border-slate-200 text-slate-400"
-                        }`}>
-                          <Icons.Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          <p className="font-bold text-sm">No holidays registered</p>
-                          <p className="text-xs mt-0.5">Click &quot;Add Holiday&quot; above to create a holiday entry.</p>
-                        </div>
-                      ) : (
-                        publicHolidays.map(h => {
-                          let monthStr = "CAL";
-                          let dayStr = "--";
-                          let weekdayStr = "";
-                          try {
-                            const d = new Date(h.date + "T00:00:00");
-                            monthStr = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
-                            dayStr = d.toLocaleDateString("en-US", { day: "2-digit" });
-                            weekdayStr = d.toLocaleDateString("en-US", { weekday: "short" });
-                          } catch {
-                            // fallback
-                          }
+                    {(() => {
+                      const filteredHolidays = publicHolidays
+                        .filter(h => selectedHolidayYear === "All" ? true : h.date.startsWith(String(selectedHolidayYear)))
+                        .sort((a, b) => a.date.localeCompare(b.date));
 
-                          return (
-                            <div
-                              key={h.id}
-                              className={`flex items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all ${
-                                isDark
-                                  ? "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
-                                  : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-xs"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3.5">
-                                {/* Calendar Tear-off Icon */}
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#0F85B0]/15 via-sky-500/10 to-teal-400/15 border border-[#0F85B0]/30 flex flex-col items-center justify-center shrink-0">
-                                  <span className="text-[9px] font-black uppercase tracking-wider text-[#0F85B0] dark:text-[#38bdf8] leading-none">
-                                    {monthStr}
-                                  </span>
-                                  <span className="text-base font-black text-slate-900 dark:text-white leading-none mt-0.5">
-                                    {dayStr}
-                                  </span>
-                                </div>
-
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
-                                      {h.name}
-                                    </h4>
-                                    {weekdayStr && (
-                                      <span className="text-[10px] font-medium text-slate-400">
-                                        ({weekdayStr})
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="font-mono text-[10px] text-slate-400 mt-0.5">{h.date}</p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-3 sm:gap-4">
-                                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition ${
-                                  h.isDoubleOT
-                                    ? isDark
-                                      ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                                      : "bg-amber-50 border-amber-200 text-amber-700"
-                                    : isDark
-                                      ? "border-slate-800 text-slate-500 hover:bg-slate-800"
-                                      : "border-slate-200 text-slate-500 hover:bg-slate-50"
-                                }`}>
-                                  <input
-                                    type="checkbox"
-                                    checked={h.isDoubleOT}
-                                    onChange={() => toggleHolidayDoubleOT(h.id)}
-                                    className="w-3.5 h-3.5 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
-                                  />
-                                  <span className="whitespace-nowrap">2× Overtime</span>
-                                </label>
-
+                      if (filteredHolidays.length === 0) {
+                        return (
+                          <div className={`p-10 text-center rounded-2xl border border-dashed ${
+                            isDark ? "border-slate-800 text-slate-500" : "border-slate-200 text-slate-400"
+                          }`}>
+                            <Icons.Calendar className="w-10 h-10 mx-auto mb-2 opacity-50 text-[#0F85B0]" />
+                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">
+                              No holidays registered for {selectedHolidayYear === "All" ? "any year" : selectedHolidayYear}
+                            </p>
+                            <p className="text-xs mt-1 max-w-md mx-auto text-slate-500">
+                              Click below to synchronize the official Sri Lankan gazetted calendar automatically without manual data entry.
+                            </p>
+                            <div className="mt-4 flex justify-center gap-2">
+                              {typeof selectedHolidayYear === "number" && (
                                 <button
                                   type="button"
-                                  onClick={() => deleteHoliday(h.id)}
-                                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
-                                    isDark
-                                      ? "border-rose-900/40 bg-rose-950/20 text-rose-400 hover:bg-rose-900/40"
-                                      : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-xs"
-                                  }`}
-                                  title="Delete Holiday"
+                                  disabled={isSyncingHolidays}
+                                  onClick={() => handleSyncHolidays(selectedHolidayYear)}
+                                  className="px-4 py-2 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5"
                                 >
-                                  <Icons.Trash className="w-3.5 h-3.5" />
+                                  <Icons.Refresh className={`w-3.5 h-3.5 ${isSyncingHolidays ? "animate-spin" : ""}`} />
+                                  <span>Sync {selectedHolidayYear} Holidays Now</span>
                                 </button>
-                              </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setShowAddHolidayModal(true)}
+                                className="px-3.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-bold rounded-xl transition text-slate-700 dark:text-slate-300"
+                              >
+                                Add Manually
+                              </button>
                             </div>
-                          );
-                        })
-                      )}
-                    </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2.5">
+                          {filteredHolidays.map(h => {
+                            let monthStr = "CAL";
+                            let dayStr = "--";
+                            let weekdayStr = "";
+                            let yearStr = h.date.split("-")[0];
+                            try {
+                              const d = new Date(h.date + "T00:00:00");
+                              monthStr = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+                              dayStr = d.toLocaleDateString("en-US", { day: "2-digit" });
+                              weekdayStr = d.toLocaleDateString("en-US", { weekday: "short" });
+                            } catch {
+                              // fallback
+                            }
+
+                            const isPoya = h.name.toLowerCase().includes("poya");
+                            const isMercantile = !h.name.toLowerCase().includes("bank");
+
+                            return (
+                              <div
+                                key={h.id}
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all gap-3 ${
+                                  isDark
+                                    ? "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
+                                    : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-xs"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3.5">
+                                  {/* Calendar Tear-off Icon */}
+                                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#0F85B0]/15 via-sky-500/10 to-teal-400/15 border border-[#0F85B0]/30 flex flex-col items-center justify-center shrink-0">
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-[#0F85B0] dark:text-[#38bdf8] leading-none">
+                                      {monthStr}
+                                    </span>
+                                    <span className="text-base font-black text-slate-900 dark:text-white leading-none mt-0.5">
+                                      {dayStr}
+                                    </span>
+                                    <span className="text-[8px] font-semibold text-slate-400 dark:text-slate-500 leading-none mt-0.5">
+                                      {yearStr}
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <h4 className="font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                                        {h.name}
+                                      </h4>
+                                      {weekdayStr && (
+                                        <span className="text-[10px] font-medium text-slate-400">
+                                          ({weekdayStr})
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                      <span className="font-mono text-[10px] text-slate-400">{h.date}</span>
+                                      {isPoya && (
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/20">
+                                          🌕 Full Moon Poya
+                                        </span>
+                                      )}
+                                      {isMercantile && (
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/20">
+                                          Mercantile
+                                        </span>
+                                      )}
+                                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+                                        Gazetted
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                                  <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition ${
+                                    h.isDoubleOT
+                                      ? isDark
+                                        ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                                        : "bg-amber-50 border-amber-200 text-amber-700"
+                                      : isDark
+                                        ? "border-slate-800 text-slate-500 hover:bg-slate-800"
+                                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                                  }`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={h.isDoubleOT}
+                                      onChange={() => toggleHolidayDoubleOT(h.id)}
+                                      className="w-3.5 h-3.5 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                                    />
+                                    <span className="whitespace-nowrap">2× Overtime</span>
+                                  </label>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteHoliday(h.id)}
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
+                                      isDark
+                                        ? "border-rose-900/40 bg-rose-950/20 text-rose-400 hover:bg-rose-900/40"
+                                        : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-xs"
+                                    }`}
+                                    title="Delete Holiday"
+                                  >
+                                    <Icons.Trash className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
