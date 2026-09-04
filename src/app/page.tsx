@@ -3217,21 +3217,22 @@ export default function Home() {
                       </p>
 
                       {/* Input Group */}
-                      <div className="w-full max-w-md mt-6">
+                      {/* Input Group */}
+                      <div className="w-full max-w-lg mt-6">
                         <div className={`relative flex items-center rounded-2xl border p-1.5 transition-all shadow-inner ${
                           isDark
                             ? "bg-slate-950/80 border-slate-800 focus-within:border-[#38bdf8] focus-within:ring-2 focus-within:ring-[#0ea5e9]/20"
                             : "bg-slate-50 border-slate-300/80 focus-within:bg-white focus-within:border-[#0F85B0] focus-within:ring-3 focus-within:ring-[#0F85B0]/10"
                         }`}>
-                          <div className="pl-3 text-slate-400">
+                          <div className="pl-3.5 text-slate-400">
                             <Icons.Search className="w-5 h-5" />
                           </div>
                           <input
                             value={selfServicePin}
                             onChange={e => { setSelfServicePin(e.target.value); setSelfServiceError(""); }}
                             onKeyDown={e => { if (e.key === "Enter") handleSelfServicePin(); }}
-                            placeholder="Enter Biometric ID (e.g. SH001, SH002)..."
-                            className="w-full px-3 py-2 text-sm font-semibold bg-transparent focus:outline-none placeholder:text-slate-400"
+                            placeholder="Biometric ID (e.g. SH001, SH002)"
+                            className="w-full px-3 py-2.5 text-sm font-semibold bg-transparent focus:outline-none placeholder:text-slate-400"
                           />
                           <button
                             onClick={handleSelfServicePin}
@@ -3250,8 +3251,8 @@ export default function Home() {
 
                       {/* Security note */}
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-6">
-                        <Icons.LockClosed className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>Hardware sync active with Hikvision Face Terminal DS-K1T320MFWX</span>
+                        <Icons.Shield className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Confidential Employee Portal · End-to-End Encrypted Live Sync</span>
                       </div>
                     </div>
                   </div>
