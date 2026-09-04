@@ -6599,120 +6599,443 @@ export default function Home() {
 
       {/* ═══════════════ MODAL: ADD/EDIT EMPLOYEE ═══════════════ */}
       {showAddEmpModal && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm ${isDark ? "bg-zinc-950/70" : "bg-slate-900/40"}`}>
-          <div className={`w-full max-w-xl rounded-xl overflow-hidden shadow-2xl border ${isDark?"bg-zinc-900 border-zinc-800":"bg-white border-zinc-200"}`}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{editingEmpId?"Edit Staff Profile":"Register New Staff Profile"}</h3>
-              <button onClick={()=>setShowAddEmpModal(false)} className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all ${isDark ? "bg-slate-950/75" : "bg-slate-900/40"}`}>
+          <div className={`w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border transition-all backdrop-blur-2xl ${
+            isDark ? "bg-slate-900/95 border-slate-800 shadow-black/60" : "bg-white/95 border-slate-200/90 shadow-2xl shadow-slate-900/10"
+          }`}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/80 dark:border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                  isDark ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/20 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                }`}>
+                  <Icons.User className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                    {editingEmpId ? "Edit Staff Profile" : "Register New Staff Profile"}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {editingEmpId 
+                      ? `${newEmp.firstName} ${newEmp.lastName} • ${newEmp.role}` 
+                      : "Configure personal info, compensation, and biometric identifiers"}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowAddEmpModal(false)} 
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <Icons.X className="w-5 h-5" />
+              </button>
             </div>
-            <form onSubmit={handleAddEmployee} className="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelCls}>First Name</label><input required className={inputCls(isDark)} value={newEmp.firstName} onChange={e=>setNewEmp(p=>({...p,firstName:e.target.value}))}/></div>
-                <div><label className={labelCls}>Last Name</label><input required className={inputCls(isDark)} value={newEmp.lastName} onChange={e=>setNewEmp(p=>({...p,lastName:e.target.value}))}/></div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelCls}>Role</label><input required className={inputCls(isDark)} value={newEmp.role} onChange={e=>setNewEmp(p=>({...p,role:e.target.value as Employee["role"]}))} placeholder="e.g. Developer" /></div>
-                <div><label className={labelCls}>Pay Type</label><select className={inputCls(isDark)} value={newEmp.payType} onChange={e=>setNewEmp(p=>({...p,payType:e.target.value as Employee["payType"]}))}>{["Fixed Monthly","Session-based","Hourly"].map(r=><option key={r}>{r}</option>)}</select></div>
-              </div>
-              {newEmp.payType==="Fixed Monthly"&&<div className="grid grid-cols-2 gap-4"><div><label className={labelCls}>Basic Salary (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.basicSalary} onChange={e=>setNewEmp(p=>({...p,basicSalary:parseFloat(e.target.value)||0}))}/></div><div><label className={labelCls}>Hourly Rate (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.hourlyRate} onChange={e=>setNewEmp(p=>({...p,hourlyRate:parseFloat(e.target.value)||0}))}/></div></div>}
-              {newEmp.payType==="Session-based"&&<div><label className={labelCls}>Session Rate (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.sessionRate} onChange={e=>setNewEmp(p=>({...p,sessionRate:parseFloat(e.target.value)||0}))}/></div>}
-              {newEmp.payType==="Hourly"&&<div><label className={labelCls}>Hourly Rate (LKR)</label><input type="number" className={inputCls(isDark)} value={newEmp.hourlyRate} onChange={e=>setNewEmp(p=>({...p,hourlyRate:parseFloat(e.target.value)||0}))}/></div>}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2"><label className={labelCls}>Biometric ID</label><input required className={inputCls(isDark)} value={newEmp.biometricId} onChange={e=>setNewEmp(p=>({...p,biometricId:e.target.value}))}/></div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className={labelCls}>Worked Day Bonus (LKR / day)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="25"
-                    className={inputCls(isDark)}
-                    placeholder={`Global: LKR ${salarySettings.globalWorkedDayBonus}`}
-                    value={newEmp.attendanceBonusRate || ""}
-                    onChange={e => setNewEmp(p => ({ ...p, attendanceBonusRate: parseFloat(e.target.value) || 0 }))}
-                  />
-                  <p className="text-[10px] text-zinc-400 mt-1">Set 0 to inherit Global: LKR {salarySettings.globalWorkedDayBonus}</p>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleAddEmployee} className="p-6 space-y-5 text-xs max-h-[78vh] overflow-y-auto">
+              {/* SECTION 1: IDENTITY & ROLE */}
+              <div className={`p-4 sm:p-5 rounded-2xl border ${
+                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+              } space-y-4`}>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#0F85B0]" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Basic Identity &amp; Position
+                  </span>
                 </div>
-                <div>
-                  <label className={labelCls}>Punctual Bonus (LKR / day)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="25"
-                    className={inputCls(isDark)}
-                    placeholder={`Global: LKR ${salarySettings.globalPunctualBonus}`}
-                    value={newEmp.punctualBonusRate || ""}
-                    onChange={e => setNewEmp(p => ({ ...p, punctualBonusRate: parseFloat(e.target.value) || 0 }))}
-                  />
-                  <p className="text-[10px] text-zinc-400 mt-1">Set 0 to inherit Global: LKR {salarySettings.globalPunctualBonus}</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>First Name</label>
+                    <input 
+                      required 
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                        isDark ? "bg-slate-900 border-slate-700 text-white placeholder:text-slate-500" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      value={newEmp.firstName} 
+                      onChange={e => setNewEmp(p => ({ ...p, firstName: e.target.value }))}
+                      placeholder="e.g. Deshani"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Last Name</label>
+                    <input 
+                      required 
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                        isDark ? "bg-slate-900 border-slate-700 text-white placeholder:text-slate-500" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      value={newEmp.lastName} 
+                      onChange={e => setNewEmp(p => ({ ...p, lastName: e.target.value }))}
+                      placeholder="e.g. Thennakoon"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className={labelCls}>Income Bonus (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.5"
-                    className={inputCls(isDark)}
-                    placeholder={`Global: ${salarySettings.globalIncomeBonusPct}%`}
-                    value={newEmp.incomeBonusPercentage || ""}
-                    onChange={e => setNewEmp(p => ({ ...p, incomeBonusPercentage: parseFloat(e.target.value) || 0 }))}
-                  />
-                  <p className="text-[10px] text-zinc-400 mt-1">Set 0 to inherit Global: {salarySettings.globalIncomeBonusPct}%</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelCls}>Designation / Role</label>
+                    <input 
+                      required 
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                        isDark ? "bg-slate-900 border-slate-700 text-white placeholder:text-slate-500" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      value={newEmp.role} 
+                      onChange={e => setNewEmp(p => ({ ...p, role: e.target.value as Employee["role"] }))} 
+                      placeholder="e.g. Lead Dental Nurse" 
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Employment Pay Type</label>
+                    <select 
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      value={newEmp.payType} 
+                      onChange={e => setNewEmp(p => ({ ...p, payType: e.target.value as Employee["payType"] }))}
+                    >
+                      {["Fixed Monthly", "Session-based", "Hourly"].map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Biometric Device ID</label>
+                    <div className="relative">
+                      <input 
+                        required 
+                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-8 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                          isDark ? "bg-slate-900 border-slate-700 text-[#38bdf8]" : "bg-white border-slate-200 text-[#0F85B0]"
+                        }`}
+                        value={newEmp.biometricId} 
+                        onChange={e => setNewEmp(p => ({ ...p, biometricId: e.target.value }))}
+                        placeholder="e.g. SH001"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">ID</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div><label className={labelCls}>Assign Allowances</label><div className="flex flex-wrap gap-2 mt-1">{allowances.map(al=>{const has=newEmp.allowanceIds.includes(al.id);return(<label key={al.id} className="flex items-center gap-1.5 text-[10px] cursor-pointer"><input type="checkbox" checked={has} onChange={()=>setNewEmp(p=>({...p,allowanceIds:has?p.allowanceIds.filter(id=>id!==al.id):[...p.allowanceIds,al.id]}))}/>{al.name}</label>);})}</div></div>
-              <div className="flex justify-between gap-5 border-t border-zinc-200 dark:border-zinc-800 pt-3">
-                <div className="flex gap-5">
-                  <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newEmp.epfEligible} onChange={e=>setNewEmp(p=>({...p,epfEligible:e.target.checked}))} className="rounded"/>EPF / ETF Eligible</label>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={newEmp.taxable} onChange={e=>setNewEmp(p=>({...p,taxable:e.target.checked}))} className="rounded"/>APIT Taxable</label>
+              {/* SECTION 2: COMPENSATION & HOURLY RATES */}
+              <div className={`p-4 sm:p-5 rounded-2xl border ${
+                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+              } space-y-4`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Compensation &amp; Overtime Base Rate
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    LKR Currency
+                  </span>
                 </div>
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                  <input type="checkbox" checked={newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0} onChange={e => {
-                    if (e.target.checked) {
-                      setNewEmp(p => ({ ...p, customOperatingHours: operatingHours.map(h => ({ ...h, id: `NEW-${Math.random()}` })) }));
-                    } else {
-                      setNewEmp(p => ({ ...p, customOperatingHours: [] }));
-                    }
-                  }} className="rounded"/>
-                  <span className="font-bold text-amber-500">Use Custom Operating Hours</span>
+
+                {newEmp.payType === "Fixed Monthly" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className={labelCls}>Basic Salary (LKR)</label>
+                        <span className="text-[10px] text-slate-400">Monthly</span>
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          className={`w-full border rounded-xl px-3.5 py-2.5 pr-14 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                            isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                          }`}
+                          value={newEmp.basicSalary} 
+                          onChange={e => setNewEmp(p => ({ ...p, basicSalary: parseFloat(e.target.value) || 0 }))}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">Base figure for statutory EPF/ETF contributions &amp; no-pay deductions.</p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className={labelCls}>Profile Hourly Rate (LKR)</label>
+                        <span className="text-[10px] font-bold text-[#0F85B0] dark:text-[#38bdf8]">OT Manual Base</span>
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          className={`w-full border rounded-xl px-3.5 py-2.5 pr-16 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                            isDark ? "bg-slate-900 border-slate-700 text-[#38bdf8]" : "bg-white border-slate-200 text-[#0F85B0]"
+                          }`}
+                          value={newEmp.hourlyRate} 
+                          onChange={e => setNewEmp(p => ({ ...p, hourlyRate: parseFloat(e.target.value) || 0 }))}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR/hr</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">Used when &ldquo;Employee Profile Fixed Hourly Rate&rdquo; is selected in OT settings.</p>
+                    </div>
+                  </div>
+                )}
+
+                {newEmp.payType === "Session-based" && (
+                  <div>
+                    <label className={labelCls}>Session Rate (LKR)</label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-16 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                          isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                        }`}
+                        value={newEmp.sessionRate} 
+                        onChange={e => setNewEmp(p => ({ ...p, sessionRate: parseFloat(e.target.value) || 0 }))}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR/session</span>
+                    </div>
+                  </div>
+                )}
+
+                {newEmp.payType === "Hourly" && (
+                  <div>
+                    <label className={labelCls}>Standard Hourly Rate (LKR)</label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-16 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                          isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                        }`}
+                        value={newEmp.hourlyRate} 
+                        onChange={e => setNewEmp(p => ({ ...p, hourlyRate: parseFloat(e.target.value) || 0 }))}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR/hr</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 3: DYNAMIC BONUSES */}
+              <div className={`p-4 sm:p-5 rounded-2xl border ${
+                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+              } space-y-4`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#0ea5e9]" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Biometric Dynamic Bonuses (Employee Overrides)
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">Set 0 to inherit global</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelCls}>Worked Day Bonus (LKR / day)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="25"
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      placeholder={`Global: LKR ${salarySettings.globalWorkedDayBonus}`}
+                      value={newEmp.attendanceBonusRate || ""}
+                      onChange={e => setNewEmp(p => ({ ...p, attendanceBonusRate: parseFloat(e.target.value) || 0 }))}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Default: LKR {salarySettings.globalWorkedDayBonus || 200}</p>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Punctual Bonus (LKR / day)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="25"
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      placeholder={`Global: LKR ${salarySettings.globalPunctualBonus}`}
+                      value={newEmp.punctualBonusRate || ""}
+                      onChange={e => setNewEmp(p => ({ ...p, punctualBonusRate: parseFloat(e.target.value) || 0 }))}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Default: LKR {salarySettings.globalPunctualBonus || 200}</p>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Income Bonus (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      placeholder={`Global: ${salarySettings.globalIncomeBonusPct}%`}
+                      value={newEmp.incomeBonusPercentage || ""}
+                      onChange={e => setNewEmp(p => ({ ...p, incomeBonusPercentage: parseFloat(e.target.value) || 0 }))}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Default: {salarySettings.globalIncomeBonusPct}%</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: ASSIGN ALLOWANCES */}
+              <div className={`p-4 sm:p-5 rounded-2xl border ${
+                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
+              } space-y-3`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Icons.Wallet className="w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8]" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Assign Clinic Allowances
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">{allowances.length} available</span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {allowances.map(al => {
+                    const has = newEmp.allowanceIds.includes(al.id);
+                    return (
+                      <button
+                        key={al.id}
+                        type="button"
+                        onClick={() => setNewEmp(p => ({
+                          ...p,
+                          allowanceIds: has ? p.allowanceIds.filter(id => id !== al.id) : [...p.allowanceIds, al.id]
+                        }))}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          has 
+                            ? "bg-[#0F85B0] text-white border-[#0F85B0] shadow-sm shadow-[#0F85B0]/25" 
+                            : isDark ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        <div className={`w-3.5 h-3.5 rounded-md flex items-center justify-center ${has ? "bg-white/20 text-white" : "border border-slate-400/40"}`}>
+                          {has && <Icons.Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                        <span>{al.name}</span>
+                        <span className={`text-[10px] ${has ? "text-white/80" : "text-slate-400"}`}>
+                          (LKR {al.amount.toLocaleString()})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SECTION 5: COMPLIANCE & CUSTOM SCHEDULE TOGGLES */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                  newEmp.epfEligible 
+                    ? isDark ? "bg-emerald-950/20 border-emerald-500/40 text-emerald-300" : "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                }`}>
+                  <input 
+                    type="checkbox" 
+                    checked={newEmp.epfEligible} 
+                    onChange={e => setNewEmp(p => ({ ...p, epfEligible: e.target.checked }))} 
+                    className="w-4 h-4 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                  />
+                  <div>
+                    <span className="text-xs font-black block">EPF / ETF Eligible</span>
+                    <span className="text-[10px] opacity-75">Statutory 8% / 12% / 3%</span>
+                  </div>
+                </label>
+
+                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                  newEmp.taxable 
+                    ? isDark ? "bg-sky-950/20 border-sky-500/40 text-sky-300" : "bg-sky-50/70 border-sky-200 text-sky-900"
+                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                }`}>
+                  <input 
+                    type="checkbox" 
+                    checked={newEmp.taxable} 
+                    onChange={e => setNewEmp(p => ({ ...p, taxable: e.target.checked }))} 
+                    className="w-4 h-4 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                  />
+                  <div>
+                    <span className="text-xs font-black block">APIT Taxable</span>
+                    <span className="text-[10px] opacity-75">Withholding tax slabs</span>
+                  </div>
+                </label>
+
+                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                  Boolean(newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0)
+                    ? isDark ? "bg-amber-950/20 border-amber-500/40 text-amber-300" : "bg-amber-50/70 border-amber-200 text-amber-900"
+                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                }`}>
+                  <input 
+                    type="checkbox" 
+                    checked={Boolean(newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0)} 
+                    onChange={e => {
+                      if (e.target.checked) {
+                        setNewEmp(p => ({ ...p, customOperatingHours: operatingHours.map(h => ({ ...h, id: `NEW-${Math.random()}` })) }));
+                      } else {
+                        setNewEmp(p => ({ ...p, customOperatingHours: [] }));
+                      }
+                    }} 
+                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
+                  />
+                  <div>
+                    <span className="text-xs font-black block">Custom Schedule</span>
+                    <span className="text-[10px] opacity-75">Overrides clinic hours</span>
+                  </div>
                 </label>
               </div>
 
+              {/* CUSTOM WEEKLY SCHEDULE DETAILS (IF ENABLED) */}
               {newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0 && (
-                <div className={`p-4 rounded-xl border ${isDark ? "border-amber-500/30 bg-amber-500/5" : "border-amber-200 bg-amber-50"}`}>
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-3">Custom Weekly Schedule</h4>
+                <div className={`p-4 sm:p-5 rounded-2xl border ${
+                  isDark ? "border-amber-500/30 bg-amber-500/5" : "border-amber-200 bg-amber-50/60"
+                } space-y-3`}>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Personalized Shift Operating Hours
+                    </h4>
+                    <span className="text-[10px] text-slate-400">Used for OT &amp; punctuality</span>
+                  </div>
                   <div className="space-y-2">
                     {newEmp.customOperatingHours.map((hour, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <label className="flex items-center gap-2 w-28">
-                          <input type="checkbox" className="rounded" checked={hour.isOpen} onChange={e => {
-                            const updated = [...newEmp.customOperatingHours!];
-                            updated[idx].isOpen = e.target.checked;
-                            setNewEmp(p => ({ ...p, customOperatingHours: updated }));
-                          }}/>
-                          <span className={`font-bold ${hour.isOpen ? (isDark ? "text-zinc-200" : "text-zinc-800") : "text-zinc-500 line-through"}`}>
-                            {["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][hour.dayOfWeek]}
+                      <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50">
+                        <label className="flex items-center gap-2 w-32 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="w-3.5 h-3.5 rounded text-amber-500" 
+                            checked={hour.isOpen} 
+                            onChange={e => {
+                              const updated = [...newEmp.customOperatingHours!];
+                              updated[idx].isOpen = e.target.checked;
+                              setNewEmp(p => ({ ...p, customOperatingHours: updated }));
+                            }}
+                          />
+                          <span className={`font-bold ${hour.isOpen ? (isDark ? "text-slate-200" : "text-slate-800") : "text-slate-400 line-through"}`}>
+                            {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][hour.dayOfWeek]}
                           </span>
                         </label>
                         {hour.isOpen ? (
                           <div className="flex items-center gap-2">
-                            <input type="time" className={inputCls(isDark)} value={hour.startTime} onChange={e => {
-                              const updated = [...newEmp.customOperatingHours!];
-                              updated[idx].startTime = e.target.value;
-                              setNewEmp(p => ({ ...p, customOperatingHours: updated }));
-                            }}/>
-                            <span className="text-zinc-500">to</span>
-                            <input type="time" className={inputCls(isDark)} value={hour.endTime} onChange={e => {
-                              const updated = [...newEmp.customOperatingHours!];
-                              updated[idx].endTime = e.target.value;
-                              setNewEmp(p => ({ ...p, customOperatingHours: updated }));
-                            }}/>
+                            <input 
+                              type="time" 
+                              className={`border rounded-lg px-2.5 py-1 text-xs font-mono font-bold ${
+                                isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                              }`}
+                              value={hour.startTime} 
+                              onChange={e => {
+                                const updated = [...newEmp.customOperatingHours!];
+                                updated[idx].startTime = e.target.value;
+                                setNewEmp(p => ({ ...p, customOperatingHours: updated }));
+                              }}
+                            />
+                            <span className="text-slate-400 text-xs">to</span>
+                            <input 
+                              type="time" 
+                              className={`border rounded-lg px-2.5 py-1 text-xs font-mono font-bold ${
+                                isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                              }`}
+                              value={hour.endTime} 
+                              onChange={e => {
+                                const updated = [...newEmp.customOperatingHours!];
+                                updated[idx].endTime = e.target.value;
+                                setNewEmp(p => ({ ...p, customOperatingHours: updated }));
+                              }}
+                            />
                           </div>
                         ) : (
-                          <span className="text-[10px] uppercase font-bold text-amber-500 w-[220px] text-right">Closed</span>
+                          <span className="text-[10px] uppercase font-bold text-amber-500 px-3 py-1 rounded-md bg-amber-500/10">Closed</span>
                         )}
                       </div>
                     ))}
@@ -6720,9 +7043,26 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                <button type="button" onClick={()=>setShowAddEmpModal(false)} className={`px-4 py-2 text-xs font-bold rounded border ${isDark?"border-zinc-700 text-zinc-400":"border-zinc-200 text-zinc-600"}`}>Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded shadow">{editingEmpId?"Save Changes":"Register Profile"}</button>
+              {/* MODAL FOOTER ACTIONS */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddEmpModal(false)} 
+                  className={`px-5 py-2.5 text-xs font-bold rounded-xl border transition active:scale-95 ${
+                    isDark 
+                      ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" 
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-6 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-black rounded-xl shadow-lg shadow-[#0F85B0]/25 transition active:scale-95 flex items-center gap-2 cursor-pointer"
+                >
+                  <Icons.Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>{editingEmpId ? "Save Changes" : "Register Profile"}</span>
+                </button>
               </div>
             </form>
           </div>
