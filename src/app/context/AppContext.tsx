@@ -748,44 +748,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     hydrateFromDatabase();
 
-    // Live background polling every 4 seconds for instant biometric scan & staff updates
+    // Live background polling every 30 seconds for biometric scans (paused when tab is hidden)
     const pollInterval = setInterval(async () => {
       try {
+        if (typeof document !== "undefined" && document.hidden) return;
+
         const today = new Date();
         const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-        const [attRes, empRes] = await Promise.all([
-          apiFetch(`/api/attendance?month=${currentMonth}`),
-          apiFetch("/api/employees"),
-        ]);
-        const [attData, empData] = await Promise.all([
-          attRes.json(),
-          empRes.json(),
-        ]);
-
-        if (empData.success && empData.employees && Array.isArray(empData.employees)) {
-          const dbEmployees: Employee[] = empData.employees.map((e: Record<string, unknown>) => ({
-            id: String(e.id),
-            firstName: String(e.firstName),
-            lastName: String(e.lastName),
-            role: (e.role as Employee["role"]) || "Doctor",
-            payType: (e.payType as Employee["payType"]) || "Fixed Monthly",
-            basicSalary: Number(e.basicSalary) || 0,
-            hourlyRate: Number(e.hourlyRate) || 0,
-            sessionRate: Number(e.sessionRate) || 0,
-            commissionRate: Number(e.commissionRate) || 0,
-            biometricId: String(e.biometricId),
-            epfEligible: Boolean(e.epfEligible),
-            taxable: Boolean(e.taxable),
-            active: Boolean(e.active),
-            branchId: (e.branchId as string) || null,
-            allowanceIds: [],
-            leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
-            attendanceBonusRate: Number(e.attendanceBonusRate) || 0,
-            punctualBonusRate: Number(e.punctualBonusRate) || 0,
-            incomeBonusPercentage: Number(e.incomeBonusPercentage) || 0,
-          }));
-          setEmployees(dbEmployees);
-        }
+        const attRes = await apiFetch(`/api/attendance?month=${currentMonth}`);
+        const attData = await attRes.json();
 
         if (attData.success && attData.logs) {
           const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
@@ -808,7 +779,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } catch {}
-    }, 4000);
+    }, 30000);
 
     return () => clearInterval(pollInterval);
   }, []);
