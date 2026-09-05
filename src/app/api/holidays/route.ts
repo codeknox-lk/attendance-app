@@ -49,21 +49,25 @@ export async function POST(req: NextRequest) {
       const targetYear = Number(body.year) || new Date().getFullYear();
       const yearHolidays = await getSriLankanHolidaysForYear(targetYear);
 
-      for (const h of yearHolidays) {
-        const existing = await db.publicHoliday.findFirst({
-          where: { clinicId, date: h.date },
-        });
-        if (!existing) {
-          await db.publicHoliday.create({
-            data: {
-              clinicId,
-              date: h.date,
-              name: h.name,
-              isDoubleOT: h.isDoubleOT,
-            },
-          });
-        }
-      }
+      // Remove existing holidays for this year to prevent stale/shifted holiday records
+      await db.publicHoliday.deleteMany({
+        where: {
+          clinicId,
+          date: {
+            startsWith: `${targetYear}-`,
+          },
+        },
+      });
+
+      await db.publicHoliday.createMany({
+        data: yearHolidays.map((h) => ({
+          clinicId,
+          date: h.date,
+          name: h.name,
+          isDoubleOT: h.isDoubleOT,
+        })),
+        skipDuplicates: true,
+      });
 
       const allHolidays = await db.publicHoliday.findMany({
         where: { clinicId },
