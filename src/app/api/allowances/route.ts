@@ -22,8 +22,37 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, amount, type, isTaxable, taxDeductible, epfApplicable } = body;
     const clinicId = await getClinicId(req);
+
+    // Support Employee Allowance Assignment
+    if (body.action === "assign") {
+      const { employeeId, allowanceId, overrideAmount } = body;
+      if (!employeeId || !allowanceId) {
+        return NextResponse.json({ success: false, error: "employeeId and allowanceId are required" }, { status: 400 });
+      }
+      await db.employeeAllowance.deleteMany({
+        where: { employeeId, allowanceId },
+      });
+      const ea = await db.employeeAllowance.create({
+        data: {
+          employeeId,
+          allowanceId,
+          overrideAmount: overrideAmount !== undefined && overrideAmount !== null ? Number(overrideAmount) : null,
+        },
+      });
+      return NextResponse.json({ success: true, employeeAllowance: ea });
+    }
+
+    // Support Employee Allowance Removal
+    if (body.action === "remove") {
+      const { employeeId, allowanceId } = body;
+      await db.employeeAllowance.deleteMany({
+        where: { employeeId, allowanceId },
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    const { name, amount, type, isTaxable, taxDeductible, epfApplicable } = body;
 
     const allowance = await db.allowance.create({
       data: {

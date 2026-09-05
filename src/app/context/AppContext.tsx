@@ -766,7 +766,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             name: String(a.name),
             amount: Number(a.amount) || 0,
             epfApplicable: Boolean(a.epfApplicable),
-            taxDeductible: Boolean(a.isTaxable),
+            taxDeductible: !Boolean(a.isTaxable),
             type: (a.type as Allowance["type"]) || "Fixed",
           }));
           setAllowances(dbAllowances);
@@ -930,14 +930,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   };
 
-  const assignAllowanceToEmployee = (employeeId: string, allowanceId: string, overrideAmount?: number) => {
+  const assignAllowanceToEmployee = async (employeeId: string, allowanceId: string, overrideAmount?: number) => {
     if (employeeAllowances.some(ea => ea.employeeId===employeeId && ea.allowanceId===allowanceId)) return;
     setEmployeeAllowances(p => [...p, { id: `EA-${Date.now()}`, employeeId, allowanceId, overrideAmount: overrideAmount ?? null }]);
     setEmployees(p => p.map(e => e.id===employeeId ? { ...e, allowanceIds: [...e.allowanceIds, allowanceId] } : e));
+    try {
+      await apiFetch("/api/allowances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "assign", employeeId, allowanceId, overrideAmount }),
+      });
+    } catch {}
   };
-  const removeAllowanceFromEmployee = (employeeId: string, allowanceId: string) => {
+  const removeAllowanceFromEmployee = async (employeeId: string, allowanceId: string) => {
     setEmployeeAllowances(p => p.filter(ea => !(ea.employeeId===employeeId && ea.allowanceId===allowanceId)));
     setEmployees(p => p.map(e => e.id===employeeId ? { ...e, allowanceIds: e.allowanceIds.filter(id => id!==allowanceId) } : e));
+    try {
+      await apiFetch("/api/allowances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove", employeeId, allowanceId }),
+      });
+    } catch {}
   };
 
   const updateOperatingHours = async (hours: ClinicOperatingHours[]) => {
