@@ -2,11 +2,11 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getClinicId } from "@/lib/clinic";
 
 export async function GET(req: NextRequest) {
   try {
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const employees = await db.employee.findMany({
       where: { clinicId },
@@ -40,8 +40,7 @@ export async function POST(req: NextRequest) {
       customOperatingHours,
     } = body;
 
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const existing = await db.employee.findFirst({
       where: { biometricId: String(biometricId), clinicId },
@@ -130,8 +129,7 @@ export async function PUT(req: NextRequest) {
       customOperatingHours,
     } = body;
 
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     if (!id && !biometricId) {
       return NextResponse.json({ success: false, error: "Employee ID or Biometric ID is required" }, { status: 400 });
@@ -209,8 +207,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

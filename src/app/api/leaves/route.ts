@@ -2,11 +2,11 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getClinicId } from "@/lib/clinic";
 
 export async function GET(req: NextRequest) {
   try {
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const leaves = await db.leaveRequest.findMany({
       where: { clinicId },
@@ -26,8 +26,7 @@ export async function POST(req: NextRequest) {
     const { employeeId, type, startDate, endDate, reason, note, status } = body;
 
     const inputEmpId = String(employeeId);
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } }).catch(() => null);
     if (dbEmp && dbEmp.clinicId !== clinicId) dbEmp = null;
@@ -68,8 +67,7 @@ export async function PUT(req: NextRequest) {
     if (!id || !status) {
       return NextResponse.json({ success: false, error: "ID and status are required" }, { status: 400 });
     }
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const leave = await db.leaveRequest.update({
       where: { id, clinicId },

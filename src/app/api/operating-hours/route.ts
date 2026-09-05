@@ -1,24 +1,32 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getClinicId } from "@/lib/clinic";
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const clinicId = req.headers.get("x-clinic-id") || searchParams.get("clinicId") || "default-clinic-id";
+    const clinicId = await getClinicId(req);
 
-    const hours = await db.clinicOperatingHours.findMany({
+    let hours = await db.clinicOperatingHours.findMany({
       where: { clinicId },
       orderBy: { dayOfWeek: "asc" },
     });
 
-    // If empty, initialize defaults
+    // If no hours found for this specific clinicId, check if any exist in DB
+    if (hours.length === 0) {
+      hours = await db.clinicOperatingHours.findMany({
+        orderBy: { dayOfWeek: "asc" },
+        take: 7,
+      });
+    }
+
+    // If still empty, initialize standard clinic hours
     if (hours.length === 0) {
       const defaultHours = [];
       for (let i = 0; i < 7; i++) {
         defaultHours.push({
           clinicId,
           dayOfWeek: i,
-          isOpen: i !== 1, // Monday closed by default as per clinic preference
+          isOpen: i !== 1, // Monday closed by default
           startTime: i === 0 ? "07:30" : i === 6 ? "13:00" : "15:30",
           endTime: i === 0 ? "14:00" : "19:00",
         });
@@ -26,13 +34,13 @@ export async function GET(req: Request) {
 
       await db.clinicOperatingHours.createMany({
         data: defaultHours,
+        skipDuplicates: true,
       });
 
-      const newHours = await db.clinicOperatingHours.findMany({
+      hours = await db.clinicOperatingHours.findMany({
         where: { clinicId },
         orderBy: { dayOfWeek: "asc" },
       });
-      return NextResponse.json({ success: true, operatingHours: newHours });
     }
 
     return NextResponse.json({ success: true, operatingHours: hours });
@@ -52,7 +60,7 @@ interface IncomingHour {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const clinicId = req.headers.get("x-clinic-id") || body.clinicId || "default-clinic-id";
+    const clinicId = await getClinicId(req);
     const { operatingHours } = body;
 
     // We expect operatingHours to be an array of exactly 7 objects (0-6)

@@ -302,6 +302,15 @@ const initialEmployeeAllowances: EmployeeAllowance[] = [];
 const initialLeaveRequests: LeaveRequest[] = [];
 const initialPayrollHistory: PayrollPeriod[] = [];
 
+const initialOperatingHours: ClinicOperatingHours[] = [
+  { id: "DEF-0", clinicId: "default-clinic-id", dayOfWeek: 0, isOpen: true, startTime: "07:30", endTime: "14:00" },
+  { id: "DEF-1", clinicId: "default-clinic-id", dayOfWeek: 1, isOpen: false, startTime: "15:30", endTime: "17:00" },
+  { id: "DEF-2", clinicId: "default-clinic-id", dayOfWeek: 2, isOpen: true, startTime: "15:30", endTime: "19:00" },
+  { id: "DEF-3", clinicId: "default-clinic-id", dayOfWeek: 3, isOpen: true, startTime: "15:30", endTime: "19:00" },
+  { id: "DEF-4", clinicId: "default-clinic-id", dayOfWeek: 4, isOpen: true, startTime: "15:30", endTime: "19:00" },
+  { id: "DEF-5", clinicId: "default-clinic-id", dayOfWeek: 5, isOpen: true, startTime: "15:30", endTime: "19:00" },
+  { id: "DEF-6", clinicId: "default-clinic-id", dayOfWeek: 6, isOpen: true, startTime: "13:00", endTime: "19:00" },
+];
 
 const initialPublicHolidays: PublicHoliday[] = [
   { id: "HOL-001", date: "2026-01-01", name: "New Year's Day", isDoubleOT: true },
@@ -363,7 +372,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const [allowances, setAllowances] = useState<Allowance[]>(initialAllowances);
   const [employeeAllowances, setEmployeeAllowances] = useState<EmployeeAllowance[]>(initialEmployeeAllowances);
-  const [operatingHours, setOperatingHours] = useState<ClinicOperatingHours[]>([]);
+  const [operatingHours, setOperatingHours] = useState<ClinicOperatingHours[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_operating_hours");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length === 7) return parsed;
+        }
+      } catch {}
+    }
+    return initialOperatingHours;
+  });
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [payrollHistory, setPayrollHistory] = useState<PayrollPeriod[]>(initialPayrollHistory);
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
@@ -649,8 +669,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const hoursRes = await apiFetch("/api/operating-hours");
         const hoursData = await hoursRes.json();
-        if (hoursData.success && hoursData.operatingHours) {
+        if (hoursData.success && hoursData.operatingHours && hoursData.operatingHours.length > 0) {
           setOperatingHours(hoursData.operatingHours);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("medicflow_operating_hours", JSON.stringify(hoursData.operatingHours));
+            } catch {}
+          }
         }
 
         const holRes = await apiFetch("/api/holidays");
@@ -685,6 +710,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const clnRes = await apiFetch("/api/clinics");
         const clnData = await clnRes.json();
         if (clnData.success && clnData.clinic) {
+          // Heal stale session clinicId if needed
+          setCurrentUser(prev => {
+            if (prev && prev.clinicId !== clnData.clinic.id) {
+              const updated = { ...prev, clinicId: clnData.clinic.id, clinicName: clnData.clinic.name };
+              if (typeof window !== "undefined") {
+                try {
+                  localStorage.setItem("medicflow_user_session", JSON.stringify(updated));
+                } catch {}
+              }
+              return updated;
+            }
+            return prev;
+          });
+
           setCompanyProfile(prev => ({
             ...prev,
             name: clnData.clinic.name || prev.name,
@@ -903,6 +942,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateOperatingHours = async (hours: ClinicOperatingHours[]) => {
     setOperatingHours(hours);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("medicflow_operating_hours", JSON.stringify(hours));
+      } catch {}
+    }
     try {
       const res = await apiFetch("/api/operating-hours", {
         method: "POST",
@@ -910,6 +954,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({ operatingHours: hours }),
       });
       const data = await res.json();
+      if (data.success && data.operatingHours) {
+        setOperatingHours(data.operatingHours);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("medicflow_operating_hours", JSON.stringify(data.operatingHours));
+          } catch {}
+        }
+      }
       if (data.success) {
         // Re-fetch attendance logs to pull newly recalculated OT values from the database
         try {

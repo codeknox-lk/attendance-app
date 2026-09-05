@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-
-
+import { getClinicId } from "@/lib/clinic";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,8 +10,7 @@ export async function GET(req: NextRequest) {
     const date = searchParams.get("date");
     const month = searchParams.get("month");
 
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     let whereClause: any = { clinicId };
     if (date) {
@@ -42,8 +40,7 @@ export async function POST(req: NextRequest) {
     const inputEmpId = String(employeeId || "1");
     const logDate = date || new Date().toISOString().split("T")[0];
 
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     // Dynamic Employee Lookup to guarantee valid Foreign Key
     let dbEmp = await db.employee.findUnique({ where: { id: inputEmpId } }).catch(() => null);
@@ -118,8 +115,7 @@ export async function PUT(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Log ID is required" }, { status: 400 });
     }
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const log = await db.attendanceLog.update({
       where: { id, clinicId },
@@ -147,8 +143,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Log ID is required" }, { status: 400 });
     }
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     await db.attendanceLog.delete({
       where: { id, clinicId },

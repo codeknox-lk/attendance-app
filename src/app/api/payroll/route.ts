@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getClinicId } from "@/lib/clinic";
 
 export async function GET(req: NextRequest) {
   try {
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month");
@@ -25,8 +25,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const body = await req.json();
     const { month, label, grossSalaryPool, netRemittances, totalEpf, totalEtf, totalApit, employeeCount } = body;

@@ -2,11 +2,11 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getClinicId } from "@/lib/clinic";
 
 export async function GET(req: NextRequest) {
   try {
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const allowances = await db.allowance.findMany({ where: { clinicId } });
     const employeeAllowances = await db.employeeAllowance.findMany({
@@ -23,8 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, amount, type, isTaxable, taxDeductible, epfApplicable } = body;
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const allowance = await db.allowance.create({
       data: {
@@ -52,8 +51,7 @@ export async function PUT(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Allowance ID required" }, { status: 400 });
     }
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const target = await db.allowance.findFirst({ where: { id, clinicId } });
     if (!target) {
@@ -86,8 +84,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Allowance ID required" }, { status: 400 });
     }
-    const clinicId = req.headers.get("x-clinic-id");
-    if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });
+    const clinicId = await getClinicId(req);
 
     const target = await db.allowance.findFirst({ where: { id, clinicId } });
     if (!target) {
