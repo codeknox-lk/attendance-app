@@ -595,7 +595,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return false;
   };
-  const logoutAdmin = () => logoutUser();
+  const logoutAdmin = () => {
+    setIsAdminAuthenticated(false);
+    pushAudit({ action: "UPDATE", entity: "AdminAuth", entityId: "LOCK", details: "Admin PIN session locked" });
+  };
 
   useEffect(() => {
     const hydrateFromDatabase = async () => {

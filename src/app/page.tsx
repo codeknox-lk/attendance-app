@@ -1323,40 +1323,35 @@ export default function Home() {
             })}
           </nav>
         </div>
-        <div className={`p-3.5 border-t space-y-2 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+        <div className={`p-3 border-t space-y-2 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
           {/* Admin PIN Lock & Session Card */}
-          <div className={`p-2 rounded-xl border transition-all ${
+          <div className={`p-2.5 rounded-xl border transition-all ${
             isDark
               ? "bg-slate-900/60 border-slate-800/80"
               : "bg-slate-50/80 border-slate-200/80 shadow-xs"
           }`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
                   isAdminAuthenticated
-                    ? isDark ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                    ? isDark ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60" : "bg-emerald-100/70 text-emerald-600 border border-emerald-200"
                     : isDark ? "bg-slate-800 text-slate-400 border border-slate-700" : "bg-white text-slate-500 border border-slate-200"
                 }`}>
                   {isAdminAuthenticated ? (
-                    <Icons.LockOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <Icons.LockOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   ) : (
-                    <Icons.LockClosed className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                    <Icons.LockClosed className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                   )}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAdminAuthenticated ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                    <span className={`text-xs font-bold leading-none truncate ${
-                      isAdminAuthenticated
-                        ? isDark ? "text-slate-200" : "text-slate-800"
-                        : isDark ? "text-slate-400" : "text-slate-600"
-                    }`}>
-                      {isAdminAuthenticated ? "Session Active" : "Admin Locked"}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-tight mt-0.5 truncate">
-                    {isAdminAuthenticated ? "Protected tabs open" : "PIN required"}
-                  </p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAdminAuthenticated ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  <span className={`text-xs font-bold whitespace-nowrap ${
+                    isAdminAuthenticated
+                      ? isDark ? "text-slate-200" : "text-slate-800"
+                      : isDark ? "text-slate-400" : "text-slate-600"
+                  }`}>
+                    {isAdminAuthenticated ? "Session Active" : "Admin Locked"}
+                  </span>
                 </div>
               </div>
 
@@ -1365,6 +1360,9 @@ export default function Home() {
                 onClick={() => {
                   if (isAdminAuthenticated) {
                     logoutAdmin();
+                    if (activeTab === "payroll" || activeTab === "settings") {
+                      setActiveTab("dashboard");
+                    }
                   } else {
                     setTargetProtectedTab(null);
                     setPinError("");
@@ -1415,7 +1413,7 @@ export default function Home() {
       </aside>
 
       {/* ── Desktop Pinned Sidebar ── */}
-      <aside className={`hidden lg:flex w-56 border-r flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
+      <aside className={`hidden lg:flex w-60 border-r flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
         <div className="p-4">
           <div className="flex items-center gap-2.5 mb-7 px-1">
             <div className={`h-9 w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md transition-all shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60 shadow-black/40" : "bg-white border border-slate-200 shadow-slate-200"}`}>
@@ -1468,40 +1466,35 @@ export default function Home() {
             })}
           </nav>
         </div>
-        <div className={`p-3.5 border-t space-y-2 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+        <div className={`p-3 border-t space-y-2 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
           {/* Admin PIN Lock & Session Card */}
-          <div className={`p-2 rounded-xl border transition-all ${
+          <div className={`p-2.5 rounded-xl border transition-all ${
             isDark
               ? "bg-slate-900/60 border-slate-800/80"
               : "bg-slate-50/80 border-slate-200/80 shadow-xs"
           }`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
                   isAdminAuthenticated
-                    ? isDark ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                    ? isDark ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/60" : "bg-emerald-100/70 text-emerald-600 border border-emerald-200"
                     : isDark ? "bg-slate-800 text-slate-400 border border-slate-700" : "bg-white text-slate-500 border border-slate-200"
                 }`}>
                   {isAdminAuthenticated ? (
-                    <Icons.LockOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <Icons.LockOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   ) : (
-                    <Icons.LockClosed className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                    <Icons.LockClosed className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                   )}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAdminAuthenticated ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                    <span className={`text-xs font-bold leading-none truncate ${
-                      isAdminAuthenticated
-                        ? isDark ? "text-slate-200" : "text-slate-800"
-                        : isDark ? "text-slate-400" : "text-slate-600"
-                    }`}>
-                      {isAdminAuthenticated ? "Session Active" : "Admin Locked"}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-tight mt-0.5 truncate">
-                    {isAdminAuthenticated ? "Protected tabs open" : "PIN required"}
-                  </p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAdminAuthenticated ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  <span className={`text-xs font-bold whitespace-nowrap ${
+                    isAdminAuthenticated
+                      ? isDark ? "text-slate-200" : "text-slate-800"
+                      : isDark ? "text-slate-400" : "text-slate-600"
+                  }`}>
+                    {isAdminAuthenticated ? "Session Active" : "Admin Locked"}
+                  </span>
                 </div>
               </div>
 
@@ -1510,6 +1503,9 @@ export default function Home() {
                 onClick={() => {
                   if (isAdminAuthenticated) {
                     logoutAdmin();
+                    if (activeTab === "payroll" || activeTab === "settings") {
+                      setActiveTab("dashboard");
+                    }
                   } else {
                     setTargetProtectedTab(null);
                     setPinError("");
