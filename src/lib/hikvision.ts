@@ -23,8 +23,8 @@ export interface HikvisionDeviceInfo {
 }
 
 export async function fetchHikvisionDeviceInfo(
-  ip: string = "192.168.8.135",
-  port: number = 80,
+  ip: string = "192.168.8.145",
+  port: number = 443,
   username: string = "admin",
   password?: string
 ): Promise<HikvisionDeviceInfo | null> {
@@ -72,13 +72,13 @@ export async function fetchHikvisionDeviceInfo(
     model: "DS-K1T320MFWX",
     serialNumber: "DS-K1T320MFWX20241227V030520ENGQ0614812",
     firmwareVersion: "V3.5.20 build 241227",
-    macAddress: "88:de:39:64:8e:27",
+    macAddress: "2c:cc:7a:24:7f:16",
   };
 }
 
 export async function fetchHikvisionPersons(
-  ip: string = "192.168.8.135",
-  port: number = 80,
+  ip: string = "192.168.8.145",
+  port: number = 443,
   username: string = "admin",
   password?: string
 ): Promise<HikvisionPerson[]> {

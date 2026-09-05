@@ -5,8 +5,8 @@ import { db } from "@/lib/db";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const ip = searchParams.get("ip") || "192.168.8.135";
-    const port = parseInt(searchParams.get("port") || "80");
+    const ip = searchParams.get("ip") || "192.168.8.145";
+    const port = parseInt(searchParams.get("port") || "443");
     const username = searchParams.get("username") || "admin";
     const password = searchParams.get("password") || "";
 

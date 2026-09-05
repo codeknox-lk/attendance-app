@@ -3954,7 +3954,7 @@ export default function Home() {
                         <span className={`px-3 py-1 text-xs font-mono font-bold rounded-xl border self-start sm:self-auto ${
                           isDark ? "bg-emerald-950/40 border-emerald-800/40 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
                         }`}>
-                          ● 192.168.8.135 (Online)
+                          ● 192.168.8.145 (Online)
                         </span>
                       </div>
 
@@ -3965,7 +3965,7 @@ export default function Home() {
                         </div>
                         <div className={`p-3 rounded-2xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-white/80 border-slate-200/80"}`}>
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Local Network IP</span>
-                          <span className="font-mono font-bold text-emerald-500 mt-0.5 block">192.168.8.135:80</span>
+                          <span className="font-mono font-bold text-emerald-500 mt-0.5 block">192.168.8.145:443</span>
                         </div>
                         <div className={`p-3 rounded-2xl border ${isDark ? "bg-slate-950/40 border-slate-800/80" : "bg-white/80 border-slate-200/80"}`}>
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Sync Protocol</span>
@@ -6145,10 +6145,10 @@ export default function Home() {
                       }`}>
                         <div className="font-black flex items-center gap-2 mb-1.5">
                           <Icons.Shield className="w-4 h-4 text-[#38bdf8]" />
-                          <span>Connecting Local Router IP (192.168.8.135) to Cloud App</span>
+                          <span>Connecting Local Router IP (192.168.8.145) to Cloud App</span>
                         </div>
                         <p className="text-[11px] leading-relaxed opacity-90">
-                          Because the Hikvision terminal is on a local private Wi-Fi network (<code>192.168.8.135</code>), cloud servers cannot open inbound HTTP calls to local router IPs directly.
+                          Because the Hikvision terminal is on a local private Wi-Fi network (<code>192.168.8.145</code>), cloud servers cannot open inbound HTTP calls to local router IPs directly.
                           <br />
                           <strong>To register new staff added on Hikvision browser:</strong>
                         </p>

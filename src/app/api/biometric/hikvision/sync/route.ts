@@ -5,8 +5,8 @@ import { db } from "@/lib/db";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const ip = body.ip || "192.168.8.135";
-    const port = parseInt(body.port || "80");
+    const ip = body.ip || "192.168.8.145";
+    const port = parseInt(body.port || "443");
     const username = body.username || "admin";
     const password = body.password || "";
 
@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const ip = searchParams.get("ip") || "192.168.8.135";
-    const port = parseInt(searchParams.get("port") || "80");
+    const ip = searchParams.get("ip") || "192.168.8.145";
+    const port = parseInt(searchParams.get("port") || "443");
 
     const clinicId = req.headers.get("x-clinic-id");
     if (!clinicId) return NextResponse.json({ success: false, error: "Missing x-clinic-id header" }, { status: 400 });

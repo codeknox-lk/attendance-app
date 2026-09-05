@@ -18,8 +18,8 @@ export interface AcsEventRecord {
  * from the machine's internal memory buffer (AcsEvent).
  */
 export async function syncHikvisionDeviceMemory(
-  ip: string = "192.168.8.135",
-  port: number = 80,
+  ip: string = "192.168.8.145",
+  port: number = 443,
   username: string = "admin",
   password?: string,
   clinicId: string = "default-clinic-id"
