@@ -1245,7 +1245,7 @@ export default function Home() {
 
   // ─── MAIN APPLICATION RENDER ──────────────────────────────────────────────────
   return (
-    <div className={`flex flex-1 min-h-screen print:min-h-0 print:block print:bg-white ${isDark ? "dark bg-[#090d16] text-slate-100" : "bg-slate-50 text-slate-800"}`} style={isDark ? { colorScheme: "dark" } : {}}>
+    <div className={`flex flex-1 h-screen overflow-hidden print:h-auto print:overflow-visible print:block print:bg-white ${isDark ? "dark bg-[#090d16] text-slate-100" : "bg-slate-50 text-slate-800"}`} style={isDark ? { colorScheme: "dark" } : {}}>
       {/* ── Mobile/Tablet Backdrop Drawer Overlay ── */}
       <div
         className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden print:hidden ${
@@ -1413,8 +1413,8 @@ export default function Home() {
       </aside>
 
       {/* ── Desktop Pinned Sidebar ── */}
-      <aside className={`hidden lg:flex w-60 border-r flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
-        <div className="p-4">
+      <aside className={`hidden lg:flex w-60 h-full border-r flex-col justify-between shrink-0 transition-all ${isDark ? "bg-slate-900/80 border-slate-800/80 backdrop-blur-xl" : "bg-white/90 border-slate-200 backdrop-blur-xl shadow-sm"}`}>
+        <div className="p-4 overflow-y-auto flex-1">
           <div className="flex items-center gap-2.5 mb-7 px-1">
             <div className={`h-9 w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md transition-all shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60 shadow-black/40" : "bg-white border border-slate-200 shadow-slate-200"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1466,7 +1466,7 @@ export default function Home() {
             })}
           </nav>
         </div>
-        <div className={`p-3 border-t space-y-2 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+        <div className={`p-3 border-t space-y-2 shrink-0 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
           {/* Admin PIN Lock & Session Card */}
           <div className={`p-2.5 rounded-xl border transition-all ${
             isDark
@@ -1556,9 +1556,9 @@ export default function Home() {
       </aside>
 
       {/* ── Main ── */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Header */}
-        <header className={`h-14 border-b flex items-center justify-between px-3 sm:px-6 lg:px-8 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-slate-900/60 border-slate-800/80" : "bg-white/80 border-slate-200 shadow-sm"}`}>
+        <header className={`h-14 border-b flex items-center justify-between px-3 sm:px-6 lg:px-8 shrink-0 backdrop-blur-xl transition-all z-10 ${isDark ? "bg-slate-900/80 border-slate-800/80" : "bg-white/90 border-slate-200 shadow-xs"}`}>
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Hamburger Button on small screens */}
             <button
@@ -1628,8 +1628,9 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Content */}
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6 flex-1">
+        {/* Scrollable Content Container */}
+        <div className="flex-1 overflow-y-auto min-h-0 print:overflow-visible">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6">
 
           {/* ═══════════════ DASHBOARD ═══════════════ */}
           {activeTab === "dashboard" && (
@@ -6779,6 +6780,7 @@ export default function Home() {
             </div>
           )}
 
+          </div>
         </div>
       </main>
 
