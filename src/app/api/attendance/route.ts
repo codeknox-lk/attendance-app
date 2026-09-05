@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getClinicId } from "@/lib/clinic";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     const clinicId = await getClinicId(req);
 
-    let whereClause: any = { clinicId };
+    const whereClause: Prisma.AttendanceLogWhereInput = { clinicId };
     if (date) {
       whereClause.date = date;
     } else if (month) {

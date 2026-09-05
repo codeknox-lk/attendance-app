@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getClinicId } from "@/lib/clinic";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month");
 
-    let whereClause: any = { clinicId };
+    const whereClause: Prisma.PayrollPeriodWhereInput = { clinicId };
     if (month) whereClause.month = month;
 
     const payrolls = await db.payrollPeriod.findMany({
