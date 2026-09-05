@@ -208,23 +208,41 @@ export async function POST(req: NextRequest) {
     // Find or Auto-Create Employee in Database (Ensures Foreign Key is 100% valid)
     let employee = null;
     try {
+      const cleanBioId = String(biometricId).trim();
+      const numericBioId = cleanBioId.replace(/\D/g, "");
+      const intBioId = numericBioId ? String(parseInt(numericBioId, 10)) : "";
+
       employee = await db.employee.findFirst({
-        where: { biometricId: String(biometricId), clinicId },
+        where: {
+          clinicId,
+          OR: [
+            { biometricId: cleanBioId },
+            ...(intBioId ? [{ biometricId: intBioId }] : []),
+            ...(cleanBioId.startsWith("SH") ? [] : [{ biometricId: `SH${cleanBioId.padStart(3, "0")}` }]),
+            ...(intBioId ? [{ biometricId: `SH${intBioId.padStart(3, "0")}` }] : []),
+          ],
+        },
       });
 
       if (!employee) {
-        // Extract name from rawText or body payload if sent by Hikvision
-        const nameMatch = rawText.match(/<name>(.*?)<\/name>/i) || rawText.match(/name["=:\s]+["']?([a-zA-Z0-9_\s]+)/i);
-        const rawName = nameMatch ? nameMatch[1].trim() : ((body.AccessControllerEvent as unknown as Record<string, string>)?.name || body.name || "");
-        const nameParts = rawName ? rawName.split(" ") : [];
-        const fName = nameParts[0] || "Staff";
-        const lName = nameParts.slice(1).join(" ") || `#${biometricId}`;
+        // Extract real person name from XML/JSON (explicitly ignoring event_log / multipart boundaries)
+        let rawName = "";
+        const xmlNameMatch = rawText.match(/<name>([^<]+)<\/name>/i);
+        if (xmlNameMatch && xmlNameMatch[1] && !xmlNameMatch[1].toLowerCase().includes("event_log")) {
+          rawName = xmlNameMatch[1].trim();
+        } else if (body.name && typeof body.name === "string" && !body.name.toLowerCase().includes("event_log")) {
+          rawName = body.name.trim();
+        }
+
+        const nameParts = rawName ? rawName.split(/\s+/) : [];
+        const fName = (nameParts[0] && !nameParts[0].toLowerCase().includes("event_log")) ? nameParts[0] : "Staff";
+        const lName = nameParts.slice(1).join(" ") || `#${cleanBioId}`;
 
         // Auto-register missing biometric ID to guarantee database foreign key integrity
         employee = await db.employee.create({
           data: {
             clinicId,
-            biometricId: String(biometricId),
+            biometricId: cleanBioId,
             firstName: fName,
             lastName: lName,
             role: "Nurse",
