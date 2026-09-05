@@ -1045,7 +1045,7 @@ export default function Home() {
         if (allDef?.epfApplicable) epfBase += amount;
       });
 
-      let basicEarnings = 0; let otPay = 0; let sessionPay = 0;
+      let basicEarnings = 0; let otPay = 0; let sessionPay = 0; let effectiveOtRate = 0;
       // Auto no-pay from absent days
       const noPayDeduction = emp.payType==="Fixed Monthly" ? (emp.basicSalary / (salarySettings.workingDaysPerMonth || 20)) * absentCount : 0;
 
@@ -1064,16 +1064,18 @@ export default function Home() {
           baseRate = emp.basicSalary / 200;
         }
         const mult = salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5;
+        effectiveOtRate = baseRate * mult;
         // Regular OT at standard rate + Holiday OT at statutory Double Rate (2.0x)
-        otPay = (regularOtHours * baseRate * mult) + (doubleOtHours * baseRate * 2.0);
+        otPay = Math.round(((regularOtHours * effectiveOtRate) + (doubleOtHours * baseRate * 2.0)) * 100) / 100;
         epfBase += basicEarnings;
       } else if (emp.payType==="Session-based") {
         sessionPay = sessionCount * emp.sessionRate;
         basicEarnings = sessionPay;
         if (emp.epfEligible) epfBase += basicEarnings;
       } else {
+        effectiveOtRate = emp.hourlyRate * 1.5;
         basicEarnings = sessionCount * 8 * emp.hourlyRate;
-        otPay = (regularOtHours * emp.hourlyRate * 1.5) + (doubleOtHours * emp.hourlyRate * 2.0);
+        otPay = Math.round(((regularOtHours * emp.hourlyRate * 1.5) + (doubleOtHours * emp.hourlyRate * 2.0)) * 100) / 100;
         if (emp.epfEligible) epfBase += basicEarnings;
       }
 
@@ -1105,7 +1107,7 @@ export default function Home() {
 
       return { 
         employee:emp, sessionCount, punctualCount, absentCount, totalOtHours, totalWorkHours,
-        regularOtHours, doubleOtHours,
+        regularOtHours, doubleOtHours, effectiveOtRate,
         basicEarnings, otPay, sessionPay, totalAllowances:totalAllowancesVal, 
         noPayDeduction, manualBonus, manualDeduction, payslipNote: adj.note, 
         employeeEpf, employerEpf, employerEtf, grossEarnings, apitMonthly, netSalary,
@@ -7937,7 +7939,7 @@ export default function Home() {
                 <div className="space-y-1.5 text-xs border-t border-dashed border-zinc-300 pt-3 mb-3">
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500">Basic / Session Pay</span>
-                    <span className="font-mono font-semibold">LKR {calc.basicEarnings.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    <span className="font-mono font-semibold">LKR {calc.basicEarnings.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
@@ -7948,54 +7950,61 @@ export default function Home() {
                   {empAllowances.map((a, i) => (
                     <div key={i} className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">{a.name}</span>
-                      <span className="font-mono font-semibold">LKR {a.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span className="font-mono font-semibold">LKR {a.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
                   ))}
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500 flex items-center gap-1">Worked Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.sessionCount} × {calc.attBonusRate})</span></span>
-                    <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.workedDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.workedDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500 flex items-center gap-1">Punctual Days Bonus <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.punctualCount} × {calc.puncBonusRate})</span></span>
-                    <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.punctualDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.punctualDaysBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
-                    <span className="text-zinc-500 flex items-center gap-1">Overtime Pay <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({formatHoursAndMins(calc.totalOtHours)} × {Math.round(calc.otPay / (calc.totalOtHours || 1))})</span></span>
-                    <span className="font-mono font-semibold text-emerald-600">+LKR {calc.otPay.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    <span className="text-zinc-500 flex items-center gap-1">
+                      Overtime Pay <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">
+                        ({formatHoursAndMins(calc.totalOtHours)} × {(() => {
+                          const rate = calc.totalOtHours > 0 ? (calc.otPay / calc.totalOtHours) : (calc.effectiveOtRate || 0);
+                          return rate % 1 === 0 ? rate.toFixed(0) : rate.toFixed(2);
+                        })()})
+                      </span>
+                    </span>
+                    <span className="font-mono font-semibold text-emerald-600">+LKR {calc.otPay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
 
                   <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                     <span className="text-zinc-500">Exceed Income Bonus</span>
-                    <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.exceedIncomeBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    <span className="font-mono font-semibold text-emerald-600">+LKR {(calc.exceedIncomeBonus || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
 
                   {calc.manualBonus > 0 && (
                     <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">Manual Addition / Bonus</span>
-                      <span className="font-mono font-semibold text-emerald-600">+LKR {calc.manualBonus.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span className="font-mono font-semibold text-emerald-600">+LKR {calc.manualBonus.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
                   )}
 
                   {calc.noPayDeduction > 0 && (
                     <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500 flex items-center gap-1">No-Pay Deduction <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded">({calc.absentCount} days absent)</span></span>
-                      <span className="font-mono font-semibold text-rose-600">-LKR {Math.round(calc.noPayDeduction).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span className="font-mono font-semibold text-rose-600">-LKR {Math.round(calc.noPayDeduction).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
                   )}
 
                   {calc.manualDeduction > 0 && (
                     <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">Manual Deduction</span>
-                      <span className="font-mono font-semibold text-rose-600">-LKR {calc.manualDeduction.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span className="font-mono font-semibold text-rose-600">-LKR {calc.manualDeduction.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between border-b-2 border-dashed border-zinc-300 pb-1.5 pt-1.5 mb-1.5 mt-1.5">
                     <span className="font-extrabold text-zinc-700">GROSS EARNINGS</span>
-                    <span className="font-mono font-extrabold">LKR {calc.grossEarnings.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    <span className="font-mono font-extrabold">LKR {calc.grossEarnings.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
 
                   <div className="flex justify-between items-center border-b border-dotted border-zinc-200 pb-1">
@@ -8004,14 +8013,14 @@ export default function Home() {
                       <span className="text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.5 rounded whitespace-nowrap">(Base: {epfBase.toLocaleString()})</span>
                     </span>
                     <span className="font-mono font-semibold text-rose-600 whitespace-nowrap">
-                      {calc.employee.epfEligible ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString(undefined, {minimumFractionDigits: 2})}` : "Exempt"}
+                      {calc.employee.epfEligible ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : "Exempt"}
                     </span>
                   </div>
 
                   {calc.apitMonthly > 0 && (
                     <div className="flex justify-between border-b border-dotted border-zinc-200 pb-1">
                       <span className="text-zinc-500">APIT Tax</span>
-                      <span className="font-mono font-semibold text-rose-600">-LKR {Math.round(calc.apitMonthly).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span className="font-mono font-semibold text-rose-600">-LKR {Math.round(calc.apitMonthly).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
                   )}
                 </div>
@@ -8024,7 +8033,7 @@ export default function Home() {
 
                 <div className="flex justify-between items-baseline border-t-2 border-dashed border-zinc-300 pt-2.5 mb-3 mt-2.5">
                   <span className="font-extrabold text-sm">NET SALARY</span>
-                  <span className="font-extrabold text-xl text-[#0c6c8f]">LKR {Math.round(calc.netSalary).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                  <span className="font-extrabold text-xl text-[#0c6c8f]">LKR {Math.round(calc.netSalary).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
                 
                 <div className="flex justify-between items-end border-t border-dashed border-zinc-200 pt-2 mt-2.5">
