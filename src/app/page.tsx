@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings, SalarySettings
 } from "./context/AppContext";
@@ -389,6 +389,30 @@ type PayrollPeriodSummary = { id: string; label: string; grossSalaryPool: number
 function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: boolean }) {
   const { operatingHours, publicHolidays, employees } = useApp();
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = (idx: number) => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setHoveredIdx(idx);
+  };
+
+  const handleMouseLeave = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = setTimeout(() => {
+      setHoveredIdx(null);
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   const daysData = useMemo(() => {
     const today = new Date();
@@ -474,10 +498,11 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
   }, [logs, operatingHours, publicHolidays, employees]);
 
   const totalWeeklyHours = daysData.reduce((acc, d) => acc + d.displayHours, 0);
+  const maxWeeklyHours = Math.max(10, ...daysData.map(d => d.hours));
 
   return (
-    <div className="space-y-4 pt-1">
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex flex-col justify-between h-full flex-1 gap-3 pt-1">
+      <div className="flex items-center justify-between mb-1 shrink-0">
         <div>
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">7-Day Clinic Attendance &amp; Shift Activity</h3>
           <p className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-slate-500"}`}>Live worked hours calculated from biometric scans</p>
@@ -487,153 +512,162 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
         </span>
       </div>
 
-      <div className={`grid grid-cols-7 gap-3 items-end pt-2 pb-3.5 px-3 border-b relative ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
-        {daysData.map((d, idx) => {
-          const heightPct = d.hours > 0 ? Math.max(18, (d.hours / 10) * 100) : 6;
-          const isHovered = hoveredIdx === idx;
-          return (
-            <div 
-              key={idx} 
-              className="relative flex flex-col items-center gap-1.5 group cursor-pointer"
-              onMouseEnter={() => setHoveredIdx(idx)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              onClick={() => setHoveredIdx(isHovered ? null : idx)}
-            >
-              {/* Floating Info Tooltip */}
-              {isHovered && (
-                <div 
-                  className={`absolute bottom-[calc(100%+12px)] z-50 pointer-events-none w-64 sm:w-72 p-3 rounded-xl shadow-2xl border transition-all duration-150 animate-in fade-in-0 zoom-in-95 ${
-                    idx === 0 
-                      ? "left-0" 
-                      : idx === 1 
-                        ? "left-0 sm:left-1/2 sm:-translate-x-1/4" 
-                        : idx >= 5 
-                          ? "right-0" 
-                          : "left-1/2 -translate-x-1/2"
-                  } ${
-                    isDark 
-                      ? "bg-slate-900/95 border-slate-700/80 text-white shadow-black/80 backdrop-blur-xl" 
-                      : "bg-white/95 border-slate-200 text-slate-900 shadow-slate-400/30 backdrop-blur-xl"
-                  }`}
-                >
-                  {/* Tooltip Header */}
-                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                    <div>
-                      <p className="text-xs font-bold leading-tight">{d.fullDate}</p>
-                      <p className="text-[10px] mt-0.5">
-                        {d.isClosed ? (
-                          <span className="text-amber-500 font-semibold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-                            {d.closedReason || "Clinic Closed"}
-                          </span>
-                        ) : (
-                          <span className="text-emerald-500 font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                            Hours: {d.operatingHoursText}
-                          </span>
-                        )}
-                      </p>
+      <div className="flex-1 flex flex-col justify-center my-auto py-1">
+        <div className={`grid grid-cols-7 gap-2 sm:gap-4 items-end pt-3 pb-3.5 px-2 sm:px-4 border-b relative ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
+          {daysData.map((d, idx) => {
+            const heightPct = d.hours > 0 ? Math.max(16, Math.min(100, (d.hours / maxWeeklyHours) * 96)) : 6;
+            const isHovered = hoveredIdx === idx;
+            return (
+              <div 
+                key={idx} 
+                className="relative flex flex-col items-center gap-2 group cursor-pointer"
+                onMouseEnter={() => handleMouseEnter(idx)}
+                onMouseLeave={handleMouseLeave}
+                onClick={() => setHoveredIdx(isHovered ? null : idx)}
+              >
+                {/* Floating Info Tooltip */}
+                {isHovered && (
+                  <div 
+                    className={`absolute top-[calc(100%+8px)] z-[100] pointer-events-auto w-64 sm:w-72 p-3 rounded-xl shadow-2xl border transition-all duration-150 animate-in fade-in-0 zoom-in-95 before:absolute before:-top-3 before:left-0 before:right-0 before:h-4 before:content-[''] ${
+                      idx === 0 
+                        ? "left-0" 
+                        : idx === 1 
+                          ? "left-0 sm:left-1/2 sm:-translate-x-1/4" 
+                          : idx >= 5 
+                            ? "right-0" 
+                            : "left-1/2 -translate-x-1/2"
+                    } ${
+                      isDark 
+                        ? "bg-slate-900/98 border-slate-700 text-white shadow-2xl shadow-black/90 backdrop-blur-xl" 
+                        : "bg-white/98 border-slate-200 text-slate-900 shadow-2xl shadow-slate-400/40 backdrop-blur-xl"
+                    }`}
+                    onMouseEnter={() => {
+                      if (closeTimerRef.current) {
+                        clearTimeout(closeTimerRef.current);
+                        closeTimerRef.current = null;
+                      }
+                    }}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    {/* Tooltip Header */}
+                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                      <div>
+                        <p className="text-xs font-bold leading-tight">{d.fullDate}</p>
+                        <p className="text-[10px] mt-0.5">
+                          {d.isClosed ? (
+                            <span className="text-amber-500 font-semibold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                              {d.closedReason || "Clinic Closed"}
+                            </span>
+                          ) : (
+                            <span className="text-emerald-500 font-medium flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                              Hours: {d.operatingHoursText}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-mono font-black text-[#38bdf8] bg-[#0ea5e9]/10 border border-[#0ea5e9]/25 px-2 py-0.5 rounded-md shrink-0">
+                        {d.displayHours > 0 ? formatHoursAndMins(d.displayHours) : d.isClosed ? "CLOSED" : "0h"}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-mono font-black text-[#38bdf8] bg-[#0ea5e9]/10 border border-[#0ea5e9]/25 px-2 py-0.5 rounded-md shrink-0">
-                      {d.displayHours > 0 ? formatHoursAndMins(d.displayHours) : d.isClosed ? "CLOSED" : "0h"}
-                    </span>
-                  </div>
 
-                  {/* Summary Metric Chips */}
-                  <div className="grid grid-cols-2 gap-1.5 my-2">
-                    <div className={`p-1.5 rounded-lg border text-center ${isDark ? "bg-slate-800/60 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
-                      <p className={`text-[9px] uppercase font-bold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Staff Present</p>
-                      <p className="text-xs font-black text-[#38bdf8]">{d.present} / {employees.length}</p>
-                    </div>
-                    <div className={`p-1.5 rounded-lg border text-center ${isDark ? "bg-slate-800/60 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
-                      <p className={`text-[9px] uppercase font-bold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Status</p>
-                      <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold">
-                        {d.onTimeCount > 0 && <span className="text-emerald-500">{d.onTimeCount} On-Time</span>}
-                        {d.lateCount > 0 && <span className="text-amber-400">{d.lateCount} Late</span>}
-                        {d.halfDayCount > 0 && <span className="text-sky-400">{d.halfDayCount} Half</span>}
-                        {d.present === 0 && <span className="text-slate-400 font-normal">None</span>}
+                    {/* Summary Metric Chips */}
+                    <div className="grid grid-cols-2 gap-1.5 my-2">
+                      <div className={`p-1.5 rounded-lg border text-center ${isDark ? "bg-slate-800/60 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
+                        <p className={`text-[9px] uppercase font-bold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Staff Present</p>
+                        <p className="text-xs font-black text-[#38bdf8]">{d.present} / {employees.length}</p>
+                      </div>
+                      <div className={`p-1.5 rounded-lg border text-center ${isDark ? "bg-slate-800/60 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
+                        <p className={`text-[9px] uppercase font-bold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Status</p>
+                        <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold">
+                          {d.onTimeCount > 0 && <span className="text-emerald-500">{d.onTimeCount} On-Time</span>}
+                          {d.lateCount > 0 && <span className="text-amber-400">{d.lateCount} Late</span>}
+                          {d.halfDayCount > 0 && <span className="text-sky-400">{d.halfDayCount} Half</span>}
+                          {d.present === 0 && <span className="text-slate-400 font-normal">None</span>}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Staff Punches Details */}
+                    {d.attendees.length > 0 ? (
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto pr-0.5">
+                        <p className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          Clocked In Staff ({d.attendees.length})
+                        </p>
+                        {d.attendees.map((a, aIdx) => (
+                          <div key={aIdx} className={`flex items-center justify-between p-1.5 rounded-lg text-[10px] border ${isDark ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/80 border-slate-100"}`}>
+                            <div className="truncate max-w-[130px]">
+                              <p className="font-semibold truncate">{a.name}</p>
+                              <p className="text-[9px] font-mono text-slate-400">
+                                {a.checkIn} {a.checkOut ? `→ ${a.checkOut}` : "→ In-Clinic"}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                                a.status === "On-Time"
+                                  ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                                  : a.status === "Late"
+                                  ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                                  : "bg-sky-500/15 text-sky-500 border border-sky-500/30"
+                              }`}>
+                                {a.status}
+                              </span>
+                              <p className="text-[9px] font-mono text-[#38bdf8] font-bold mt-0.5">
+                                {a.empHours > 0 ? formatHoursAndMins(a.empHours, { short: true }) : "Active"}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={`p-2 rounded-lg text-center text-[10px] border ${isDark ? "bg-slate-800/20 border-slate-800/60 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"}`}>
+                        {d.isClosed ? "Clinic was closed on this day" : "No biometric logs recorded"}
+                      </div>
+                    )}
+
+                    {/* Upward pointer arrow */}
+                    <div className={`absolute bottom-full w-0 h-0 border-x-4 border-x-transparent border-b-4 ${
+                      idx === 0 ? "left-4" : idx === 1 ? "left-4 sm:left-8" : idx >= 5 ? "right-4" : "left-1/2 -translate-x-1/2"
+                    } ${isDark ? "border-b-slate-700" : "border-b-slate-200"}`} />
                   </div>
+                )}
 
-                  {/* Staff Punches Details */}
-                  {d.attendees.length > 0 ? (
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-0.5">
-                      <p className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                        Clocked In Staff ({d.attendees.length})
-                      </p>
-                      {d.attendees.map((a, aIdx) => (
-                        <div key={aIdx} className={`flex items-center justify-between p-1.5 rounded-lg text-[10px] border ${isDark ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/80 border-slate-100"}`}>
-                          <div className="truncate max-w-[130px]">
-                            <p className="font-semibold truncate">{a.name}</p>
-                            <p className="text-[9px] font-mono text-slate-400">
-                              {a.checkIn} {a.checkOut ? `→ ${a.checkOut}` : "→ In-Clinic"}
-                            </p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                              a.status === "On-Time"
-                                ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
-                                : a.status === "Late"
-                                ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
-                                : "bg-sky-500/15 text-sky-500 border border-sky-500/30"
-                            }`}>
-                              {a.status}
-                            </span>
-                            <p className="text-[9px] font-mono text-[#38bdf8] font-bold mt-0.5">
-                              {a.empHours > 0 ? formatHoursAndMins(a.empHours, { short: true }) : "Active"}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className={`p-2 rounded-lg text-center text-[10px] border ${isDark ? "bg-slate-800/20 border-slate-800/60 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"}`}>
-                      {d.isClosed ? "Clinic was closed on this day" : "No biometric logs recorded"}
-                    </div>
-                  )}
+                <span className={`text-[10px] sm:text-[11px] font-mono font-bold transition-all ${
+                  isHovered
+                    ? "text-sky-300 scale-110"
+                    : d.hours > 0 ? "text-[#38bdf8]" : d.isClosed ? "text-amber-500" : "text-slate-400"
+                }`}>
+                  {d.hours > 0 ? formatHoursAndMins(d.hours, { short: true }) : d.isClosed ? "CLOSED" : "0h"}
+                </span>
 
-                  {/* Pointer arrow */}
-                  <div className={`absolute top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 ${
-                    idx === 0 ? "left-4" : idx === 1 ? "left-4 sm:left-8" : idx >= 5 ? "right-4" : "left-1/2 -translate-x-1/2"
-                  } ${isDark ? "border-t-slate-700/80" : "border-t-slate-200"}`} />
+                <div className={`w-full max-w-[36px] sm:max-w-[46px] rounded-t-2xl overflow-hidden h-52 sm:h-60 flex items-end p-0.5 sm:p-1 border transition-all duration-200 ${
+                  isHovered
+                    ? "ring-2 ring-sky-400/80 shadow-lg shadow-[#0ea5e9]/30 scale-105"
+                    : ""
+                } ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
+                  <div
+                    className={`w-full rounded-t-xl transition-all duration-500 ${
+                      d.hours > 0
+                        ? "bg-gradient-to-t from-[#0F85B0] via-[#0ea5e9] to-teal-400 shadow-md shadow-[#0F85B0]/20"
+                        : d.isClosed
+                          ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(245,158,11,0.2)_4px,rgba(245,158,11,0.2)_8px)] border border-amber-500/30"
+                          : isDark ? "bg-slate-800/20" : "bg-slate-200/50"
+                    }`}
+                    style={{ height: d.isClosed && d.hours === 0 ? "100%" : `${heightPct}%` }}
+                  />
                 </div>
-              )}
 
-              <span className={`text-[10px] font-mono font-bold transition-all ${
-                isHovered
-                  ? "text-sky-300 scale-110"
-                  : d.hours > 0 ? "text-[#38bdf8]" : d.isClosed ? "text-amber-500" : "text-slate-400"
-              }`}>
-                {d.hours > 0 ? formatHoursAndMins(d.hours, { short: true }) : d.isClosed ? "CLOSED" : "0h"}
-              </span>
-
-              <div className={`w-full max-w-[32px] rounded-t-xl overflow-hidden h-24 flex items-end p-0.5 border transition-all duration-200 ${
-                isHovered
-                  ? "ring-2 ring-sky-400/80 shadow-lg shadow-[#0ea5e9]/30 scale-105"
-                  : ""
-              } ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
-                <div
-                  className={`w-full rounded-t-lg transition-all duration-500 ${
-                    d.hours > 0
-                      ? "bg-gradient-to-t from-[#0F85B0] via-[#0ea5e9] to-teal-400 shadow-md shadow-[#0F85B0]/20"
-                      : d.isClosed
-                        ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(245,158,11,0.2)_4px,rgba(245,158,11,0.2)_8px)] border border-amber-500/30"
-                        : isDark ? "bg-slate-800/20" : "bg-slate-200/50"
-                  }`}
-                  style={{ height: d.isClosed && d.hours === 0 ? "100%" : `${heightPct}%` }}
-                />
+                <span className={`text-[11px] sm:text-xs font-extrabold leading-tight mt-1 transition-colors ${
+                  isHovered ? "text-sky-400" : isDark ? "text-slate-300" : "text-slate-700"
+                }`}>{d.day}</span>
               </div>
-
-              <span className={`text-[11px] font-extrabold leading-tight mt-1 transition-colors ${
-                isHovered ? "text-sky-400" : isDark ? "text-slate-300" : "text-slate-700"
-              }`}>{d.day}</span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-3">
+      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2 shrink-0">
         {hoveredIdx !== null && daysData[hoveredIdx] ? (
           <span className="flex items-center gap-1.5 text-slate-300 font-medium">
             <span className="w-2 h-2 rounded-full bg-[#38bdf8] animate-ping" />
@@ -877,6 +911,9 @@ export default function Home() {
     salarySettings, updateSalarySettings,
   } = useApp();
 
+  const isUserAdmin = Boolean((currentUser?.role === "Admin" && currentUser?.loginType !== "staff") || isAdminAuthenticated);
+
+
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [isDark, setIsDark] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -943,6 +980,26 @@ export default function Home() {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [hoveredCalDate, setHoveredCalDate] = useState<string | null>(null);
+  const calHoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleCalCellEnter = (dateStr: string) => {
+    if (calHoverTimerRef.current) {
+      clearTimeout(calHoverTimerRef.current);
+      calHoverTimerRef.current = null;
+    }
+    setHoveredCalDate(dateStr);
+  };
+
+  const handleCalCellLeave = () => {
+    if (calHoverTimerRef.current) {
+      clearTimeout(calHoverTimerRef.current);
+    }
+    calHoverTimerRef.current = setTimeout(() => {
+      setHoveredCalDate(null);
+    }, 250);
+  };
+
   const [selectedHistoryYear, setSelectedHistoryYear] = useState<string>("All Years");
   const [selectedHistoryPeriodId, setSelectedHistoryPeriodId] = useState<string | null>(null);
   const [auditSearch, setAuditSearch] = useState<string>("");
@@ -1192,9 +1249,29 @@ export default function Home() {
   }, [apitSlabs]);
 
   // Payroll calculations with per-employee allowances, auto no-pay, auto APIT
+  // Only employees who actually worked / had activity in this cycle are included to ensure accurate reports & remittances
   const payrollCalcs = useMemo(() => {
-    return activeEmployees.map(emp => {
-      const empLogs = attendanceLogs.filter(l => l.employeeId===emp.id && l.date>=dateRange.startDate && l.date<=dateRange.endDate);
+    const eligibleEmployees = activeEmployees.filter(emp => {
+      const empLogs = attendanceLogs.filter(l => 
+        (l.employeeId === emp.id || l.employeeId === emp.biometricId || (l.employee && (l.employee.id === emp.id || l.employee.biometricId === emp.biometricId))) 
+        && l.date >= dateRange.startDate 
+        && l.date <= dateRange.endDate
+      );
+      const workedSessions = empLogs.filter(l => ["On-Time", "Late", "Half-Day"].includes(l.status)).length;
+      const onLeaveSessions = empLogs.filter(l => l.status === "On-Leave").length;
+      const adjKey = `${selectedMonth}_${emp.id}`;
+      const existingAdj = manualAdjustments[adjKey];
+      const hasManualAdjustment = existingAdj && (existingAdj.bonusAmount > 0 || existingAdj.deductionAmount > 0 || (monthlyExcessIncome[adjKey] || 0) > 0);
+
+      return workedSessions > 0 || onLeaveSessions > 0 || hasManualAdjustment;
+    });
+
+    return eligibleEmployees.map(emp => {
+      const empLogs = attendanceLogs.filter(l => 
+        (l.employeeId === emp.id || l.employeeId === emp.biometricId || (l.employee && (l.employee.id === emp.id || l.employee.biometricId === emp.biometricId))) 
+        && l.date >= dateRange.startDate 
+        && l.date <= dateRange.endDate
+      );
       const sessionCount = empLogs.filter(l => ["On-Time","Late","Half-Day"].includes(l.status)).length;
       const effectiveHours = (emp.customOperatingHours && emp.customOperatingHours.length > 0)
         ? emp.customOperatingHours
@@ -1333,6 +1410,10 @@ export default function Home() {
   const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]}); };
 
   const openDrawer = (log: AttendanceLog) => {
+    if (!isUserAdmin) {
+      setShowAdminPinModal(true);
+      return;
+    }
     const effectiveOt = (salarySettings.otCalculationType !== "Manual")
       ? calculateOvertimeHours(log.checkOut, log.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, log.checkIn)
       : (log.overtimeHours || 0);
@@ -1351,7 +1432,7 @@ export default function Home() {
     if (isCurrentMonthFinalized) return;
     const [y,m] = selectedMonth.split("-");
     const monthLabel = new Date(parseInt(y), parseInt(m)-1, 1).toLocaleString("default",{month:"long",year:"numeric"});
-    finalizePayroll({ month:selectedMonth, label:monthLabel, grossSalaryPool:payrollTotals.gross, netRemittances:payrollTotals.net, totalEpf:payrollTotals.epfEmp+payrollTotals.epfEmr, totalEtf:payrollTotals.etf, totalApit:payrollTotals.apit, employeeCount:activeEmployees.length });
+    finalizePayroll({ month:selectedMonth, label:monthLabel, grossSalaryPool:payrollTotals.gross, netRemittances:payrollTotals.net, totalEpf:payrollTotals.epfEmp+payrollTotals.epfEmr, totalEtf:payrollTotals.etf, totalApit:payrollTotals.apit, employeeCount:payrollCalcs.length });
   };
 
 
@@ -1545,7 +1626,7 @@ export default function Home() {
               }
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg border transition-smooth cursor-pointer ${
-              isAdminAuthenticated
+              isUserAdmin
                 ? isDark
                   ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald"
                   : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
@@ -1555,10 +1636,10 @@ export default function Home() {
             }`}
           >
             <span className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${isAdminAuthenticated ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}/>
-              <span className="whitespace-nowrap">{isAdminAuthenticated ? "Session Active" : "Admin Locked"}</span>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isUserAdmin ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}/>
+              <span className="whitespace-nowrap">{isUserAdmin ? "Session Active" : "Admin Locked"}</span>
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{isAdminAuthenticated ? "Lock" : "Unlock"}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{isUserAdmin ? "Lock" : "Unlock"}</span>
           </button>
 
           <button
@@ -1649,7 +1730,7 @@ export default function Home() {
               }
             }}
             className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 text-xs font-bold rounded-lg border transition-smooth cursor-pointer ${
-              isAdminAuthenticated
+              isUserAdmin
                 ? isDark
                   ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald"
                   : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
@@ -1659,10 +1740,10 @@ export default function Home() {
             }`}
           >
             <span className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${isAdminAuthenticated ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}/>
-              <span className="whitespace-nowrap">{isAdminAuthenticated ? "Session Active" : "Admin Locked"}</span>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isUserAdmin ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}/>
+              <span className="whitespace-nowrap">{isUserAdmin ? "Session Active" : "Admin Locked"}</span>
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{isAdminAuthenticated ? "Lock" : "Unlock"}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{isUserAdmin ? "Lock" : "Unlock"}</span>
           </button>
 
           <button
@@ -1715,38 +1796,36 @@ export default function Home() {
               }`}
             >
               <span className={`w-2 h-2 shrink-0 rounded-full ${biometricSettings.status === "Connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-ping"}`}/>
-              <span className="hidden 2xl:inline">Hikvision DS-K1T320MFWX (HTTP Real-time Push - Connected)</span>
-              <span className="hidden sm:inline 2xl:hidden">DS-K1T320MFWX · Connected</span>
-              <span className="inline sm:hidden">Online</span>
+              <span>{biometricSettings.status || "Connected"}</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={triggerSync}
               disabled={biometricSettings.status === "Syncing"}
-              className={`px-2.5 sm:px-3.5 py-1.5 text-xs font-bold rounded-lg border transition-smooth flex items-center gap-1.5 sm:gap-2 ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg border transition-smooth flex items-center gap-1.5 sm:gap-2 shrink-0 ${
                 isDark
                   ? "bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-200"
                   : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
               }`}
             >
               <Icons.Refresh className={`w-3.5 h-3.5 ${biometricSettings.status === "Syncing" ? "animate-spin text-amber-400" : "text-[#38bdf8]"}`} />
-              <span className="hidden md:inline">{biometricSettings.status === "Syncing" ? "Syncing Logs..." : "Refresh Cloud Logs"}</span>
-              <span className="inline md:hidden">{biometricSettings.status === "Syncing" ? "..." : "Sync"}</span>
+              <span className="hidden xl:inline">{biometricSettings.status === "Syncing" ? "Syncing Logs..." : "Refresh Cloud Logs"}</span>
+              <span className="inline xl:hidden">{biometricSettings.status === "Syncing" ? "Syncing..." : "Sync"}</span>
             </button>
 
-            <div className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
+            <div className={`flex items-center gap-2 sm:gap-2.5 px-2 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold shrink-0 ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
               <div className="w-7 h-7 shrink-0 rounded-lg bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0F85B0]/30 font-extrabold flex items-center justify-center text-xs shadow-xs">
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
               </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="font-bold text-xs leading-none max-w-[120px] truncate">{currentUser?.name || "Clinic Administrator"}</span>
+              <div className="hidden xs:flex sm:flex flex-col text-left shrink-0">
+                <span className="font-bold text-xs leading-none whitespace-nowrap">{currentUser?.name || "Clinic Administrator"}</span>
                 <span className="text-[9px] text-[#38bdf8] font-semibold uppercase tracking-wider leading-none mt-0.5">{currentUser?.role || "Admin"}</span>
               </div>
               <button
                 onClick={logoutUser}
-                className="ml-1 px-1.5 sm:px-2 py-1 text-[10px] font-bold rounded border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition"
+                className="ml-1 px-1.5 sm:px-2 py-1 text-[10px] font-bold rounded border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition shrink-0 whitespace-nowrap"
                 title="Sign Out"
               >
                 Sign Out
@@ -1795,9 +1874,9 @@ export default function Home() {
               </div>
 
               {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 relative z-20">
                 {/* ── Premium Area Chart with hover tooltips ── */}
-                <div className={`${cardCls(isDark)} col-span-1 lg:col-span-2`}>
+                <div className={`${cardCls(isDark)} col-span-1 lg:col-span-2 relative z-30 flex flex-col justify-between`}>
                   {payrollHistory.length >= 2 && (
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -2246,24 +2325,47 @@ export default function Home() {
                               )}
                             </td>
                             <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  onClick={() => openDrawer(log)}
-                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-smooth ${
-                                    isDark
-                                      ? "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"
-                                      : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
-                                  }`}
-                                >
-                                  Adjust
-                                </button>
-                                <button
-                                  onClick={() => deleteAttendanceLog(log.id)}
-                                  className="px-2 py-1 rounded-lg text-[11px] font-bold border border-rose-500/20 text-rose-400 hover:bg-rose-500/10 transition"
-                                >
-                                  Delete
-                                </button>
-                              </div>
+                              {isUserAdmin ? (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => openDrawer(log)}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-smooth ${
+                                      isDark
+                                        ? "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200"
+                                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
+                                    }`}
+                                  >
+                                    Adjust
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm("Are you sure you want to delete this attendance record?")) {
+                                        deleteAttendanceLog(log.id);
+                                      }
+                                    }}
+                                    className="px-2 py-1 rounded-lg text-[11px] font-bold border border-rose-500/20 text-rose-400 hover:bg-rose-500/10 transition"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                    isDark ? "bg-zinc-800/80 text-zinc-400 border-zinc-700/60" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                                  }`} title="Only administrators can adjust or delete attendance records">
+                                    <Icons.LockClosed className="w-2.5 h-2.5 opacity-60" />
+                                    <span>Admin Only</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowAdminPinModal(true)}
+                                    className="text-[10px] font-bold text-[#38bdf8] hover:underline"
+                                    title="Unlock admin with PIN"
+                                  >
+                                    Unlock
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -2741,19 +2843,32 @@ export default function Home() {
                             const absentCount = dayLogs.filter(l => l.status === "Absent").length;
                             const lateCount = dayLogs.filter(l => l.status === "Late").length;
 
+                            const colIndex = idx % 7;
+                            const rowIndex = Math.floor(idx / 7);
+                            const isHovered = hoveredCalDate === dateStr;
+
+                            const pendingLeavesOnDay = leaveRequests.filter(req => {
+                              if (req.status === "Pending") {
+                                return req.startDate <= dateStr && dateStr <= req.endDate;
+                              }
+                              return false;
+                            });
+
                             return (
                               <div
                                 key={`day-${day}`}
-                                className={`rounded-xl p-2 text-center text-[10px] min-h-[68px] sm:min-h-[76px] flex flex-col justify-between border transition-all ${
+                                onMouseEnter={() => handleCalCellEnter(dateStr)}
+                                onMouseLeave={handleCalCellLeave}
+                                className={`relative rounded-xl p-2 text-center text-[10px] min-h-[68px] sm:min-h-[76px] flex flex-col justify-between border transition-all cursor-pointer ${
                                   isToday
                                     ? "ring-2 ring-[#0F85B0] border-[#0F85B0]"
                                     : ""
                                 } ${
                                   holiday
-                                    ? (isDark ? "border-amber-700/60 bg-amber-950/25 shadow-xs" : "border-amber-200 bg-amber-50/80 shadow-xs")
+                                    ? (isDark ? "border-amber-700/60 bg-amber-950/25 shadow-xs hover:border-amber-500" : "border-amber-200 bg-amber-50/80 shadow-xs hover:border-amber-400")
                                     : isClinicClosed
-                                    ? (isDark ? "border-zinc-800/80 bg-zinc-950/60 border-dashed" : "border-slate-200/90 bg-slate-50/80 border-dashed")
-                                    : (isDark ? "border-zinc-800 bg-zinc-950/50 hover:border-zinc-700" : "border-zinc-200/90 bg-white hover:border-zinc-300 shadow-xs")
+                                    ? (isDark ? "border-zinc-800/80 bg-zinc-950/60 border-dashed hover:border-zinc-700" : "border-slate-200/90 bg-slate-50/80 border-dashed hover:border-slate-400")
+                                    : (isDark ? "border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 hover:bg-zinc-900/60" : "border-zinc-200/90 bg-white hover:border-zinc-300 hover:bg-zinc-50 shadow-xs")
                                 }`}
                               >
                                 <div className="flex items-center justify-between">
@@ -2820,10 +2935,216 @@ export default function Home() {
                                     </span>
                                   )}
                                 </div>
+
+                                {/* Floating Rich Day Info Tooltip */}
+                                {isHovered && (
+                                  <div
+                                    className={`absolute z-[100] pointer-events-auto w-72 sm:w-84 p-3.5 rounded-2xl shadow-2xl border transition-all duration-150 animate-in fade-in-0 zoom-in-95 ${
+                                      rowIndex >= 3
+                                        ? "bottom-[calc(100%+8px)] before:absolute before:-bottom-3 before:left-0 before:right-0 before:h-4 before:content-['']"
+                                        : "top-[calc(100%+8px)] before:absolute before:-top-3 before:left-0 before:right-0 before:h-4 before:content-['']"
+                                    } ${
+                                      colIndex <= 1
+                                        ? "left-0"
+                                        : colIndex >= 5
+                                        ? "right-0"
+                                        : "left-1/2 -translate-x-1/2"
+                                    } ${
+                                      isDark
+                                        ? "bg-zinc-950/98 border-zinc-700/90 text-zinc-100 shadow-2xl shadow-black/90 backdrop-blur-xl"
+                                        : "bg-white/98 border-zinc-200 text-zinc-900 shadow-2xl shadow-zinc-400/40 backdrop-blur-xl"
+                                    }`}
+                                    onMouseEnter={() => {
+                                      if (calHoverTimerRef.current) {
+                                        clearTimeout(calHoverTimerRef.current);
+                                        calHoverTimerRef.current = null;
+                                      }
+                                    }}
+                                    onMouseLeave={handleCalCellLeave}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {/* Tooltip Header */}
+                                    <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-zinc-200 dark:border-zinc-800 text-left">
+                                      <div>
+                                        <p className="text-xs font-bold leading-tight flex items-center gap-1.5">
+                                          <span>{cellDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span>
+                                          {isToday && (
+                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-[#0F85B0] text-white">
+                                              Today
+                                            </span>
+                                          )}
+                                        </p>
+                                        <p className="text-[10px] mt-0.5">
+                                          {holiday ? (
+                                            <span className="text-amber-500 font-semibold flex items-center gap-1">
+                                              <Icons.Star className="w-2.5 h-2.5 shrink-0" />
+                                              <span>{holiday.name} {holiday.isDoubleOT ? "(Double OT)" : ""}</span>
+                                            </span>
+                                          ) : isClinicClosed ? (
+                                            <span className="text-rose-500 font-semibold flex items-center gap-1">
+                                              <Icons.LockClosed className="w-2.5 h-2.5 shrink-0" />
+                                              <span>Clinic Closed</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-emerald-500 font-medium flex items-center gap-1">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                              <span>Hours: {opHour ? `${opHour.startTime} - ${opHour.endTime}` : "Normal Hours"}</span>
+                                            </span>
+                                          )}
+                                        </p>
+                                      </div>
+                                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border shrink-0 ${
+                                        isToday
+                                          ? "bg-[#0F85B0]/15 text-[#38bdf8] border-[#0F85B0]/30"
+                                          : (isDark ? "bg-zinc-800 text-zinc-300 border-zinc-700" : "bg-zinc-100 text-zinc-600 border-zinc-200")
+                                      }`}>
+                                        {dayLogs.length} Active
+                                      </span>
+                                    </div>
+
+                                    {/* Summary Metric Chips */}
+                                    <div className="grid grid-cols-4 gap-1 my-2 text-center">
+                                      <div className={`p-1.5 rounded-lg border ${isDark ? "bg-emerald-950/30 border-emerald-800/40 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
+                                        <p className="text-[8px] font-bold uppercase tracking-wider">Present</p>
+                                        <p className="text-xs font-black mt-0.5">{presentCount}</p>
+                                      </div>
+                                      <div className={`p-1.5 rounded-lg border ${isDark ? "bg-amber-950/30 border-amber-800/40 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+                                        <p className="text-[8px] font-bold uppercase tracking-wider">Late</p>
+                                        <p className="text-xs font-black mt-0.5">{lateCount}</p>
+                                      </div>
+                                      <div className={`p-1.5 rounded-lg border ${isDark ? "bg-purple-950/30 border-purple-800/40 text-purple-400" : "bg-purple-50 border-purple-200 text-purple-700"}`}>
+                                        <p className="text-[8px] font-bold uppercase tracking-wider">On Leave</p>
+                                        <p className="text-xs font-black mt-0.5">{leaveCount}</p>
+                                      </div>
+                                      <div className={`p-1.5 rounded-lg border ${isDark ? "bg-rose-950/30 border-rose-800/40 text-rose-400" : "bg-rose-50 border-rose-200 text-rose-700"}`}>
+                                        <p className="text-[8px] font-bold uppercase tracking-wider">Absent</p>
+                                        <p className="text-xs font-black mt-0.5">{absentCount}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Staff Attendance & Activity Breakdown */}
+                                    <div className="mt-2 text-left">
+                                      <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                                        Staff Activity on {cellDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}:
+                                      </p>
+                                      <div className="space-y-1.5 max-h-44 overflow-y-auto pr-0.5 custom-scrollbar">
+                                        {dayLogs.map(log => {
+                                          const emp = employees.find(e => e.id === log.employeeId) || log.employee;
+                                          const name = emp ? `${emp.firstName} ${emp.lastName}` : (log.employeeId || "Staff Member");
+                                          const role = (emp && "role" in emp && emp.role) ? String(emp.role) : "Staff";
+                                          const statusBadge =
+                                            log.status === "On-Time" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
+                                            log.status === "Late" ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
+                                            log.status === "On-Leave" ? "bg-purple-500/15 text-purple-400 border-purple-500/30" :
+                                            "bg-rose-500/15 text-rose-400 border-rose-500/30";
+
+                                          return (
+                                            <div key={log.id} className={`p-1.5 rounded-lg border flex items-center justify-between gap-2 text-[10px] ${
+                                              isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-zinc-50 border-zinc-200"
+                                            }`}>
+                                              <div className="min-w-0 flex-1">
+                                                <p className="font-bold truncate text-zinc-100 dark:text-zinc-100">{name}</p>
+                                                <p className="text-[9px] text-zinc-400 truncate">{role}</p>
+                                              </div>
+                                              <div className="text-right shrink-0">
+                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${statusBadge}`}>
+                                                  {log.status}
+                                                </span>
+                                                <p className="text-[8px] font-mono text-zinc-400 mt-0.5">
+                                                  {log.checkIn ? log.checkIn.slice(0, 5) : "—"}{log.checkOut ? ` - ${log.checkOut.slice(0, 5)}` : ""}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+
+                                        {approvedLeavesOnDay
+                                          .filter(req => !dayLogs.some(l => l.employeeId === req.employeeId && l.status === "On-Leave"))
+                                          .map(req => {
+                                            const emp = employees.find(e => e.id === req.employeeId);
+                                            const name = emp ? `${emp.firstName} ${emp.lastName}` : "Staff Member";
+                                            return (
+                                              <div key={req.id} className={`p-1.5 rounded-lg border flex items-center justify-between gap-2 text-[10px] ${
+                                                isDark ? "bg-purple-950/25 border-purple-800/40 text-purple-300" : "bg-purple-50 border-purple-200 text-purple-700"
+                                              }`}>
+                                                <div className="min-w-0 flex-1">
+                                                  <p className="font-bold truncate">{name}</p>
+                                                  <p className="text-[9px] opacity-80 truncate">{req.type} Leave {req.note ? `· "${req.note}"` : ""}</p>
+                                                </div>
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30 shrink-0">
+                                                  Approved Leave
+                                                </span>
+                                              </div>
+                                            );
+                                          })
+                                        }
+
+                                        {pendingLeavesOnDay.map(req => {
+                                          const emp = employees.find(e => e.id === req.employeeId);
+                                          const name = emp ? `${emp.firstName} ${emp.lastName}` : "Staff Member";
+                                          return (
+                                            <div key={req.id} className={`p-1.5 rounded-lg border flex items-center justify-between gap-2 text-[10px] ${
+                                              isDark ? "bg-amber-950/20 border-amber-800/40 text-amber-300" : "bg-amber-50 border-amber-200 text-amber-800"
+                                            }`}>
+                                              <div className="min-w-0 flex-1">
+                                                <p className="font-bold truncate">{name}</p>
+                                                <p className="text-[9px] opacity-80 truncate">Pending {req.type} Leave</p>
+                                              </div>
+                                              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+                                                Pending
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+
+                                        {dayLogs.length === 0 && approvedLeavesOnDay.length === 0 && pendingLeavesOnDay.length === 0 && (
+                                          <div className={`py-2 text-center text-[10px] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}>
+                                            {isClinicClosed ? (
+                                              <span>Scheduled clinic closure. No staff rostered.</span>
+                                            ) : holiday ? (
+                                              <span>Public holiday observed. Clinic closed.</span>
+                                            ) : dateStr > todayStr ? (
+                                              <span>Upcoming clinic day.</span>
+                                            ) : (
+                                              <span>No attendance punches recorded.</span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Footer Quick Action */}
+                                    <div className="mt-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">
+                                      <span className="text-[9px] text-zinc-400 truncate">
+                                        {holiday ? holiday.name : isClinicClosed ? "Closed Day" : "Regular Clinic Day"}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setNewLeave({
+                                            employeeId: currentUser?.employeeId || activeEmployees[0]?.id || "",
+                                            type: "Annual",
+                                            startDate: dateStr,
+                                            endDate: dateStr,
+                                            status: "Pending",
+                                            note: "",
+                                          });
+                                          setLeaveDurationMode("single");
+                                          setShowAddLeaveModal(true);
+                                        }}
+                                        className="px-2 py-0.5 rounded text-[9px] font-bold text-[#0F85B0] dark:text-[#38bdf8] hover:underline cursor-pointer flex items-center gap-1 shrink-0"
+                                      >
+                                        <Icons.Plus className="w-2.5 h-2.5" />
+                                        <span>Request Leave</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
                         </div>
+
 
                         {/* Legend */}
                         <div className={`flex flex-wrap items-center justify-center gap-4 mt-4 pt-3 border-t text-[11px] font-medium ${isDark ? "border-zinc-800 text-zinc-400" : "border-zinc-200 text-zinc-600"}`}>
@@ -3005,26 +3326,45 @@ export default function Home() {
                               {/* Actions */}
                               <td className="px-4 py-3 whitespace-nowrap">
                                 {req.status === "Pending" ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => approveLeave(req.id)}
-                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg shadow-xs transition flex items-center gap-1"
-                                      title="Approve Leave"
-                                    >
-                                      <Icons.Check className="w-3 h-3" />
-                                      <span>Approve</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => rejectLeave(req.id)}
-                                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow-xs transition flex items-center gap-1"
-                                      title="Reject Leave"
-                                    >
-                                      <Icons.X className="w-3 h-3" />
-                                      <span>Reject</span>
-                                    </button>
-                                  </div>
+                                  isUserAdmin ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => approveLeave(req.id)}
+                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg shadow-xs transition flex items-center gap-1 active:scale-95 cursor-pointer"
+                                        title="Approve Leave"
+                                      >
+                                        <Icons.Check className="w-3 h-3" />
+                                        <span>Approve</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => rejectLeave(req.id)}
+                                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg shadow-xs transition flex items-center gap-1 active:scale-95 cursor-pointer"
+                                        title="Reject Leave"
+                                      >
+                                        <Icons.X className="w-3 h-3" />
+                                        <span>Reject</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                        isDark ? "bg-zinc-800/80 text-zinc-400 border-zinc-700/60" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                                      }`} title="Only administrators can approve or reject leave requests">
+                                        <Icons.LockClosed className="w-2.5 h-2.5 opacity-60" />
+                                        <span>Admin Only</span>
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowAdminPinModal(true)}
+                                        className="text-[10px] font-bold text-[#38bdf8] hover:underline cursor-pointer"
+                                        title="Unlock admin with PIN"
+                                      >
+                                        Unlock
+                                      </button>
+                                    </div>
+                                  )
                                 ) : (
                                   <span className="text-[11px] text-zinc-400 font-medium">
                                     {req.status === "Approved" ? "Processed" : "Declined"}
@@ -3172,6 +3512,9 @@ export default function Home() {
                       <span>Active Cycle</span>
                     </span>
                   )}
+                  <span className={`px-2.5 py-1 rounded-xl text-[11px] font-medium border ${isDark ? "bg-slate-800/50 border-slate-700/60 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                    {payrollCalcs.length} {payrollCalcs.length === 1 ? "Staff Member" : "Staff Members"} Active
+                  </span>
                 </div>
               </div>
 
@@ -3195,7 +3538,20 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${isDark ? "divide-slate-800/60" : "divide-slate-100"}`}>
-                      {payrollCalcs.map(c => {
+                      {payrollCalcs.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="px-4 py-12 text-center text-zinc-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+                                <Icons.Users className="w-5 h-5" />
+                              </div>
+                              <p className={`font-bold text-xs ${isDark ? "text-slate-300" : "text-slate-700"}`}>No Staff Worked in This Payroll Cycle</p>
+                              <p className="text-[10px] text-slate-500 max-w-sm">Only employees with biometric attendance scans or approved leaves during this period are included in monthly payroll calculations.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        payrollCalcs.map(c => {
                         const adjKey = `${selectedMonth}_${c.employee.id}`;
                         const existing = manualAdjustments[adjKey];
                         const hasAdjustment = existing && (existing.bonusAmount > 0 || existing.deductionAmount > 0 || (monthlyExcessIncome[adjKey] || 0) > 0);
@@ -3284,7 +3640,7 @@ export default function Home() {
                             </td>
                           </tr>
                         );
-                      })}
+                      }))}
                     </tbody>
                   </table>
                 </div>
@@ -7179,6 +7535,10 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => {
+                    if (!isUserAdmin) {
+                      setShowAdminPinModal(true);
+                      return;
+                    }
                     if (drawerLogId) {
                       updateAttendanceLog(drawerLogId, punchEdit);
                       setDrawerLogId(null);
@@ -7700,6 +8060,17 @@ export default function Home() {
 
         const isQuotaExceeded = availableQuota !== null && durationDays > availableQuota;
 
+        const targetEmpId = newLeave.employeeId || selectedEmp?.id || activeEmployees[0]?.id || "";
+        const overlappingLeave = (newLeave.startDate && effectiveEndDate && !isDateInvalid)
+          ? leaveRequests.find(r => {
+              const matchEmp = r.employeeId === targetEmpId || (selectedEmp && (r.employeeId === selectedEmp.id || r.employeeId === selectedEmp.biometricId));
+              if (!matchEmp) return false;
+              if (r.status === "Rejected") return false;
+              const rEnd = r.endDate || r.startDate;
+              return newLeave.startDate <= rEnd && effectiveEndDate >= r.startDate;
+            })
+          : null;
+
         const quickReasons = [
           { label: "Family Vacation", icon: <Icons.Sun className="w-3 h-3 text-amber-500" /> },
           { label: "Doctor Appointment", icon: <Icons.HeartPulse className="w-3 h-3 text-rose-500" /> },
@@ -7832,41 +8203,53 @@ export default function Home() {
                 </div>
 
                 {/* 3. Approval Pipeline Status */}
-                <div className="space-y-2">
-                  <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
-                    Approval Status
-                  </label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setNewLeave(p => ({ ...p, status: "Pending" }))}
-                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
-                        newLeave.status === "Pending"
-                          ? "bg-amber-500/15 border-amber-500/80 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20"
-                          : isDark
-                            ? "bg-zinc-800/40 border-zinc-700/70 text-zinc-400 hover:bg-zinc-800"
-                            : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
-                      }`}
-                    >
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      Pending Approval
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNewLeave(p => ({ ...p, status: "Approved" }))}
-                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
-                        newLeave.status === "Approved"
-                          ? "bg-emerald-500/15 border-emerald-500/80 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20"
-                          : isDark
-                            ? "bg-zinc-800/40 border-zinc-700/70 text-zinc-400 hover:bg-zinc-800"
-                            : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
-                      }`}
-                    >
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      Instant Approve
-                    </button>
+                {isUserAdmin ? (
+                  <div className="space-y-2">
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                      Approval Status
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setNewLeave(p => ({ ...p, status: "Pending" }))}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                          newLeave.status === "Pending"
+                            ? "bg-amber-500/15 border-amber-500/80 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20"
+                            : isDark
+                              ? "bg-zinc-800/40 border-zinc-700/70 text-zinc-400 hover:bg-zinc-800"
+                              : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        Pending Approval
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewLeave(p => ({ ...p, status: "Approved" }))}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                          newLeave.status === "Approved"
+                            ? "bg-emerald-500/15 border-emerald-500/80 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20"
+                            : isDark
+                              ? "bg-zinc-800/40 border-zinc-700/70 text-zinc-400 hover:bg-zinc-800"
+                              : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Instant Approve
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-1">
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                      Approval Status
+                    </label>
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs ${isDark ? "bg-zinc-900/60 border-zinc-800 text-zinc-400" : "bg-zinc-50 border-zinc-200 text-zinc-600"}`}>
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span>Pending Admin Approval (Requires Administrator Review)</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* 4. Date Selection & Duration Calculator */}
                 <div className="space-y-3">
@@ -7974,7 +8357,20 @@ export default function Home() {
                     </div>
                   )}
 
-                  {!isDateInvalid && durationDays > 0 && (
+                  {/* Overlapping Leave Warning Banner */}
+                  {overlappingLeave && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-medium space-y-1">
+                      <div className="flex items-center gap-2 font-bold">
+                        <Icons.AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+                        <span>Duplicate / Overlapping Leave Detected</span>
+                      </div>
+                      <p className="text-[11px] text-rose-400 pl-6 leading-relaxed">
+                        {selectedEmp ? `${selectedEmp.firstName} ${selectedEmp.lastName}` : "This staff member"} already has an active <strong>{overlappingLeave.status}</strong> {overlappingLeave.type} leave for <strong>{overlappingLeave.startDate}{overlappingLeave.endDate !== overlappingLeave.startDate ? ` → ${overlappingLeave.endDate}` : ""}</strong>. You cannot request the same day or an overlapping range twice.
+                      </p>
+                    </div>
+                  )}
+
+                  {!isDateInvalid && !overlappingLeave && durationDays > 0 && (
                     <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs font-semibold ${
                       isQuotaExceeded 
                         ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
@@ -8054,27 +8450,34 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
-                  disabled={!newLeave.startDate || (leaveDurationMode === "range" && !newLeave.endDate) || isDateInvalid}
+                  disabled={!newLeave.startDate || (leaveDurationMode === "range" && !newLeave.endDate) || isDateInvalid || Boolean(overlappingLeave)}
                   onClick={() => {
                     const finalEndDate = leaveDurationMode === "single" || !newLeave.endDate
                       ? newLeave.startDate
                       : newLeave.endDate;
 
+                    if (overlappingLeave) {
+                      alert(`Cannot submit: Staff member already has an active ${overlappingLeave.status.toLowerCase()} leave covering this date range.`);
+                      return;
+                    }
+
                     if (newLeave.startDate && finalEndDate && !isDateInvalid) {
+                      const finalStatus = isUserAdmin ? (newLeave.status || "Pending") : "Pending";
                       const finalLeave = {
                         ...newLeave,
+                        status: finalStatus,
                         endDate: finalEndDate,
                         employeeId: newLeave.employeeId || selectedEmp?.id || activeEmployees[0]?.id || "",
                       };
                       addLeaveRequest(finalLeave);
-                      if (finalLeave.status === "Approved") {
+                      if (finalLeave.status === "Approved" && isUserAdmin) {
                         setTimeout(() => approveLeave(leaveRequests[0]?.id), 100);
                       }
                       setShowAddLeaveModal(false);
                     }
                   }}
                   className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-lg transition-all flex items-center gap-2 ${
-                    !newLeave.startDate || (leaveDurationMode === "range" && !newLeave.endDate) || isDateInvalid
+                    !newLeave.startDate || (leaveDurationMode === "range" && !newLeave.endDate) || isDateInvalid || Boolean(overlappingLeave)
                       ? "opacity-50 cursor-not-allowed bg-zinc-400 text-white"
                       : isDark
                         ? "bg-teal-500 hover:bg-teal-400 text-zinc-950 shadow-teal-500/20 active:scale-95"

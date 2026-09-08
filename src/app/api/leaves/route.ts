@@ -39,6 +39,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "No matching employee found" }, { status: 400 });
     }
 
+    const effectiveStartDate = startDate || new Date().toISOString().split("T")[0];
+    const effectiveEndDate = endDate || effectiveStartDate;
+
+    // Check for duplicate or overlapping leave for this employee (excluding Rejected)
+    const existingOverlap = await db.leaveRequest.findFirst({
+      where: {
+        clinicId,
+        employeeId: dbEmp.id,
+        status: { not: "Rejected" },
+        startDate: { lte: effectiveEndDate },
+        endDate: { gte: effectiveStartDate },
+      },
+    });
+
+    if (existingOverlap) {
+      return NextResponse.json({
+        success: false,
+        error: `A ${existingOverlap.status.toLowerCase()} leave request already exists for this staff member covering ${existingOverlap.startDate}${existingOverlap.endDate !== existingOverlap.startDate ? ` to ${existingOverlap.endDate}` : ""}. Duplicate or overlapping dates are not allowed.`
+      }, { status: 400 });
+    }
+
     const leave = await db.leaveRequest.create({
       data: {
         clinicId,

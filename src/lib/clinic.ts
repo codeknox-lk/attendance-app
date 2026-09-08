@@ -13,7 +13,7 @@ export async function getClinicId(req: Request): Promise<string> {
     queryClinicId = url.searchParams.get("clinicId");
   } catch {}
 
-  const candidateId = headerClinicId || queryClinicId;
+  const candidateId = headerClinicId || queryClinicId || process.env.ACTIVE_CLINIC_ID;
 
   if (candidateId) {
     const exists = await db.clinic.findUnique({

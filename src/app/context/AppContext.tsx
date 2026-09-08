@@ -357,7 +357,29 @@ const initialLogs = (): AttendanceLog[] => {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [employees, setEmployeesRaw] = useState<Employee[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_employees");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return initialEmployees;
+  });
+
+  const setEmployees = (value: React.SetStateAction<Employee[]>) => {
+    setEmployeesRaw(prev => {
+      const next = typeof value === "function" ? value(prev) : value;
+      if (typeof window !== "undefined") {
+        try { localStorage.setItem("medicflow_employees", JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
+  };
+
   const [attendanceLogs, setAttendanceLogsRaw] = useState<AttendanceLog[]>(initialLogs);
 
   const setAttendanceLogs = (value: React.SetStateAction<AttendanceLog[]>) => {
@@ -384,8 +406,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return initialOperatingHours;
   });
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
+  const [leaveRequests, setLeaveRequestsRaw] = useState<LeaveRequest[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("medicflow_leave_requests");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {}
+    }
+    return initialLeaveRequests;
+  });
+
+  const setLeaveRequests = (value: React.SetStateAction<LeaveRequest[]>) => {
+    setLeaveRequestsRaw(prev => {
+      const next = typeof value === "function" ? value(prev) : value;
+      if (typeof window !== "undefined") {
+        try { localStorage.setItem("medicflow_leave_requests", JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
+  };
   const [payrollHistory, setPayrollHistory] = useState<PayrollPeriod[]>(initialPayrollHistory);
+
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
   const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>(() => {
@@ -536,11 +580,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== "undefined") {
       try {
         const savedUser = localStorage.getItem("medicflow_user_session");
-        if (savedUser) return true;
+        if (savedUser) {
+          const u = JSON.parse(savedUser);
+          return Boolean(u && u.role === "Admin" && u.loginType !== "staff");
+        }
       } catch {}
     }
     return false;
   });
+
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     if (typeof window !== "undefined") {
@@ -602,195 +650,246 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     const hydrateFromDatabase = async () => {
-      try {
-        const empRes = await apiFetch("/api/employees");
-        const empData = await empRes.json();
-        if (empData.success && empData.employees && empData.employees.length > 0) {
-          const dbEmployees: Employee[] = empData.employees.map((e: Record<string, unknown>) => ({
-            id: String(e.id),
-            firstName: String(e.firstName),
-            lastName: String(e.lastName),
-            role: (e.role as Employee["role"]) || "Doctor",
-            payType: (e.payType as Employee["payType"]) || "Fixed Monthly",
-            basicSalary: Number(e.basicSalary) || 0,
-            hourlyRate: Number(e.hourlyRate) || 0,
-            sessionRate: Number(e.sessionRate) || 0,
-            commissionRate: Number(e.commissionRate) || 0,
-            biometricId: String(e.biometricId),
-            epfEligible: Boolean(e.epfEligible),
-            taxable: Boolean(e.taxable),
-            active: Boolean(e.active),
-            branchId: (e.branchId as string) || null,
-            allowanceIds: [],
-            leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
-            attendanceBonusRate: Number(e.attendanceBonusRate) || 0,
-            punctualBonusRate: Number(e.punctualBonusRate) || 0,
-            incomeBonusPercentage: Number(e.incomeBonusPercentage) || 0,
-          }));
-          setEmployees(dbEmployees);
-        }
-
-        // Fetch ALL attendance logs initially so past months are available in the UI
-        const attRes = await apiFetch(`/api/attendance`);
-        const attData = await attRes.json();
-        if (attData.success && Array.isArray(attData.logs)) {
-          const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
-            id: String(l.id),
-            employeeId: String(l.employeeId),
-            date: String(l.date),
-            checkIn: String(l.checkIn),
-            checkOut: (l.checkOut as string) || null,
-            status: (l.status as AttendanceLog["status"]) || "On-Time",
-            overtimeHours: Number(l.overtimeHours) || 0,
-            noPayHours: Number(l.noPayHours) || 0,
-            authMethod: (l.authMethod as string) || "Fingerprint",
-            deviceId: (l.deviceId as string) || "DS-K1T320MFWX",
-            employee: l.employee as AttendanceLog["employee"],
-          }));
-          setAttendanceLogs(dbLogs);
-        }
-
-        const lvrRes = await apiFetch("/api/leaves");
-        const lvrData = await lvrRes.json();
-        if (lvrData.success && lvrData.leaves && lvrData.leaves.length > 0) {
-          const dbLeaves: LeaveRequest[] = lvrData.leaves.map((l: Record<string, unknown>) => ({
-            id: String(l.id),
-            employeeId: String(l.employeeId),
-            type: (l.type as LeaveRequest["type"]) || "Annual",
-            startDate: String(l.startDate),
-            endDate: String(l.endDate),
-            reason: String(l.reason),
-            status: (l.status as LeaveRequest["status"]) || "Pending",
-            appliedAt: new Date().toISOString(),
-          }));
-          setLeaveRequests(prev => {
-            const merged = [...dbLeaves];
-            prev.forEach(p => { if (!merged.some(m => m.id === p.id)) merged.push(p); });
-            return merged;
-          });
-        }
-
-        const hoursRes = await apiFetch("/api/operating-hours");
-        const hoursData = await hoursRes.json();
-        if (hoursData.success && hoursData.operatingHours && hoursData.operatingHours.length > 0) {
-          setOperatingHours(hoursData.operatingHours);
-          if (typeof window !== "undefined") {
-            try {
-              localStorage.setItem("medicflow_operating_hours", JSON.stringify(hoursData.operatingHours));
-            } catch {}
+      await Promise.allSettled([
+        // 1. Employees
+        (async () => {
+          try {
+            const empRes = await apiFetch("/api/employees");
+            const empData = await empRes.json();
+            if (empData.success && Array.isArray(empData.employees) && empData.employees.length > 0) {
+              const dbEmployees: Employee[] = empData.employees.map((e: Record<string, unknown>) => ({
+                id: String(e.id),
+                firstName: String(e.firstName),
+                lastName: String(e.lastName),
+                role: (e.role as Employee["role"]) || "Doctor",
+                payType: (e.payType as Employee["payType"]) || "Fixed Monthly",
+                basicSalary: Number(e.basicSalary) || 0,
+                hourlyRate: Number(e.hourlyRate) || 0,
+                sessionRate: Number(e.sessionRate) || 0,
+                commissionRate: Number(e.commissionRate) || 0,
+                biometricId: String(e.biometricId),
+                epfEligible: Boolean(e.epfEligible),
+                taxable: Boolean(e.taxable),
+                active: Boolean(e.active),
+                branchId: (e.branchId as string) || null,
+                allowanceIds: [],
+                leaveBalances: { annual: Number(e.annualLeave) || 14, sick: Number(e.sickLeave) || 7, casual: Number(e.casualLeave) || 3 },
+                attendanceBonusRate: Number(e.attendanceBonusRate) || 0,
+                punctualBonusRate: Number(e.punctualBonusRate) || 0,
+                incomeBonusPercentage: Number(e.incomeBonusPercentage) || 0,
+              }));
+              setEmployees(dbEmployees);
+            }
+          } catch (e) {
+            console.error("Failed to hydrate employees:", e);
           }
-        }
+        })(),
 
-        const holRes = await apiFetch("/api/holidays");
-        const holData = await holRes.json();
-        if (holData.success && holData.holidays) {
-          setPublicHolidays(holData.holidays.map((h: Record<string, unknown>) => ({
-            id: String(h.id),
-            date: String(h.date),
-            name: String(h.name),
-            isDoubleOT: Boolean(h.isDoubleOT),
-          })));
-        }
+        // 2. Attendance
+        (async () => {
+          try {
+            const attRes = await apiFetch(`/api/attendance`);
+            const attData = await attRes.json();
+            if (attData.success && Array.isArray(attData.logs)) {
+              const dbLogs: AttendanceLog[] = attData.logs.map((l: Record<string, unknown>) => ({
+                id: String(l.id),
+                employeeId: String(l.employeeId),
+                date: String(l.date),
+                checkIn: String(l.checkIn),
+                checkOut: (l.checkOut as string) || null,
+                status: (l.status as AttendanceLog["status"]) || "On-Time",
+                overtimeHours: Number(l.overtimeHours) || 0,
+                noPayHours: Number(l.noPayHours) || 0,
+                authMethod: (l.authMethod as string) || "Fingerprint",
+                deviceId: (l.deviceId as string) || "DS-K1T320MFWX",
+                employee: l.employee as AttendanceLog["employee"],
+              }));
+              setAttendanceLogs(dbLogs);
+            }
+          } catch (e) {
+            console.error("Failed to hydrate attendance:", e);
+          }
+        })(),
 
-        const payRes = await apiFetch("/api/payroll");
-        const payData = await payRes.json();
-        if (payData.success && payData.payrolls) {
-          setPayrollHistory(payData.payrolls.map((p: Record<string, unknown>) => ({
-            id: String(p.id),
-            month: String(p.month),
-            label: String(p.label),
-            status: String(p.status),
-            finalizedAt: String(p.finalizedAt),
-            grossSalaryPool: Number(p.grossSalaryPool),
-            netRemittances: Number(p.netRemittances),
-            totalEpf: Number(p.totalEpf),
-            totalEtf: Number(p.totalEtf),
-            totalApit: Number(p.totalApit),
-            employeeCount: Number(p.employeeCount),
-          })));
-        }
+        // 3. Leaves
+        (async () => {
+          try {
+            const lvrRes = await apiFetch("/api/leaves");
+            const lvrData = await lvrRes.json();
+            if (lvrData.success && Array.isArray(lvrData.leaves)) {
+              const dbLeaves: LeaveRequest[] = lvrData.leaves.map((l: Record<string, unknown>) => ({
+                id: String(l.id),
+                employeeId: String(l.employeeId),
+                type: (l.type as LeaveRequest["type"]) || "Annual",
+                startDate: String(l.startDate),
+                endDate: String(l.endDate),
+                reason: String(l.reason),
+                status: (l.status as LeaveRequest["status"]) || "Pending",
+                appliedAt: String(l.appliedAt || new Date().toISOString()),
+              }));
+              setLeaveRequests(prev => {
+                const merged = [...dbLeaves];
+                prev.forEach(p => { if (!merged.some(m => m.id === p.id)) merged.push(p); });
+                return merged;
+              });
+            }
+          } catch (e) {
+            console.error("Failed to hydrate leaves:", e);
+          }
+        })(),
 
-        const clnRes = await apiFetch("/api/clinics");
-        const clnData = await clnRes.json();
-        if (clnData.success && clnData.clinic) {
-          // Heal stale session clinicId if needed
-          setCurrentUser(prev => {
-            if (prev && prev.clinicId !== clnData.clinic.id) {
-              const updated = { ...prev, clinicId: clnData.clinic.id, clinicName: clnData.clinic.name };
+        // 4. Operating Hours
+        (async () => {
+          try {
+            const hoursRes = await apiFetch("/api/operating-hours");
+            const hoursData = await hoursRes.json();
+            if (hoursData.success && Array.isArray(hoursData.operatingHours) && hoursData.operatingHours.length > 0) {
+              setOperatingHours(hoursData.operatingHours);
               if (typeof window !== "undefined") {
                 try {
-                  localStorage.setItem("medicflow_user_session", JSON.stringify(updated));
+                  localStorage.setItem("medicflow_operating_hours", JSON.stringify(hoursData.operatingHours));
                 } catch {}
               }
-              return updated;
             }
-            return prev;
-          });
-
-          setCompanyProfile(prev => ({
-            ...prev,
-            name: clnData.clinic.name || prev.name,
-            address: clnData.clinic.address || prev.address,
-            phone: clnData.clinic.phone || prev.phone,
-            email: clnData.clinic.email || prev.email,
-            logoUrl: clnData.clinic.logoUrl ?? prev.logoUrl,
-            epfRegNo: clnData.clinic.epfRegNo || prev.epfRegNo,
-            etfRegNo: clnData.clinic.etfRegNo || prev.etfRegNo,
-          }));
-          setEpfSettings(prev => ({
-            ...prev,
-            epfRegNo: clnData.clinic.epfRegNo || prev.epfRegNo,
-            etfRegNo: clnData.clinic.etfRegNo || prev.etfRegNo,
-            employeeRate: clnData.clinic.epfEmployeeRate ?? prev.employeeRate,
-            employerRate: clnData.clinic.epfEmployerRate ?? prev.employerRate,
-            etfRate: clnData.clinic.etfRate ?? prev.etfRate,
-          }));
-          setSalarySettings(prev => ({
-            ...prev,
-            workingDaysPerMonth: clnData.clinic.workingDaysPerMonth ?? prev.workingDaysPerMonth,
-            globalWorkedDayBonus: clnData.clinic.globalWorkedDayBonus ?? prev.globalWorkedDayBonus,
-            globalPunctualBonus: clnData.clinic.globalPunctualBonus ?? prev.globalPunctualBonus,
-            globalIncomeBonusPct: clnData.clinic.globalIncomeBonusPct ?? prev.globalIncomeBonusPct,
-            otCalculationType: clnData.clinic.otCalculationType ?? prev.otCalculationType,
-            otGracePeriodMinutes: clnData.clinic.otGracePeriodMinutes ?? prev.otGracePeriodMinutes,
-            otRateBasis: (clnData.clinic.otRateBasis as SalarySettings["otRateBasis"]) ?? prev.otRateBasis ?? "Basic_200",
-            otMultiplier: clnData.clinic.otMultiplier ?? prev.otMultiplier ?? 1.5,
-            punctualGraceType: (clnData.clinic.punctualGraceType as "Strict" | "Grace Period") ?? prev.punctualGraceType ?? "Grace Period",
-            punctualGraceMinutes: clnData.clinic.punctualGraceMinutes ?? prev.punctualGraceMinutes ?? 15,
-          }));
-        }
-
-
-        const allRes = await apiFetch("/api/allowances");
-        const allData = await allRes.json();
-        if (allData.success && allData.allowances) {
-          const dbAllowances: Allowance[] = allData.allowances.map((a: Record<string, unknown>) => ({
-            id: String(a.id),
-            name: String(a.name),
-            amount: Number(a.amount) || 0,
-            epfApplicable: Boolean(a.epfApplicable),
-            taxDeductible: !Boolean(a.isTaxable),
-            type: (a.type as Allowance["type"]) || "Fixed",
-          }));
-          setAllowances(dbAllowances);
-          
-          if (allData.employeeAllowances) {
-            const dbEmpAllowances: EmployeeAllowance[] = allData.employeeAllowances.map((ea: Record<string, unknown>) => ({
-              id: String(ea.id),
-              employeeId: String(ea.employeeId),
-              allowanceId: String(ea.allowanceId),
-              overrideAmount: ea.overrideAmount ? Number(ea.overrideAmount) : undefined,
-            }));
-            setEmployeeAllowances(dbEmpAllowances);
+          } catch (e) {
+            console.error("Failed to hydrate operating hours:", e);
           }
-        }
-      } catch (err) {
-        console.error("Database hydration error:", err);
-      }
+        })(),
+
+        // 5. Holidays
+        (async () => {
+          try {
+            const holRes = await apiFetch("/api/holidays");
+            const holData = await holRes.json();
+            if (holData.success && Array.isArray(holData.holidays)) {
+              setPublicHolidays(holData.holidays.map((h: Record<string, unknown>) => ({
+                id: String(h.id),
+                date: String(h.date),
+                name: String(h.name),
+                isDoubleOT: Boolean(h.isDoubleOT),
+              })));
+            }
+          } catch (e) {
+            console.error("Failed to hydrate holidays:", e);
+          }
+        })(),
+
+        // 6. Payroll
+        (async () => {
+          try {
+            const payRes = await apiFetch("/api/payroll");
+            const payData = await payRes.json();
+            if (payData.success && Array.isArray(payData.payrolls)) {
+              setPayrollHistory(payData.payrolls.map((p: Record<string, unknown>) => ({
+                id: String(p.id),
+                month: String(p.month),
+                label: String(p.label),
+                status: String(p.status),
+                finalizedAt: String(p.finalizedAt),
+                grossSalaryPool: Number(p.grossSalaryPool),
+                netRemittances: Number(p.netRemittances),
+                totalEpf: Number(p.totalEpf),
+                totalEtf: Number(p.totalEtf),
+                totalApit: Number(p.totalApit),
+                employeeCount: Number(p.employeeCount),
+              })));
+            }
+          } catch (e) {
+            console.error("Failed to hydrate payroll:", e);
+          }
+        })(),
+
+        // 7. Clinics
+        (async () => {
+          try {
+            const clnRes = await apiFetch("/api/clinics");
+            const clnData = await clnRes.json();
+            if (clnData.success && clnData.clinic) {
+              setCurrentUser(prev => {
+                if (prev && prev.clinicId !== clnData.clinic.id) {
+                  const updated = { ...prev, clinicId: clnData.clinic.id, clinicName: clnData.clinic.name };
+                  if (typeof window !== "undefined") {
+                    try {
+                      localStorage.setItem("medicflow_user_session", JSON.stringify(updated));
+                    } catch {}
+                  }
+                  return updated;
+                }
+                return prev;
+              });
+
+              setCompanyProfile(prev => ({
+                ...prev,
+                name: clnData.clinic.name || prev.name,
+                address: clnData.clinic.address || prev.address,
+                phone: clnData.clinic.phone || prev.phone,
+                email: clnData.clinic.email || prev.email,
+                logoUrl: clnData.clinic.logoUrl ?? prev.logoUrl,
+                epfRegNo: clnData.clinic.epfRegNo || prev.epfRegNo,
+                etfRegNo: clnData.clinic.etfRegNo || prev.etfRegNo,
+              }));
+              setEpfSettings(prev => ({
+                ...prev,
+                epfRegNo: clnData.clinic.epfRegNo || prev.epfRegNo,
+                etfRegNo: clnData.clinic.etfRegNo || prev.etfRegNo,
+                employeeRate: clnData.clinic.epfEmployeeRate ?? prev.employeeRate,
+                employerRate: clnData.clinic.epfEmployerRate ?? prev.employerRate,
+                etfRate: clnData.clinic.etfRate ?? prev.etfRate,
+              }));
+              setSalarySettings(prev => ({
+                ...prev,
+                workingDaysPerMonth: clnData.clinic.workingDaysPerMonth ?? prev.workingDaysPerMonth,
+                globalWorkedDayBonus: clnData.clinic.globalWorkedDayBonus ?? prev.globalWorkedDayBonus,
+                globalPunctualBonus: clnData.clinic.globalPunctualBonus ?? prev.globalPunctualBonus,
+                globalIncomeBonusPct: clnData.clinic.globalIncomeBonusPct ?? prev.globalIncomeBonusPct,
+                otCalculationType: clnData.clinic.otCalculationType ?? prev.otCalculationType,
+                otGracePeriodMinutes: clnData.clinic.otGracePeriodMinutes ?? prev.otGracePeriodMinutes,
+                otRateBasis: (clnData.clinic.otRateBasis as SalarySettings["otRateBasis"]) ?? prev.otRateBasis ?? "Basic_200",
+                otMultiplier: clnData.clinic.otMultiplier ?? prev.otMultiplier ?? 1.5,
+                punctualGraceType: (clnData.clinic.punctualGraceType as "Strict" | "Grace Period") ?? prev.punctualGraceType ?? "Grace Period",
+                punctualGraceMinutes: clnData.clinic.punctualGraceMinutes ?? prev.punctualGraceMinutes ?? 15,
+              }));
+            }
+          } catch (e) {
+            console.error("Failed to hydrate clinic profile:", e);
+          }
+        })(),
+
+        // 8. Allowances
+        (async () => {
+          try {
+            const allRes = await apiFetch("/api/allowances");
+            const allData = await allRes.json();
+            if (allData.success && allData.allowances) {
+              const dbAllowances: Allowance[] = allData.allowances.map((a: Record<string, unknown>) => ({
+                id: String(a.id),
+                name: String(a.name),
+                amount: Number(a.amount) || 0,
+                epfApplicable: Boolean(a.epfApplicable),
+                taxDeductible: !Boolean(a.isTaxable),
+                type: (a.type as Allowance["type"]) || "Fixed",
+              }));
+              setAllowances(dbAllowances);
+              
+              if (allData.employeeAllowances) {
+                const dbEmpAllowances: EmployeeAllowance[] = allData.employeeAllowances.map((ea: Record<string, unknown>) => ({
+                  id: String(ea.id),
+                  employeeId: String(ea.employeeId),
+                  allowanceId: String(ea.allowanceId),
+                  overrideAmount: ea.overrideAmount ? Number(ea.overrideAmount) : undefined,
+                }));
+                setEmployeeAllowances(dbEmpAllowances);
+              }
+            }
+          } catch (e) {
+            console.error("Failed to hydrate allowances:", e);
+          }
+        })(),
+      ]);
     };
     hydrateFromDatabase();
 
-    // Live background polling every 30 seconds for biometric scans (paused when tab is hidden)
+    // Live background polling every 20 seconds
     const pollInterval = setInterval(async () => {
       try {
         if (typeof document !== "undefined" && document.hidden) return;
@@ -820,8 +919,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return [...dbLogs, ...existingToKeep].sort((a,b) => b.date.localeCompare(a.date));
           });
         }
+
+        // Also refresh leaves and employees if empty
+        setEmployeesRaw(currentEmps => {
+          if (currentEmps.length === 0) {
+            apiFetch("/api/employees").then(r => r.json()).then(d => {
+              if (d.success && Array.isArray(d.employees) && d.employees.length > 0) {
+                setEmployees(d.employees);
+              }
+            }).catch(() => {});
+          }
+          return currentEmps;
+        });
       } catch {}
-    }, 30000);
+    }, 20000);
 
     return () => clearInterval(pollInterval);
   }, []);
@@ -867,6 +978,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAttendanceLog = (log: Omit<AttendanceLog,"id">) => setAttendanceLogs(p => [{ ...log, id: `LOG-${Date.now()}-${log.employeeId}` }, ...p]);
   
   const updateAttendanceLog = async (id: string, f: Partial<AttendanceLog>) => {
+    const isTrueAdmin = Boolean(
+      currentUser
+        ? (currentUser.role === "Admin" && currentUser.loginType !== "staff")
+        : isAdminAuthenticated
+    );
+    if (!isTrueAdmin) {
+      alert("Unauthorized: Only an administrator can adjust attendance records.");
+      return;
+    }
     setAttendanceLogs(p => p.map(l => l.id === id ? { ...l, ...f } : l));
     pushAudit({ action: "UPDATE", entity: "AttendanceLog", entityId: id, details: "Adjusted log" });
     try {
@@ -879,6 +999,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAttendanceLog = async (id: string) => {
+    const isTrueAdmin = Boolean(
+      currentUser
+        ? (currentUser.role === "Admin" && currentUser.loginType !== "staff")
+        : isAdminAuthenticated
+    );
+    if (!isTrueAdmin) {
+      alert("Unauthorized: Only an administrator can delete attendance records.");
+      return;
+    }
     setAttendanceLogs(p => p.filter(l => l.id !== id));
     pushAudit({ action: "DELETE", entity: "AttendanceLog", entityId: id, details: "Deleted attendance log" });
     try {
@@ -1004,21 +1133,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addLeaveRequest = async (req: Omit<LeaveRequest,"id"|"appliedAt">) => {
+    const reqStart = req.startDate;
+    const reqEnd = req.endDate || req.startDate;
+    const isOverlap = leaveRequests.some(r => {
+      if (r.employeeId !== req.employeeId) return false;
+      if (r.status === "Rejected") return false;
+      const rEnd = r.endDate || r.startDate;
+      return reqStart <= rEnd && reqEnd >= r.startDate;
+    });
+
+    if (isOverlap) {
+      alert("Duplicate Leave Detected: An active or pending leave request already exists for this staff member covering the selected dates.");
+      return;
+    }
+
     const nr: LeaveRequest = { ...req, id: `LVR-${String(Date.now()).slice(-4)}`, appliedAt: nowStr() };
     setLeaveRequests(p => [nr,...p]);
     pushAudit({ action: "CREATE", entity: "LeaveRequest", entityId: nr.id, details: `${req.type} leave by ${req.employeeId}` });
     try {
-      await apiFetch("/api/leaves", {
+      const res = await apiFetch("/api/leaves", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req),
       });
+      const data = await res.json();
+      if (!data.success) {
+        setLeaveRequests(p => p.filter(r => r.id !== nr.id));
+        alert(data.error || "Failed to submit leave request.");
+      }
     } catch {}
   };
 
   const updateLeaveRequest = (id: string, f: Partial<LeaveRequest>) => setLeaveRequests(p => p.map(r => r.id===id ? {...r,...f} : r));
   
   const approveLeave = async (id: string) => {
+    const isTrueAdmin = (currentUser?.role === "Admin" && currentUser?.loginType !== "staff") || isAdminAuthenticated;
+    if (!isTrueAdmin) {
+      alert("Unauthorized: Only an administrator can approve leave requests.");
+      return;
+    }
     setLeaveRequests(p => p.map(r => r.id === id ? { ...r, status: "Approved" } : r));
     pushAudit({ action: "APPROVE", entity: "LeaveRequest", entityId: id, details: "Approved leave" });
     try {
@@ -1031,6 +1184,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const rejectLeave = async (id: string) => {
+    const isTrueAdmin = (currentUser?.role === "Admin" && currentUser?.loginType !== "staff") || isAdminAuthenticated;
+    if (!isTrueAdmin) {
+      alert("Unauthorized: Only an administrator can reject leave requests.");
+      return;
+    }
     setLeaveRequests(p => p.map(r => r.id === id ? { ...r, status: "Rejected" } : r));
     pushAudit({ action: "REJECT", entity: "LeaveRequest", entityId: id, details: "Rejected leave" });
     try {
