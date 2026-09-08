@@ -83,6 +83,34 @@ const formatHoursAndMins = (decimalHours: number, options?: { showZero?: boolean
   return `${m} min`;
 };
 
+const formatCycleRange = (startDate: string, endDate: string): string => {
+  if (!startDate || !endDate) return "";
+  try {
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const [ey, em, ed] = endDate.split("-").map(Number);
+    const sDate = new Date(sy, sm - 1, sd);
+    const eDate = new Date(ey, em - 1, ed);
+    const sStr = sDate.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+    const eStr = eDate.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+    return `${sStr} → ${eStr}`;
+  } catch {
+    return `${startDate} → ${endDate}`;
+  }
+};
+
+const getActiveWorkMonthKey = (cycleStartDay: number = 1, refDate: Date = new Date()): string => {
+  let y = refDate.getFullYear();
+  let m = refDate.getMonth();
+  if (cycleStartDay > 1 && refDate.getDate() >= cycleStartDay) {
+    m += 1;
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+  }
+  return `${y}-${String(m + 1).padStart(2, "0")}`;
+};
+
 const calculateWorkedHours = (checkIn?: string | null, checkOut?: string | null): number => {
   if (!checkIn || !checkOut || checkOut === "–" || checkOut.toLowerCase().includes("active")) return 0;
   const [inH, inM] = checkIn.split(":").map(Number);
@@ -359,7 +387,8 @@ const Icons = {
 type PayrollPeriodSummary = { id: string; label: string; grossSalaryPool: number; netRemittances: number; };
 
 function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: boolean }) {
-  const { operatingHours, publicHolidays } = useApp();
+  const { operatingHours, publicHolidays, employees } = useApp();
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const daysData = useMemo(() => {
     const today = new Date();
@@ -369,33 +398,82 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
       d.setDate(d.getDate() - i);
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+      const fullDate = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      const dayOfWeek = d.getDay();
+      const opHour = operatingHours.find(h => h.dayOfWeek === dayOfWeek);
+      const holiday = publicHolidays.find(h => h.date === dateStr);
+      const isClosed = (opHour && !opHour.isOpen) || !!holiday;
+      const closedReason = holiday ? `Holiday: ${holiday.name}` : (opHour && !opHour.isOpen ? "Scheduled Off" : undefined);
+      const operatingHoursText = opHour && opHour.isOpen ? `${opHour.startTime} → ${opHour.endTime}` : (holiday ? holiday.name : "Closed");
+
       const dayLogs = logs.filter(l => l.date === dateStr);
-      const presentCount = dayLogs.filter(l => ["On-Time", "Late", "Half-Day"].includes(l.status)).length;
-      
-      // Calculate worked hours for the day
       let hours = 0;
+      const attendees: Array<{
+        id: string;
+        name: string;
+        role: string;
+        checkIn: string;
+        checkOut: string | null;
+        status: AttendanceLog["status"];
+        empHours: number;
+      }> = [];
+
       dayLogs.forEach(l => {
+        let empHours = 0;
         if (l.checkIn && l.checkOut) {
           const [h1, m1] = l.checkIn.split(":").map(Number);
           const [h2, m2] = l.checkOut.split(":").map(Number);
           const diffMin = (h2 * 60 + m2) - (h1 * 60 + m1);
-          if (diffMin > 0) hours += Math.round((diffMin / 60) * 10) / 10;
+          if (diffMin > 0) empHours = Math.round((diffMin / 60) * 10) / 10;
         } else if (l.checkIn) {
-          hours += 1;
+          empHours = 1;
         }
+        hours += empHours;
+
+        const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId || (l.employee && (e.biometricId === String(l.employee.biometricId) || e.id === l.employee.id)));
+        const name = emp ? `${emp.firstName} ${emp.lastName}` : (l.employee ? `${l.employee.firstName} ${l.employee.lastName}` : `Staff #${l.employeeId}`);
+        const role = emp?.role || "Staff";
+
+        attendees.push({
+          id: l.id,
+          name,
+          role,
+          checkIn: l.checkIn,
+          checkOut: l.checkOut,
+          status: l.status,
+          empHours,
+        });
       });
 
-      const dayOfWeek = d.getDay();
-      const opHour = operatingHours.find(h => h.dayOfWeek === dayOfWeek);
-      const isPublicHoliday = publicHolidays.some(h => h.date === dateStr);
-      const isClosed = (opHour && !opHour.isOpen) || isPublicHoliday;
-      
-      result.push({ date: dateStr, day: dayName, present: presentCount, hours: Math.min(12, hours), isClosed });
+      const onTimeCount = dayLogs.filter(l => l.status === "On-Time").length;
+      const lateCount = dayLogs.filter(l => l.status === "Late").length;
+      const halfDayCount = dayLogs.filter(l => l.status === "Half-Day").length;
+      const leaveCount = dayLogs.filter(l => l.status === "On-Leave").length;
+      const absentCount = dayLogs.filter(l => l.status === "Absent").length;
+      const presentCount = onTimeCount + lateCount + halfDayCount;
+
+      result.push({
+        date: dateStr,
+        day: dayName,
+        fullDate,
+        present: presentCount,
+        hours: Math.min(24, Math.round(hours * 10) / 10),
+        displayHours: hours,
+        isClosed,
+        closedReason,
+        operatingHoursText,
+        onTimeCount,
+        lateCount,
+        halfDayCount,
+        leaveCount,
+        absentCount,
+        attendees,
+      });
     }
     return result;
-  }, [logs, operatingHours, publicHolidays]);
+  }, [logs, operatingHours, publicHolidays, employees]);
 
-  const totalWeeklyHours = daysData.reduce((acc, d) => acc + d.hours, 0);
+  const totalWeeklyHours = daysData.reduce((acc, d) => acc + d.displayHours, 0);
 
   return (
     <div className="space-y-4 pt-1">
@@ -409,15 +487,132 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
         </span>
       </div>
 
-      <div className={`grid grid-cols-7 gap-3 items-end pt-2 pb-3.5 px-3 border-b ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
+      <div className={`grid grid-cols-7 gap-3 items-end pt-2 pb-3.5 px-3 border-b relative ${isDark ? "border-slate-800/60" : "border-slate-200"}`}>
         {daysData.map((d, idx) => {
           const heightPct = d.hours > 0 ? Math.max(18, (d.hours / 10) * 100) : 6;
+          const isHovered = hoveredIdx === idx;
           return (
-            <div key={idx} className="flex flex-col items-center gap-1.5 group">
-              <span className={`text-[10px] font-mono font-bold ${d.hours > 0 ? "text-[#38bdf8]" : d.isClosed ? "text-amber-500" : "text-slate-400"}`}>
+            <div 
+              key={idx} 
+              className="relative flex flex-col items-center gap-1.5 group cursor-pointer"
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              onClick={() => setHoveredIdx(isHovered ? null : idx)}
+            >
+              {/* Floating Info Tooltip */}
+              {isHovered && (
+                <div 
+                  className={`absolute bottom-[calc(100%+12px)] z-50 pointer-events-none w-64 sm:w-72 p-3 rounded-xl shadow-2xl border transition-all duration-150 animate-in fade-in-0 zoom-in-95 ${
+                    idx === 0 
+                      ? "left-0" 
+                      : idx === 1 
+                        ? "left-0 sm:left-1/2 sm:-translate-x-1/4" 
+                        : idx >= 5 
+                          ? "right-0" 
+                          : "left-1/2 -translate-x-1/2"
+                  } ${
+                    isDark 
+                      ? "bg-slate-900/95 border-slate-700/80 text-white shadow-black/80 backdrop-blur-xl" 
+                      : "bg-white/95 border-slate-200 text-slate-900 shadow-slate-400/30 backdrop-blur-xl"
+                  }`}
+                >
+                  {/* Tooltip Header */}
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                    <div>
+                      <p className="text-xs font-bold leading-tight">{d.fullDate}</p>
+                      <p className="text-[10px] mt-0.5">
+                        {d.isClosed ? (
+                          <span className="text-amber-500 font-semibold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                            {d.closedReason || "Clinic Closed"}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-500 font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                            Hours: {d.operatingHoursText}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono font-black text-[#38bdf8] bg-[#0ea5e9]/10 border border-[#0ea5e9]/25 px-2 py-0.5 rounded-md shrink-0">
+                      {d.displayHours > 0 ? formatHoursAndMins(d.displayHours) : d.isClosed ? "CLOSED" : "0h"}
+                    </span>
+                  </div>
+
+                  {/* Summary Metric Chips */}
+                  <div className="grid grid-cols-2 gap-1.5 my-2">
+                    <div className={`p-1.5 rounded-lg border text-center ${isDark ? "bg-slate-800/60 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
+                      <p className={`text-[9px] uppercase font-bold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Staff Present</p>
+                      <p className="text-xs font-black text-[#38bdf8]">{d.present} / {employees.length}</p>
+                    </div>
+                    <div className={`p-1.5 rounded-lg border text-center ${isDark ? "bg-slate-800/60 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
+                      <p className={`text-[9px] uppercase font-bold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Status</p>
+                      <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold">
+                        {d.onTimeCount > 0 && <span className="text-emerald-500">{d.onTimeCount} On-Time</span>}
+                        {d.lateCount > 0 && <span className="text-amber-400">{d.lateCount} Late</span>}
+                        {d.halfDayCount > 0 && <span className="text-sky-400">{d.halfDayCount} Half</span>}
+                        {d.present === 0 && <span className="text-slate-400 font-normal">None</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Staff Punches Details */}
+                  {d.attendees.length > 0 ? (
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-0.5">
+                      <p className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                        Clocked In Staff ({d.attendees.length})
+                      </p>
+                      {d.attendees.map((a, aIdx) => (
+                        <div key={aIdx} className={`flex items-center justify-between p-1.5 rounded-lg text-[10px] border ${isDark ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/80 border-slate-100"}`}>
+                          <div className="truncate max-w-[130px]">
+                            <p className="font-semibold truncate">{a.name}</p>
+                            <p className="text-[9px] font-mono text-slate-400">
+                              {a.checkIn} {a.checkOut ? `→ ${a.checkOut}` : "→ In-Clinic"}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                              a.status === "On-Time"
+                                ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                                : a.status === "Late"
+                                ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                                : "bg-sky-500/15 text-sky-500 border border-sky-500/30"
+                            }`}>
+                              {a.status}
+                            </span>
+                            <p className="text-[9px] font-mono text-[#38bdf8] font-bold mt-0.5">
+                              {a.empHours > 0 ? formatHoursAndMins(a.empHours, { short: true }) : "Active"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`p-2 rounded-lg text-center text-[10px] border ${isDark ? "bg-slate-800/20 border-slate-800/60 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"}`}>
+                      {d.isClosed ? "Clinic was closed on this day" : "No biometric logs recorded"}
+                    </div>
+                  )}
+
+                  {/* Pointer arrow */}
+                  <div className={`absolute top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 ${
+                    idx === 0 ? "left-4" : idx === 1 ? "left-4 sm:left-8" : idx >= 5 ? "right-4" : "left-1/2 -translate-x-1/2"
+                  } ${isDark ? "border-t-slate-700/80" : "border-t-slate-200"}`} />
+                </div>
+              )}
+
+              <span className={`text-[10px] font-mono font-bold transition-all ${
+                isHovered
+                  ? "text-sky-300 scale-110"
+                  : d.hours > 0 ? "text-[#38bdf8]" : d.isClosed ? "text-amber-500" : "text-slate-400"
+              }`}>
                 {d.hours > 0 ? formatHoursAndMins(d.hours, { short: true }) : d.isClosed ? "CLOSED" : "0h"}
               </span>
-              <div className={`w-full max-w-[32px] rounded-t-xl overflow-hidden h-24 flex items-end p-0.5 border ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
+
+              <div className={`w-full max-w-[32px] rounded-t-xl overflow-hidden h-24 flex items-end p-0.5 border transition-all duration-200 ${
+                isHovered
+                  ? "ring-2 ring-sky-400/80 shadow-lg shadow-[#0ea5e9]/30 scale-105"
+                  : ""
+              } ${isDark ? "bg-slate-800/50 border-slate-700/40" : "bg-slate-100 border-slate-200"}`}>
                 <div
                   className={`w-full rounded-t-lg transition-all duration-500 ${
                     d.hours > 0
@@ -429,14 +624,24 @@ function ClinicActivityChart({ logs, isDark }: { logs: AttendanceLog[]; isDark: 
                   style={{ height: d.isClosed && d.hours === 0 ? "100%" : `${heightPct}%` }}
                 />
               </div>
-              <span className={`text-[11px] font-extrabold leading-tight mt-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>{d.day}</span>
+
+              <span className={`text-[11px] font-extrabold leading-tight mt-1 transition-colors ${
+                isHovered ? "text-sky-400" : isDark ? "text-slate-300" : "text-slate-700"
+              }`}>{d.day}</span>
             </div>
           );
         })}
       </div>
 
       <div className="flex items-center justify-between text-[10px] text-slate-400 pt-3">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#0F85B0] animate-pulse"/>Weekly Attendance Overview</span>
+        {hoveredIdx !== null && daysData[hoveredIdx] ? (
+          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <span className="w-2 h-2 rounded-full bg-[#38bdf8] animate-ping" />
+            <strong className="text-white">{daysData[hoveredIdx].fullDate}:</strong> {formatHoursAndMins(daysData[hoveredIdx].displayHours)} logged · {daysData[hoveredIdx].present} staff present ({daysData[hoveredIdx].operatingHoursText})
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#0F85B0] animate-pulse"/>Weekly Attendance Overview</span>
+        )}
         <span className="font-mono font-bold text-[#38bdf8]">
           {operatingHours.find(h => h.dayOfWeek === new Date().getDay())?.isOpen 
             ? `Today's Clinic Hours: ${operatingHours.find(h => h.dayOfWeek === new Date().getDay())?.startTime} → ${operatingHours.find(h => h.dayOfWeek === new Date().getDay())?.endTime}`
@@ -728,8 +933,7 @@ export default function Home() {
 
   // ── Filters ──
   const [selectedMonth, setSelectedMonth] = useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    return getActiveWorkMonthKey(payrollCycleStartDay, new Date());
   });
   const [attendanceSearch, setAttendanceSearch] = useState("");
   const [attendanceStatusFilter, setAttendanceStatusFilter] = useState("All");
@@ -875,6 +1079,7 @@ export default function Home() {
       await updateSalarySettings(salarySettings);
       await updateEpfSettings(epfForm);
       updatePayrollCycleStartDay(cycleStartDayForm);
+      setSelectedMonth(getActiveWorkMonthKey(cycleStartDayForm, new Date()));
 
       const msg = customSuccessMsg || "All salary policies, dynamic bonus rates, statutory parameters & payroll cycle saved successfully!";
       setSalarySaveFeedback({ type: "success", msg });
@@ -1374,10 +1579,10 @@ export default function Home() {
       </aside>
 
       {/* ── Desktop Pinned Sidebar (Fixed to screen) ── */}
-      <aside className={`hidden lg:flex w-60 fixed inset-y-0 left-0 z-30 border-r flex-col justify-between transition-all ${isDark ? "bg-[#090d16] border-slate-800/80 backdrop-blur-xl" : "bg-white border-slate-200 backdrop-blur-xl shadow-sm"}`}>
-        <div className="p-4 overflow-y-auto flex-1">
-          <div className="flex items-center gap-2.5 mb-7 px-1">
-            <div className={`h-9 w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md transition-all shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60 shadow-black/40" : "bg-white border border-slate-200 shadow-slate-200"}`}>
+      <aside className={`hidden lg:flex w-52 xl:w-60 fixed inset-y-0 left-0 z-30 border-r flex-col justify-between transition-all ${isDark ? "bg-[#090d16] border-slate-800/80 backdrop-blur-xl" : "bg-white border-slate-200 backdrop-blur-xl shadow-sm"}`}>
+        <div className="p-3.5 xl:p-4 overflow-y-auto flex-1">
+          <div className="flex items-center gap-2.5 mb-6 xl:mb-7 px-1">
+            <div className={`h-8 w-8 xl:h-9 xl:w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md transition-all shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60 shadow-black/40" : "bg-white border border-slate-200 shadow-slate-200"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="MedSync" className="w-full h-full object-contain" />
             </div>
@@ -1403,7 +1608,7 @@ export default function Home() {
                       setActiveTab(tab.id);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold rounded-lg transition-smooth ${
+                  className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 xl:py-2.5 text-xs font-semibold rounded-lg transition-smooth ${
                     isActive
                       ? isDark
                         ? "bg-gradient-to-r from-indigo-950/60 to-slate-900 text-white border-l-2 border-[#0ea5e9] shadow-sm"
@@ -1413,7 +1618,7 @@ export default function Home() {
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
+                  <div className="flex items-center gap-2 xl:gap-2.5 truncate">
                     <svg className={`w-4 h-4 shrink-0 transition-smooth ${isActive ? (isDark ? "text-[#38bdf8]" : "text-[#0F85B0]") : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon}/>
                     </svg>
@@ -1427,7 +1632,7 @@ export default function Home() {
             })}
           </nav>
         </div>
-        <div className={`p-4 border-t space-y-2 shrink-0 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+        <div className={`p-3.5 xl:p-4 border-t space-y-2 shrink-0 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
           <button
             type="button"
             onClick={() => {
@@ -1443,7 +1648,7 @@ export default function Home() {
                 setShowAdminPinModal(true);
               }
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg border transition-smooth cursor-pointer ${
+            className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 text-xs font-bold rounded-lg border transition-smooth cursor-pointer ${
               isAdminAuthenticated
                 ? isDark
                   ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald"
@@ -1463,7 +1668,7 @@ export default function Home() {
           <button
             type="button"
             onClick={toggleTheme}
-            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+            className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 text-xs font-semibold rounded-lg border transition cursor-pointer ${
               isDark
                 ? "bg-slate-800/40 hover:bg-slate-800 border-slate-800 text-slate-300"
                 : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
@@ -1478,9 +1683,9 @@ export default function Home() {
       </aside>
 
       {/* ── Main Area (Offset by fixed sidebar on desktop) ── */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-60 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-52 xl:pl-60 min-h-screen">
         {/* Header (Sticky at top) */}
-        <header className={`h-14 sticky top-0 z-20 border-b flex items-center justify-between px-3 sm:px-6 lg:px-8 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-[#090d16]/95 border-slate-800/80" : "bg-white/95 border-slate-200 shadow-xs"}`}>
+        <header className={`h-14 sticky top-0 z-20 border-b flex items-center justify-between px-3 sm:px-5 lg:px-6 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-[#090d16]/95 border-slate-800/80" : "bg-white/95 border-slate-200 shadow-xs"}`}>
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Hamburger Button on small screens */}
             <button
@@ -1510,8 +1715,8 @@ export default function Home() {
               }`}
             >
               <span className={`w-2 h-2 shrink-0 rounded-full ${biometricSettings.status === "Connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-ping"}`}/>
-              <span className="hidden xl:inline">Hikvision DS-K1T320MFWX (HTTP Real-time Push - Connected)</span>
-              <span className="hidden sm:inline xl:hidden">DS-K1T320MFWX · Connected</span>
+              <span className="hidden 2xl:inline">Hikvision DS-K1T320MFWX (HTTP Real-time Push - Connected)</span>
+              <span className="hidden sm:inline 2xl:hidden">DS-K1T320MFWX · Connected</span>
               <span className="inline sm:hidden">Online</span>
             </button>
           </div>
@@ -1551,7 +1756,7 @@ export default function Home() {
         </header>
 
         {/* Content (Middle part that scrolls) */}
-        <main className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6 flex-1">
+        <main className="p-3 sm:p-5 lg:p-5 xl:p-6 max-w-[1600px] w-full mx-auto space-y-4 sm:space-y-6 flex-1">
 
           {/* ═══════════════ DASHBOARD ═══════════════ */}
           {activeTab === "dashboard" && (
@@ -1568,23 +1773,23 @@ export default function Home() {
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-4 rounded-xl border transition-smooth relative overflow-hidden group backdrop-blur-xl ${
+                    className={`p-3 sm:p-4 rounded-xl border transition-smooth relative overflow-hidden group backdrop-blur-xl ${
                       isDark
                         ? "bg-white/5 border-white/10 hover:border-white/20 shadow-xl"
                         : "bg-white/80 border-black/5 hover:border-black/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{item.label}</span>
-                      <span className="text-base">{item.icon}</span>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate mr-1">{item.label}</span>
+                      <span className="text-base shrink-0">{item.icon}</span>
                     </div>
                     <div className="mt-2 flex items-baseline justify-between">
-                      <span className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</span>
+                      <span className={`text-xl sm:text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</span>
                       <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${isDark ? "bg-slate-800/40 text-slate-300 border border-slate-700/50" : "bg-slate-100 text-slate-700 border border-slate-200"}`}>
                         {item.badge}
                       </span>
                     </div>
-                    <div className={`h-1 w-full bg-gradient-to-r ${item.color} rounded-full mt-3 opacity-80 group-hover:opacity-100 transition-smooth`} />
+                    <div className={`h-1 w-full bg-gradient-to-r ${item.color} rounded-full mt-2.5 sm:mt-3 opacity-80 group-hover:opacity-100 transition-smooth`} />
                   </div>
                 ))}
               </div>
@@ -1610,48 +1815,140 @@ export default function Home() {
 
                 {/* ── Stacked Attendance Breakdown Chart ── */}
                 <div className={cardCls(isDark)}>
-                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Attendance Breakdown</h3>
-                  <p className={`text-[10px] mb-4 ${isDark?"text-zinc-600":"text-zinc-400"}`}>This period · by status</p>
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+                    <div>
+                      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Attendance Breakdown</h3>
+                      <p className={`text-[10px] mt-0.5 ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+                        This month · by status
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-md border text-[9px] font-mono font-bold ${
+                        isDark ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/30 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0c6c8f]"
+                      }`}>
+                        Cycle: {payrollCycleStartDay === 1 ? "1st – End" : `Day #${payrollCycleStartDay}`}
+                      </span>
+                      {monthSelector(selectedMonth, (m) => setSelectedMonth(m))}
+                    </div>
+                  </div>
+
+                  {/* Subtitle with Cycle Date Range */}
+                  <div className={`flex items-center justify-between text-[10px] font-mono mb-3.5 pb-2 border-b ${isDark ? "border-white/5 text-zinc-400" : "border-black/5 text-zinc-500"}`}>
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <Icons.Calendar className="w-3 h-3 text-[#38bdf8]" />
+                      <span>{formatCycleRange(dateRange.startDate, dateRange.endDate)}</span>
+                    </span>
+                    <span className="text-[9px] text-zinc-400">
+                      {activeEmployees.length} Staff
+                    </span>
+                  </div>
+
                   <div className="space-y-3">
                     {activeEmployees.map(emp => {
-                      const empLogs = attendanceLogs.filter(l => l.employeeId===emp.id && l.date>=dateRange.startDate && l.date<=dateRange.endDate);
-                      const total = empLogs.length || 1;
-                      const onTime = empLogs.filter(l=>l.status==="On-Time").length;
-                      const late = empLogs.filter(l=>l.status==="Late").length;
-                      const leave = empLogs.filter(l=>l.status==="On-Leave").length;
-                      const absent = empLogs.filter(l=>l.status==="Absent").length;
-                      const pctOT = Math.round((onTime/total)*100);
-                      const pctLate = Math.round((late/total)*100);
-                      const pctLeave = Math.round((leave/total)*100);
-                      const pctAbs = Math.round((absent/total)*100);
+                      const empLogs = attendanceLogs.filter(l => 
+                        (l.employeeId === emp.id || l.employeeId === emp.biometricId || (l.employee && (l.employee.id === emp.id || l.employee.biometricId === emp.biometricId))) 
+                        && l.date >= dateRange.startDate 
+                        && l.date <= dateRange.endDate
+                      );
+                      const totalDays = empLogs.length;
+                      const onTime = empLogs.filter(l => l.status === "On-Time").length;
+                      const late = empLogs.filter(l => l.status === "Late").length;
+                      const halfDay = empLogs.filter(l => l.status === "Half-Day").length;
+                      const leave = empLogs.filter(l => l.status === "On-Leave").length;
+                      const absent = empLogs.filter(l => l.status === "Absent").length;
+
+                      const pctOT = totalDays > 0 ? Math.round((onTime / totalDays) * 100) : 0;
+                      const pctLate = totalDays > 0 ? Math.round((late / totalDays) * 100) : 0;
+                      const pctHalf = totalDays > 0 ? Math.round((halfDay / totalDays) * 100) : 0;
+                      const pctLeave = totalDays > 0 ? Math.round((leave / totalDays) * 100) : 0;
+                      const pctAbs = totalDays > 0 ? Math.round((absent / totalDays) * 100) : 0;
+
                       return (
-                        <div key={emp.id}>
+                        <div key={emp.id} className="group/emp">
                           <div className="flex justify-between items-baseline mb-1">
-                            <span className={`text-[10px] font-semibold ${isDark?"text-zinc-300":"text-zinc-700"}`}>{emp.firstName}</span>
-                            <span className="text-[9px] text-zinc-500 font-mono">{total} days</span>
+                            <span className={`text-[11px] font-semibold ${isDark ? "text-zinc-200" : "text-zinc-700"}`}>
+                              {emp.firstName} {emp.lastName ? emp.lastName.charAt(0) + "." : ""}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono">
+                              {totalDays === 0 ? "0 days" : `${totalDays} ${totalDays === 1 ? "day" : "days"}`}
+                            </span>
                           </div>
+
                           {/* Stacked bar */}
-                          <div className={`flex h-3.5 w-full rounded-full overflow-hidden gap-px ${isDark?"bg-zinc-800":"bg-zinc-100"}`}>
-                            {pctOT>0&&<div className="h-full bg-emerald-500 transition-all duration-700" style={{width:`${pctOT}%`}} title={`On-Time: ${pctOT}%`}/>}
-                            {pctLate>0&&<div className="h-full bg-amber-400 transition-all duration-700" style={{width:`${pctLate}%`}} title={`Late: ${pctLate}%`}/>}
-                            {pctLeave>0&&<div className="h-full bg-purple-500 transition-all duration-700" style={{width:`${pctLeave}%`}} title={`Leave: ${pctLeave}%`}/>}
-                            {pctAbs>0&&<div className="h-full bg-rose-500 transition-all duration-700" style={{width:`${pctAbs}%`}} title={`Absent: ${pctAbs}%`}/>}
+                          <div className={`flex h-3.5 w-full rounded-full overflow-hidden gap-px ${isDark ? "bg-zinc-800/80" : "bg-zinc-100"}`}>
+                            {totalDays === 0 ? (
+                              <div className="h-full w-full bg-transparent" title="No attendance logs recorded this month" />
+                            ) : (
+                              <>
+                                {pctOT > 0 && (
+                                  <div 
+                                    className="h-full bg-emerald-500 transition-all duration-700 hover:brightness-110" 
+                                    style={{ width: `${pctOT}%` }} 
+                                    title={`On-Time: ${onTime} days (${pctOT}%)`} 
+                                  />
+                                )}
+                                {pctLate > 0 && (
+                                  <div 
+                                    className="h-full bg-amber-400 transition-all duration-700 hover:brightness-110" 
+                                    style={{ width: `${pctLate}%` }} 
+                                    title={`Late: ${late} days (${pctLate}%)`} 
+                                  />
+                                )}
+                                {pctHalf > 0 && (
+                                  <div 
+                                    className="h-full bg-sky-400 transition-all duration-700 hover:brightness-110" 
+                                    style={{ width: `${pctHalf}%` }} 
+                                    title={`Half-Day: ${halfDay} days (${pctHalf}%)`} 
+                                  />
+                                )}
+                                {pctLeave > 0 && (
+                                  <div 
+                                    className="h-full bg-purple-500 transition-all duration-700 hover:brightness-110" 
+                                    style={{ width: `${pctLeave}%` }} 
+                                    title={`Leave: ${leave} days (${pctLeave}%)`} 
+                                  />
+                                )}
+                                {pctAbs > 0 && (
+                                  <div 
+                                    className="h-full bg-rose-500 transition-all duration-700 hover:brightness-110" 
+                                    style={{ width: `${pctAbs}%` }} 
+                                    title={`Absent: ${absent} days (${pctAbs}%)`} 
+                                  />
+                                )}
+                              </>
+                            )}
                           </div>
-                          <div className="flex gap-2.5 mt-1">
-                            {pctOT>0&&<span className="text-[8px] text-emerald-500 font-bold">{pctOT}%</span>}
-                            {pctLate>0&&<span className="text-[8px] text-amber-400 font-bold">{pctLate}%</span>}
-                            {pctLeave>0&&<span className="text-[8px] text-purple-400 font-bold">{pctLeave}%</span>}
-                            {pctAbs>0&&<span className="text-[8px] text-rose-400 font-bold">{pctAbs}%</span>}
+
+                          {/* Status percentage indicators */}
+                          <div className="flex items-center gap-2.5 mt-1 text-[9px] font-mono font-bold">
+                            {totalDays === 0 ? (
+                              <span className="text-zinc-500 font-normal italic text-[8.5px]">No logs recorded this month</span>
+                            ) : (
+                              <>
+                                {pctOT > 0 && <span className="text-emerald-500" title={`${onTime} days`}>{pctOT}%</span>}
+                                {pctLate > 0 && <span className="text-amber-400" title={`${late} days`}>{pctLate}%</span>}
+                                {pctHalf > 0 && <span className="text-sky-400" title={`${halfDay} days`}>{pctHalf}%</span>}
+                                {pctLeave > 0 && <span className="text-purple-400" title={`${leave} days`}>{pctLeave}%</span>}
+                                {pctAbs > 0 && <span className="text-rose-400" title={`${absent} days`}>{pctAbs}%</span>}
+                              </>
+                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+
                   {/* Legend */}
-                  <div className={`flex flex-wrap gap-3 mt-4 pt-3 border-t text-[9px] ${isDark?"border-white/10":"border-black/5"}`}>
-                    {[["bg-emerald-500","On-Time"],["bg-amber-400","Late"],["bg-purple-500","Leave"],["bg-rose-500","Absent"]].map(([cls,lbl])=>(
-                      <span key={lbl} className="flex items-center gap-1 text-zinc-500">
-                        <span className={`w-2 h-2 rounded-sm ${cls} inline-block`}/>
+                  <div className={`flex flex-wrap gap-3 mt-4 pt-3 border-t text-[9px] ${isDark ? "border-white/10" : "border-black/5"}`}>
+                    {[
+                      ["bg-emerald-500", "On-Time"],
+                      ["bg-amber-400", "Late"],
+                      ["bg-sky-400", "Half-Day"],
+                      ["bg-purple-500", "Leave"],
+                      ["bg-rose-500", "Absent"]
+                    ].map(([cls, lbl]) => (
+                      <span key={lbl} className="flex items-center gap-1.5 text-zinc-500 font-medium">
+                        <span className={`w-2 h-2 rounded-xs ${cls} inline-block`} />
                         {lbl}
                       </span>
                     ))}
@@ -1746,29 +2043,29 @@ export default function Home() {
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-4 rounded-2xl border transition-smooth relative overflow-hidden group backdrop-blur-xl ${
+                    className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-smooth relative overflow-hidden group backdrop-blur-xl ${
                       isDark
                         ? "bg-white/5 border-white/10 hover:border-white/20 shadow-xl"
                         : "bg-white/80 border-black/5 hover:border-black/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{item.label}</span>
-                      <span className="text-base">{item.icon}</span>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate mr-1">{item.label}</span>
+                      <span className="text-base shrink-0">{item.icon}</span>
                     </div>
                     <div className="mt-2 flex items-baseline justify-between">
-                      <span className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</span>
+                      <span className={`text-xl sm:text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</span>
                       <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${isDark ? "bg-slate-800/40 text-slate-300 border border-slate-700/50" : "bg-slate-100 text-slate-700 border border-slate-200"}`}>
                         {item.badge}
                       </span>
                     </div>
-                    <div className={`h-1 w-full bg-gradient-to-r ${item.color} rounded-full mt-3 opacity-80 group-hover:opacity-100 transition-smooth`} />
+                    <div className={`h-1 w-full bg-gradient-to-r ${item.color} rounded-full mt-2.5 sm:mt-3 opacity-80 group-hover:opacity-100 transition-smooth`} />
                   </div>
                 ))}
               </div>
 
               {/* Toolbar Card */}
-              <div className={`p-4 sm:p-5 rounded-2xl border transition-smooth backdrop-blur-xl ${
+              <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-smooth backdrop-blur-xl ${
                 isDark
                   ? "bg-white/5 border-white/10 shadow-xl"
                   : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
@@ -2625,16 +2922,17 @@ export default function Home() {
 
                   {/* Table */}
                   <div className={`rounded-xl border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
-                    <table className="w-full text-xs">
-                      <thead className={`border-b ${isDark ? "bg-zinc-900/90 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
-                        <tr>
-                          {["Employee", "Leave Type", "Schedule Period", "Status", "Reason / Note", "Actions"].map(h => (
-                            <th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className={`border-b ${isDark ? "bg-zinc-900/90 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
+                          <tr>
+                            {["Employee", "Leave Type", "Schedule Period", "Status", "Reason / Note", "Actions"].map(h => (
+                              <th key={h} className="px-4 py-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-400 whitespace-nowrap">
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
                       <tbody className={`divide-y ${isDark ? "divide-zinc-800/80" : "divide-zinc-100"}`}>
                         {filteredLeaveRequests.map(req => {
                           const emp = employees.find(e => e.id === req.employeeId);
@@ -2650,7 +2948,7 @@ export default function Home() {
                           return (
                             <tr key={req.id} className={`hover:${isDark ? "bg-zinc-900/40" : "bg-zinc-50/70"} transition-colors`}>
                               {/* Employee */}
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 whitespace-nowrap">
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#0F85B0]/20 to-sky-500/30 text-[#0F85B0] font-extrabold text-[11px] flex items-center justify-center border border-[#0F85B0]/20 shrink-0">
                                     {initials}
@@ -2667,14 +2965,14 @@ export default function Home() {
                               </td>
 
                               {/* Type */}
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 whitespace-nowrap">
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${typeBadgeStyle}`}>
                                   {req.type}
                                 </span>
                               </td>
 
                               {/* Period */}
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 whitespace-nowrap">
                                 <div className="flex items-center gap-2">
                                   <span className={`font-mono text-xs ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>
                                     {req.startDate}{req.startDate !== req.endDate ? ` → ${req.endDate}` : ""}
@@ -2686,7 +2984,7 @@ export default function Home() {
                               </td>
 
                               {/* Status */}
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 whitespace-nowrap">
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusColor(req.status, isDark)}`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${
                                     req.status === "Approved" ? "bg-emerald-500" :
@@ -2698,14 +2996,14 @@ export default function Home() {
                               </td>
 
                               {/* Note */}
-                              <td className="px-4 py-3">
-                                <span className={`text-xs ${req.note ? (isDark ? "text-zinc-300 italic" : "text-zinc-600 italic") : "text-zinc-400"}`}>
+                              <td className="px-4 py-3 max-w-[200px] truncate">
+                                <span className={`text-xs truncate block ${req.note ? (isDark ? "text-zinc-300 italic" : "text-zinc-600 italic") : "text-zinc-400"}`}>
                                   {req.note ? `"${req.note}"` : "—"}
                                 </span>
                               </td>
 
                               {/* Actions */}
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 whitespace-nowrap">
                                 {req.status === "Pending" ? (
                                   <div className="flex items-center gap-1.5">
                                     <button
@@ -2758,6 +3056,7 @@ export default function Home() {
                         )}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2796,61 +3095,61 @@ export default function Home() {
               </div>
 
               {/* 4 Executive Metric Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
                 {/* Gross Salaries Pool */}
-                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Gross Salaries Pool</span>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"}`}>
-                      <Icons.Briefcase className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">Gross Salaries Pool</span>
+                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"}`}>
+                      <Icons.Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                   </div>
-                  <p className={`text-xl font-extrabold mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                  <p className={`text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
                     LKR {payrollTotals.gross.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1">Total monthly salary allocation</p>
+                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Total monthly salary allocation</p>
                 </div>
 
                 {/* Net Remittances */}
-                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Net Remittances</span>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8]">
-                      <Icons.Wallet className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">Net Remittances</span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8] shrink-0">
+                      <Icons.Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                   </div>
-                  <p className="text-xl font-extrabold mt-2 text-[#0F85B0] dark:text-[#38bdf8]">
+                  <p className="text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 text-[#0F85B0] dark:text-[#38bdf8]">
                     LKR {payrollTotals.net.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1">Disbursable to staff accounts</p>
+                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Disbursable to staff accounts</p>
                 </div>
 
                 {/* EPF (8% + 12%) */}
-                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">EPF Total (8%+12%)</span>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                      <Icons.Shield className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">EPF Total (8%+12%)</span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-teal-500/10 text-teal-600 dark:text-teal-400 shrink-0">
+                      <Icons.Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                   </div>
-                  <p className={`text-xl font-extrabold mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                  <p className={`text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
                     LKR {(payrollTotals.epfEmp + payrollTotals.epfEmr).toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1">Statutory retirement fund total</p>
+                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Statutory retirement fund total</p>
                 </div>
 
                 {/* APIT Total */}
-                <div className={`p-4 rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">APIT Total</span>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                      <Icons.FileText className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">APIT Total</span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                      <Icons.FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                   </div>
-                  <p className="text-xl font-extrabold mt-2 text-amber-600 dark:text-amber-400">
+                  <p className="text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 text-amber-600 dark:text-amber-400">
                     LKR {Math.round(payrollTotals.apit).toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1">Inland revenue withholding tax</p>
+                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Inland revenue withholding tax</p>
                 </div>
               </div>
 
