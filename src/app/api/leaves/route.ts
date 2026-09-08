@@ -101,3 +101,21 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Leave ID is required" }, { status: 400 });
+    }
+    const clinicId = await getClinicId(req);
+    await db.leaveRequest.deleteMany({
+      where: { id, clinicId },
+    });
+    return NextResponse.json({ success: true, message: "Leave deleted successfully" });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Error deleting leave";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}

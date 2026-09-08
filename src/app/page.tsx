@@ -899,7 +899,7 @@ export default function Home() {
     updateAttendanceLog, deleteAttendanceLog,
     addAllowance, updateAllowance, deleteAllowance,
     updateOperatingHours,
-    addLeaveRequest, approveLeave, rejectLeave,
+    addLeaveRequest, approveLeave, rejectLeave, deleteLeaveRequest,
     finalizePayroll,
     addHoliday, deleteHoliday, toggleHolidayDoubleOT, syncSriLankanHolidays,
     updateBiometricSettings, updateEpfSettings, updatePayrollCycleStartDay,
@@ -3346,6 +3346,18 @@ export default function Home() {
                                         <Icons.X className="w-3 h-3" />
                                         <span>Reject</span>
                                       </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (confirm("Are you sure you want to delete this leave request?")) {
+                                            deleteLeaveRequest(req.id);
+                                          }
+                                        }}
+                                        className="p-1 rounded-md text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                                        title="Delete leave request"
+                                      >
+                                        <Icons.Trash className="w-3.5 h-3.5" />
+                                      </button>
                                     </div>
                                   ) : (
                                     <div className="flex items-center gap-1.5">
@@ -3366,9 +3378,25 @@ export default function Home() {
                                     </div>
                                   )
                                 ) : (
-                                  <span className="text-[11px] text-zinc-400 font-medium">
-                                    {req.status === "Approved" ? "Processed" : "Declined"}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-zinc-400 font-medium">
+                                      {req.status === "Approved" ? "Processed" : "Declined"}
+                                    </span>
+                                    {isUserAdmin && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (confirm("Are you sure you want to delete this leave record?")) {
+                                            deleteLeaveRequest(req.id);
+                                          }
+                                        }}
+                                        className="p-1 rounded-md text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                                        title="Delete leave record"
+                                      >
+                                        <Icons.Trash className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </td>
                             </tr>

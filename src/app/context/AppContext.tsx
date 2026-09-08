@@ -258,6 +258,7 @@ export interface AppContextProps {
   updateLeaveRequest: (id: string, req: Partial<LeaveRequest>) => void;
   approveLeave: (id: string) => void;
   rejectLeave: (id: string) => void;
+  deleteLeaveRequest: (id: string) => void;
   finalizePayroll: (period: Omit<PayrollPeriod, "id" | "finalizedAt" | "status">) => void;
   addBranch: (branch: Omit<Branch, "id">) => void;
   updateBranch: (id: string, branch: Partial<Branch>) => void;
@@ -727,11 +728,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 status: (l.status as LeaveRequest["status"]) || "Pending",
                 appliedAt: String(l.appliedAt || new Date().toISOString()),
               }));
-              setLeaveRequests(prev => {
-                const merged = [...dbLeaves];
-                prev.forEach(p => { if (!merged.some(m => m.id === p.id)) merged.push(p); });
-                return merged;
-              });
+              setLeaveRequests(dbLeaves);
             }
           } catch (e) {
             console.error("Failed to hydrate leaves:", e);
@@ -1200,6 +1197,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   };
 
+  const deleteLeaveRequest = async (id: string) => {
+    const isTrueAdmin = (currentUser?.role === "Admin" && currentUser?.loginType !== "staff") || isAdminAuthenticated;
+    if (!isTrueAdmin) {
+      alert("Unauthorized: Only an administrator can delete leave requests.");
+      return;
+    }
+    setLeaveRequests(p => p.filter(r => r.id !== id));
+    pushAudit({ action: "DELETE", entity: "LeaveRequest", entityId: id, details: "Deleted leave request" });
+    try {
+      await apiFetch(`/api/leaves?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    } catch {}
+  };
+
   const finalizePayroll = async (period: Omit<PayrollPeriod,"id"|"finalizedAt"|"status">) => {
     if (payrollHistory.find(p => p.month===period.month)) return;
     const np: PayrollPeriod = { ...period, id: `PAY-${Date.now()}`, status: "Finalized", finalizedAt: nowStr() };
@@ -1519,7 +1531,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addAllowance, updateAllowance, deleteAllowance,
       assignAllowanceToEmployee, removeAllowanceFromEmployee,
       updateOperatingHours,
-      addLeaveRequest, updateLeaveRequest, approveLeave, rejectLeave,
+      addLeaveRequest, updateLeaveRequest, approveLeave, rejectLeave, deleteLeaveRequest,
       finalizePayroll, addBranch, updateBranch, deleteBranch,
       addHoliday, deleteHoliday, toggleHolidayDoubleOT, syncSriLankanHolidays,
       updateBiometricSettings, updateEpfSettings, updatePayrollCycleStartDay, updateApitSlabs, updateMonthlyExcessIncome,
