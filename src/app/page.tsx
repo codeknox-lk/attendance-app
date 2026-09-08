@@ -1766,7 +1766,7 @@ export default function Home() {
       {/* ── Main Area (Offset by fixed sidebar on desktop) ── */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-52 xl:pl-60 min-h-screen">
         {/* Header (Sticky at top) */}
-        <header className={`h-14 sticky top-0 z-30 border-b flex items-center justify-between px-3 sm:px-5 lg:px-6 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-[#090d16]/95 border-slate-800/80" : "bg-white/95 border-slate-200 shadow-xs"}`}>
+        <header className={`h-14 sticky top-0 z-40 border-b flex items-center justify-between px-3 sm:px-5 lg:px-6 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-[#090d16]/95 border-slate-800/80" : "bg-white/95 border-slate-200 shadow-xs"}`}>
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Hamburger Button on small screens */}
             <button
@@ -1874,9 +1874,9 @@ export default function Home() {
               </div>
 
               {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 relative z-20">
                 {/* ── Premium Area Chart with hover tooltips ── */}
-                <div className={`${cardCls(isDark)} col-span-1 lg:col-span-2 flex flex-col justify-between`}>
+                <div className={`${cardCls(isDark)} col-span-1 lg:col-span-2 relative z-20 flex flex-col justify-between`}>
                   {payrollHistory.length >= 2 && (
                     <div className="flex items-center justify-between mb-3">
                       <div>
