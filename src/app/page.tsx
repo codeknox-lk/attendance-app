@@ -1846,7 +1846,7 @@ export default function Home() {
                 {[
                   { label: "Total Staff", value: dashboardMetrics.totalStaff, color: "from-[#0ea5e9] to-[#0F85B0]", badge: "Active", icon: <Icons.Users className="w-4 h-4 text-[#38bdf8]" /> },
                   { label: "Present Today", value: dashboardMetrics.present, color: "from-emerald-500 to-teal-600", badge: "On Time", icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
-                  { label: "Late Arrivals", value: dashboardMetrics.late, color: "from-amber-500 to-orange-600", badge: "Grace 15m", icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
+                  { label: "Late Arrivals", value: dashboardMetrics.late, color: "from-amber-500 to-orange-600", badge: salarySettings.punctualGraceType === "Strict" ? "Strict" : `Grace ${salarySettings.punctualGraceMinutes ?? 15}m`, icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
                   { label: "On Leave", value: dashboardMetrics.onLeave, color: "from-[#0ea5e9] to-[#0F85B0]", badge: "Approved", icon: <Icons.Sun className="w-4 h-4 text-purple-400" /> },
                   { label: "Absent", value: dashboardMetrics.absent, color: "from-rose-500 to-red-600", badge: "Action Req", icon: <Icons.AlertTriangle className="w-4 h-4 text-rose-400" /> },
                 ].map((item, idx) => (
