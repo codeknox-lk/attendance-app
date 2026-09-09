@@ -402,17 +402,40 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-xl transition ${
-              isDark ? "text-zinc-400 hover:text-white hover:bg-zinc-800" : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
-            }`}
-            aria-label="Close modal"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowInstructions((p) => !p)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border flex items-center gap-1.5 transition shadow-2xs ${
+                showInstructions
+                  ? isDark ? "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20" : "bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100"
+                  : isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50"
+              }`}
+              title={showInstructions ? "Hide instructions guide" : "Show instructions guide"}
+            >
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" strokeWidth={3} strokeLinecap="round" />
+              </svg>
+              <span>{showInstructions ? "Hide Guide" : "Show Guide"}</span>
+              <svg className={`w-3 h-3 shrink-0 transition-transform duration-200 ${showInstructions ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-xl transition ${
+                isDark ? "text-zinc-400 hover:text-white hover:bg-zinc-800" : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
+              }`}
+              aria-label="Close modal"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Modal Scrollable Body */}
@@ -421,7 +444,7 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
           <div className={`rounded-xl border p-4 transition-all ${
             isDark ? "bg-zinc-950/60 border-zinc-800/80" : "bg-teal-50/50 border-teal-100 text-zinc-800"
           }`}>
-            <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setShowInstructions(p => !p)}>
+            <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setShowInstructions((p) => !p)}>
               <div className="flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-teal-500/20 text-teal-600 dark:text-teal-400 text-xs font-bold">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -434,12 +457,23 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                   Best Practices for Maximum AI Recognition Accuracy
                 </h4>
               </div>
-              <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowInstructions((p) => !p);
+                }}
+                className={`text-xs px-2.5 py-1 rounded-lg border font-semibold flex items-center gap-1.5 transition shadow-2xs ${
+                  isDark
+                    ? "bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                    : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
                 <span>{showInstructions ? "Hide Instructions" : "Show Instructions"}</span>
                 <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${showInstructions ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
-              </span>
+              </button>
             </div>
 
             {showInstructions && (
