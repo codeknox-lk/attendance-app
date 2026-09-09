@@ -6,7 +6,7 @@ import {
   useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings, SalarySettings
 } from "./context/AppContext";
 import { LoginView } from "@/components/auth/LoginView";
-import { LogbookScannerModal } from "@/components/attendance/LogbookScannerModal";
+import { LogbookScannerView } from "@/components/attendance/LogbookScannerView";
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
@@ -983,7 +983,7 @@ export default function Home() {
   });
   const [hoveredCalDate, setHoveredCalDate] = useState<string | null>(null);
   const calHoverTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [showAiScannerModal, setShowAiScannerModal] = useState(false);
+  const [attendanceSubView, setAttendanceSubView] = useState<"list" | "scanner">("list");
 
   const handleCalCellEnter = (dateStr: string) => {
     if (calHoverTimerRef.current) {
@@ -2122,6 +2122,25 @@ export default function Home() {
 
           {/* ═══════════════ ATTENDANCE ═══════════════ */}
           {activeTab==="attendance" && (
+            attendanceSubView === "scanner" ? (
+              <LogbookScannerView
+                isDark={isDark}
+                employees={employees}
+                existingAttendanceLogs={attendanceLogs}
+                defaultMonth={selectedMonth}
+                onBack={() => setAttendanceSubView("list")}
+                onImportSuccess={async (newLogs) => {
+                  await triggerSync();
+                  if (newLogs && newLogs.length > 0 && newLogs[0].date) {
+                    const targetMonth = newLogs[0].date.slice(0, 7);
+                    if (targetMonth) {
+                      setSelectedMonth(targetMonth);
+                    }
+                  }
+                  setAttendanceSubView("list");
+                }}
+              />
+            ) : (
             <div className="space-y-6">
               {/* Top Quick Stat Cards - Matching Dashboard style */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -2186,7 +2205,7 @@ export default function Home() {
                   {/* Right: Action buttons */}
                   <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={() => setShowAiScannerModal(true)}
+                      onClick={() => setAttendanceSubView("scanner")}
                       className="px-3.5 py-2 text-xs font-bold rounded-xl border transition-smooth flex items-center gap-2 shrink-0 bg-gradient-to-r from-teal-500 to-[#0ea5e9] text-white hover:brightness-110 shadow-sm border-teal-400/30 active:scale-[0.98]"
                       title="Upload photo of handwritten logbook to auto-import attendance via Vision AI"
                     >
@@ -2500,6 +2519,7 @@ export default function Home() {
                 )}
               </div>
             </div>
+            )
           )}
 
           {/* ═══════════════ LEAVE MANAGER ═══════════════ */}
@@ -9456,24 +9476,6 @@ export default function Home() {
         );
       })()}
 
-      {/* ═══════════════ MODAL: PHYSICAL LOGBOOK AI SCANNER ═══════════════ */}
-      <LogbookScannerModal
-        isOpen={showAiScannerModal}
-        onClose={() => setShowAiScannerModal(false)}
-        isDark={isDark}
-        employees={employees}
-        existingAttendanceLogs={attendanceLogs}
-        defaultMonth={selectedMonth}
-        onImportSuccess={async (newLogs) => {
-          await triggerSync();
-          if (newLogs && newLogs.length > 0 && newLogs[0].date) {
-            const targetMonth = newLogs[0].date.slice(0, 7);
-            if (targetMonth) {
-              setSelectedMonth(targetMonth);
-            }
-          }
-        }}
-      />
     </div>
   );
 }
