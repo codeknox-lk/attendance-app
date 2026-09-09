@@ -2123,25 +2123,27 @@ export default function Home() {
           {/* ═══════════════ ATTENDANCE ═══════════════ */}
           {activeTab==="attendance" && (
             attendanceSubView === "scanner" ? (
-              <LogbookScannerView
-                isDark={isDark}
-                employees={employees}
-                existingAttendanceLogs={attendanceLogs}
-                defaultMonth={selectedMonth}
-                onBack={() => setAttendanceSubView("list")}
-                onImportSuccess={async (newLogs) => {
-                  await triggerSync();
-                  if (newLogs && newLogs.length > 0 && newLogs[0].date) {
-                    const targetMonth = newLogs[0].date.slice(0, 7);
-                    if (targetMonth) {
-                      setSelectedMonth(targetMonth);
+              <div key="attendance-scanner" className="animate-workspace-enter">
+                <LogbookScannerView
+                  isDark={isDark}
+                  employees={employees}
+                  existingAttendanceLogs={attendanceLogs}
+                  defaultMonth={selectedMonth}
+                  onBack={() => setAttendanceSubView("list")}
+                  onImportSuccess={async (newLogs) => {
+                    await triggerSync();
+                    if (newLogs && newLogs.length > 0 && newLogs[0].date) {
+                      const targetMonth = newLogs[0].date.slice(0, 7);
+                      if (targetMonth) {
+                        setSelectedMonth(targetMonth);
+                      }
                     }
-                  }
-                  setAttendanceSubView("list");
-                }}
-              />
+                    setAttendanceSubView("list");
+                  }}
+                />
+              </div>
             ) : (
-            <div className="space-y-6">
+            <div key="attendance-list" className="space-y-6 animate-workspace-enter">
               {/* Top Quick Stat Cards - Matching Dashboard style */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 {[
@@ -2206,12 +2208,12 @@ export default function Home() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => setAttendanceSubView("scanner")}
-                      className="px-3.5 py-2 text-xs font-bold rounded-xl border transition-smooth flex items-center gap-2 shrink-0 bg-gradient-to-r from-teal-500 to-[#0ea5e9] text-white hover:brightness-110 shadow-sm border-teal-400/30 active:scale-[0.98]"
+                      className="group relative px-4 py-2 text-xs font-bold rounded-xl border transition-all duration-300 flex items-center gap-2 shrink-0 bg-gradient-to-r from-teal-500 via-[#0ea5e9] to-[#0284c7] text-white hover:brightness-110 shadow-sm hover:shadow-md hover:shadow-sky-500/25 active:scale-95 border-teal-400/30 cursor-pointer overflow-hidden"
                       title="Upload photo of handwritten logbook to auto-import attendance via Vision AI"
                     >
-                      <Icons.Camera className="w-3.5 h-3.5" />
+                      <Icons.Camera className="w-3.5 h-3.5 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" />
                       <span>Scan Logbook</span>
-                      <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded-md">AI</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded-md shadow-xs">AI</span>
                     </button>
 
                     <button

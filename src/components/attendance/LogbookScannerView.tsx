@@ -342,7 +342,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-workspace-enter">
       {/* 1. Header & Navigation Bar */}
       <div
         className={`p-4 sm:p-5 rounded-2xl border transition backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 ${
@@ -544,7 +544,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
       {/* 3. Main Workspace: Side-by-Side Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Pinned Document & Controls (4 cols on lg) */}
-        <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-4">
+        <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-4 animate-panel-left">
           <div
             className={`p-4 sm:p-5 rounded-2xl border transition backdrop-blur-xl space-y-4 ${
               isDark ? "bg-white/5 border-white/10 shadow-xl" : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
@@ -646,6 +646,10 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                     isDark ? "border-zinc-800" : "border-zinc-200"
                   }`}
                 >
+                  {/* High-tech Vision AI Scanning Sweep */}
+                  {isAnalyzing && (
+                    <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-teal-400 to-transparent shadow-[0_0_15px_3px_rgba(45,212,191,0.8)] animate-laser-sweep pointer-events-none z-10" />
+                  )}
                   <div
                     style={{
                       transform: `scale(${zoomLevel})`,
@@ -808,7 +812,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
         </div>
 
         {/* RIGHT COLUMN: Interactive Verification & Conflict Table (8 cols on lg) */}
-        <div className="lg:col-span-8 space-y-4">
+        <div className="lg:col-span-8 space-y-4 animate-panel-right">
           {/* Progress Banner */}
           {isAnalyzing && (
             <div

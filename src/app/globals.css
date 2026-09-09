@@ -68,9 +68,78 @@ body {
   box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.3);
 }
 
-/* ═══════════════ MICRO-ANIMATIONS ═══════════════ */
+/* ═══════════════ MICRO-ANIMATIONS & TRANSITIONS ═══════════════ */
 .transition-smooth {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes workspaceEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.994);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-workspace-enter {
+  animation: workspaceEntrance 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes panelSlideLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-panel-left {
+  animation: panelSlideLeft 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes panelSlideRight {
+  0% {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-panel-right {
+  animation: panelSlideRight 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes laserSweep {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.animate-laser-sweep {
+  animation: laserSweep 2.2s ease-in-out infinite;
 }
 
 @keyframes pulseGlow {
