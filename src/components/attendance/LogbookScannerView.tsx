@@ -72,6 +72,8 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
   // Analysis status
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeStep, setAnalyzeStep] = useState<string>("");
+  const [analyzeProgress, setAnalyzeProgress] = useState<number>(0);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [punches, setPunches] = useState<ScannedPunch[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
@@ -141,14 +143,36 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
       return;
     }
 
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+    }
+
     setIsAnalyzing(true);
+    setAnalyzeProgress(12);
     setErrorMessage(null);
     setSuccessNotice(null);
     setAnalyzeStep("Uploading image and preparing Gemini Vision analysis...");
 
-    try {
-      setAnalyzeStep("Transcribing handwritten dates, staff names & punch times...");
+    // Smooth dynamic percentage progression
+    let currentPct = 12;
+    progressTimerRef.current = setInterval(() => {
+      if (currentPct < 35) {
+        currentPct += Math.floor(Math.random() * 5) + 3;
+        setAnalyzeStep("Transcribing handwritten dates, staff names & punch times...");
+      } else if (currentPct < 70) {
+        currentPct += Math.floor(Math.random() * 4) + 2;
+        setAnalyzeStep("Transcribing handwritten dates, staff names & punch times...");
+      } else if (currentPct < 88) {
+        currentPct += Math.floor(Math.random() * 3) + 1;
+        setAnalyzeStep("Cross-referencing staff roster & validating timestamps...");
+      } else if (currentPct < 94) {
+        currentPct += 1;
+        setAnalyzeStep("Structuring attendance records & detecting leaves...");
+      }
+      setAnalyzeProgress(Math.min(95, currentPct));
+    }, 380);
 
+    try {
       const activeRoster = employees
         .filter((e) => e.active !== false)
         .map((e) => ({
@@ -175,12 +199,20 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
         throw new Error(data.error || "Failed to scan handwritten logbook.");
       }
 
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+      setAnalyzeProgress(98);
+      setAnalyzeStep("Finalizing extracted punch records...");
+
       const rawPunches = data.punches || [];
       if (rawPunches.length === 0) {
         setErrorMessage(
           "No legible attendance rows could be detected in this photo. Please ensure clear lighting and legible date/staff columns."
         );
         setIsAnalyzing(false);
+        setAnalyzeProgress(0);
         return;
       }
 
@@ -220,17 +252,30 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
         };
       });
 
+      setAnalyzeProgress(100);
+      setAnalyzeStep("Extraction completed!");
       setPunches(formatted);
       setSuccessNotice(`Successfully extracted ${formatted.length} records! Review and adjust below before importing.`);
     } catch (err: unknown) {
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
       const msg = err instanceof Error ? err.message : "An unexpected error occurred during AI analysis.";
       setErrorMessage(msg);
       if (msg.toLowerCase().includes("api key")) {
         setShowKeyField(true);
       }
     } finally {
-      setIsAnalyzing(false);
-      setAnalyzeStep("");
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        setAnalyzeProgress(0);
+        setAnalyzeStep("");
+      }, 500);
     }
   };
 
@@ -788,7 +833,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
               >
                 {isAnalyzing ? (
                   <>
-                    <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin w-4 h-4 text-white shrink-0" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path
                         className="opacity-75"
@@ -796,7 +841,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       />
                     </svg>
-                    <span>Analyzing Handwriting...</span>
+                    <span>Analyzing ({analyzeProgress}%)...</span>
                   </>
                 ) : (
                   <>
@@ -813,22 +858,38 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
 
         {/* RIGHT COLUMN: Interactive Verification & Conflict Table (8 cols on lg) */}
         <div className="lg:col-span-8 space-y-4 animate-panel-right">
-          {/* Progress Banner */}
+          {/* Progress Banner with Percentage Loading */}
           {isAnalyzing && (
             <div
-              className={`p-4 rounded-xl border animate-pulse ${
-                isDark ? "bg-zinc-950 border-teal-500/30 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-700"
+              className={`p-4 rounded-2xl border transition-all shadow-md backdrop-blur-xl ${
+                isDark
+                  ? "bg-zinc-950/90 border-teal-500/30 text-teal-300 shadow-teal-950/20"
+                  : "bg-teal-50/90 border-teal-200 text-teal-800 shadow-teal-900/5"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-ping" />
-                <span className="text-xs font-bold">{analyzeStep}</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-ping shrink-0" />
+                  <span className="text-xs font-bold truncate">{analyzeStep}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="font-mono text-xs font-black px-2.5 py-0.5 rounded-lg border bg-teal-500/10 border-teal-500/25 text-teal-600 dark:text-teal-400 shadow-xs">
+                    {analyzeProgress}%
+                  </span>
+                </div>
               </div>
-              <div className="w-full bg-zinc-700/20 rounded-full h-1.5 mt-2.5 overflow-hidden">
+
+              {/* Dynamic Percentage Progress Bar */}
+              <div className={`w-full rounded-full h-2 mt-3 overflow-hidden ${isDark ? "bg-zinc-800/80" : "bg-teal-100/70"}`}>
                 <div
-                  className="bg-gradient-to-r from-teal-500 to-[#0ea5e9] h-full rounded-full animate-[shimmer_2s_infinite]"
-                  style={{ width: "70%" }}
+                  className="bg-gradient-to-r from-teal-500 via-[#0ea5e9] to-[#38bdf8] h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_12px_rgba(20,184,166,0.6)]"
+                  style={{ width: `${Math.min(100, Math.max(6, analyzeProgress))}%` }}
                 />
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 font-medium">
+                <span>Gemini 2.5 Flash Vision OCR</span>
+                <span>{analyzeProgress < 100 ? "Processing document..." : "Extraction Ready!"}</span>
               </div>
             </div>
           )}
