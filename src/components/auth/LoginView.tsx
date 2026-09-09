@@ -667,19 +667,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
       {/* ─────────────────── MODAL 1: FIRST-TIME USER SETUP GUIDE ─────────────────── */}
       {showGuideModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border transition-all ${
+          <div className={`w-full max-w-2xl rounded-3xl p-6 sm:p-7 shadow-2xl border transition-all max-h-[90vh] flex flex-col ${
             isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"
           }`}>
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-9 h-9 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-bold text-base">Getting Started with MedSync</h3>
-                  <p className="text-[11px] text-zinc-400">Quick start instructions &amp; demo credentials</p>
+                  <h3 className="font-bold text-base sm:text-lg">MedSync Clinic OS • Complete Getting Started Guide</h3>
+                  <p className="text-[11px] text-zinc-400">Step-by-step lifecycle from clinic onboarding to automated payroll</p>
                 </div>
               </div>
 
@@ -695,98 +696,173 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </div>
 
             {/* Quick Demo Access Card */}
-            <div className={`mt-4 p-4 rounded-2xl border ${
+            <div className={`mt-4 p-4 rounded-2xl border shrink-0 ${
               isDark ? "bg-teal-950/20 border-teal-800/50" : "bg-teal-50/70 border-teal-200/80"
             }`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                  Pre-Configured Demo Credentials
+                <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+                  <span>Instant Demo Credentials</span>
                 </span>
-                <span className="text-[10px] font-mono text-zinc-400">Cloud Database Connected</span>
+                <span className="text-[10px] font-mono text-zinc-400">Neon Cloud PostgreSQL Online</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs mb-3 font-mono">
-                <div className="p-2 rounded-lg bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700">
-                  <span className="text-[10px] text-zinc-400 block font-sans font-bold uppercase">Clinic Code</span>
-                  <strong className="text-teal-600 dark:text-teal-400 font-bold">MEDSYNC</strong>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 font-mono">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
+                  <span className="text-[10px] text-zinc-400 font-sans font-bold uppercase">Clinic Code</span>
+                  <strong className="text-teal-600 dark:text-teal-400 font-bold text-sm">MEDSYNC</strong>
                 </div>
-                <div className="p-2 rounded-lg bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700">
-                  <span className="text-[10px] text-zinc-400 block font-sans font-bold uppercase">Admin User / Pass</span>
-                  <strong>admin</strong> / <strong>admin</strong>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
+                  <span className="text-[10px] text-zinc-400 font-sans font-bold uppercase">Admin User / Pass</span>
+                  <span><strong>admin</strong> / <strong>admin</strong></span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                 <button
                   type="button"
                   onClick={fillDemoAdmin}
-                  className="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2 px-3 bg-gradient-to-r from-teal-500 to-[#0ea5e9] hover:brightness-110 text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
                   </svg>
-                  <span>Fill Practice Admin</span>
+                  <span>Use Practice Admin Demo</span>
                 </button>
                 <button
                   type="button"
                   onClick={fillDemoStaff}
-                  className="py-2 px-3 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+                  className="py-2 px-4 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
                 >
-                  <span>Fill Staff (Bio #101)</span>
+                  <span>Staff Portal Demo (Bio #101)</span>
                 </button>
               </div>
             </div>
 
-            {/* Step-by-Step Walkthrough */}
-            <div className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-1 text-xs">
-              <div className="flex gap-3">
-                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">1</span>
-                <div>
-                  <p className="font-bold text-zinc-800 dark:text-zinc-200">How Clinic Code Works</p>
-                  <p className="text-zinc-500 leading-relaxed">
-                    Every dental clinic has an assigned <strong>Clinic Code</strong>. Staff and administrators enter this code on the login page to direct their session to the correct clinic database.
+            {/* 6-Step End-to-End System Walkthrough */}
+            <div className="mt-4 space-y-3.5 overflow-y-auto pr-2 text-xs flex-1">
+              {/* Step 1 */}
+              <div className={`p-3.5 rounded-2xl border flex gap-3 transition ${
+                isDark ? "bg-zinc-850/40 border-zinc-800" : "bg-slate-50 border-slate-200/80"
+              }`}>
+                <div className="w-6 h-6 rounded-lg bg-teal-500/20 text-teal-600 dark:text-teal-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  1
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-zinc-900 dark:text-white text-xs">Practice Setup &amp; Custom Clinic Code</p>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">Settings</span>
+                  </div>
+                  <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Sign in as Practice Admin. In <strong>Settings &rarr; Clinic Profile</strong>, configure your clinic name, address, logo (for payslips), your custom <strong>Clinic Code</strong> (which staff use to sign in), and your 4-digit Master Security PIN for authorizing salary disbursements.
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">2</span>
-                <div>
-                  <p className="font-bold text-zinc-800 dark:text-zinc-200">Changing Your Clinic Code</p>
-                  <p className="text-zinc-500 leading-relaxed">
-                    Once signed in as Practice Admin, navigate to <strong>Settings &rarr; Clinic Profile</strong> to update your clinic name and choose your own custom Clinic Code anytime.
+              {/* Step 2 */}
+              <div className={`p-3.5 rounded-2xl border flex gap-3 transition ${
+                isDark ? "bg-zinc-850/40 border-zinc-800" : "bg-slate-50 border-slate-200/80"
+              }`}>
+                <div className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  2
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-zinc-900 dark:text-white text-xs">Staff &amp; Biometric Terminal Enrollment</p>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">Employees</span>
+                  </div>
+                  <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Add dentists, dental assistants, nurses, and receptionists. Assign their basic monthly salary, hourly rates, and matching <strong>Biometric ID</strong> (101, 102, etc.) so punches from your biometric terminal link to the right employee.
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">3</span>
-                <div>
-                  <p className="font-bold text-zinc-800 dark:text-zinc-200">AI Handwritten Logbook Scanner</p>
-                  <p className="text-zinc-500 leading-relaxed">
-                    Under the <strong>Attendance</strong> tab, click <strong>&ldquo;Scan Logbook&rdquo;</strong> to upload handwritten register sheet photos for automated AI OCR and selective entry imports.
+              {/* Step 3 */}
+              <div className={`p-3.5 rounded-2xl border flex gap-3 transition ${
+                isDark ? "bg-zinc-850/40 border-zinc-800" : "bg-slate-50 border-slate-200/80"
+              }`}>
+                <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  3
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-zinc-900 dark:text-white text-xs">Capture Attendance (Hardware Sync or AI Vision)</p>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">Attendance</span>
+                  </div>
+                  <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    MedSync supports hybrid attendance:
+                    <br/>• <strong>Live Terminal Sync</strong>: Real-time biometric facial/fingerprint streaming via your Hikvision DS-K1T320MFWX device.
+                    <br/>• <strong>AI Logbook Scanner</strong>: Snap a photo of handwritten attendance logbooks &mdash; Google Gemini Vision OCR transcribes dates, staff names, check-in/out times, and lets you selectively tick entries to import.
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">4</span>
-                <div>
-                  <p className="font-bold text-zinc-800 dark:text-zinc-200">Registering a New Clinic</p>
-                  <p className="text-zinc-500 leading-relaxed">
-                    If you are setting up a fresh practice, click <strong>&ldquo;Register Clinic&rdquo;</strong> below to create an isolated database workspace with your preferred clinic code and admin account.
+              {/* Step 4 */}
+              <div className={`p-3.5 rounded-2xl border flex gap-3 transition ${
+                isDark ? "bg-zinc-850/40 border-zinc-800" : "bg-slate-50 border-slate-200/80"
+              }`}>
+                <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  4
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-zinc-900 dark:text-white text-xs">Leaves, Holidays &amp; 2× Overtime Multipliers</p>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Leave Manager</span>
+                  </div>
+                  <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Approve sick, annual, and casual leaves. Configure scheduled <strong>Clinic Closed</strong> dates and Poya/Public Holidays. Staff working on designated holidays automatically receive <strong>2× Holiday Overtime</strong>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 5 */}
+              <div className={`p-3.5 rounded-2xl border flex gap-3 transition ${
+                isDark ? "bg-zinc-850/40 border-zinc-800" : "bg-slate-50 border-slate-200/80"
+              }`}>
+                <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  5
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-zinc-900 dark:text-white text-xs">Automated Payroll, EPF/ETF &amp; Payslips</p>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Payroll Engine</span>
+                  </div>
+                  <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Generate monthly salaries with 1-click. Calculates worked days bonus, punctuality grace allowances, overtime pay, statutory deductions (EPF Employee 8%, EPF Employer 12%, ETF 3%), and exports branded PDF payslips.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 6 */}
+              <div className={`p-3.5 rounded-2xl border flex gap-3 transition ${
+                isDark ? "bg-zinc-850/40 border-zinc-800" : "bg-slate-50 border-slate-200/80"
+              }`}>
+                <div className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  6
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-zinc-900 dark:text-white text-xs">Staff Self-Service Portal</p>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">Staff Portal</span>
+                  </div>
+                  <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Employees can toggle to <strong>Staff Portal</strong> on the login page and enter the Clinic Code + their Biometric ID/PIN to inspect their personal punch logs, shift punctuality, and submit leave requests.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
+            {/* Modal Footer */}
+            <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-zinc-400">
+                Ready to begin? Use the demo buttons above or sign in with your credentials.
+              </span>
               <button
                 type="button"
                 onClick={() => setShowGuideModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-zinc-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition shadow-sm active:scale-95"
               >
-                Got It
+                Close Guide
               </button>
             </div>
           </div>
