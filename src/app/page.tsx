@@ -1137,6 +1137,42 @@ export default function Home() {
   useEffect(() => { setCycleStartDayForm(payrollCycleStartDay); }, [payrollCycleStartDay]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const [isSavingClinicProfile, setIsSavingClinicProfile] = useState(false);
+  const [clinicProfileSaveFeedback, setClinicProfileSaveFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [clinicProfileSavedJustNow, setClinicProfileSavedJustNow] = useState(false);
+
+  const handleSaveClinicProfile = async () => {
+    setIsSavingClinicProfile(true);
+    setClinicProfileSaveFeedback(null);
+    setClinicProfileSavedJustNow(false);
+    try {
+      await updateCompanyProfile(profileForm);
+      if (profileForm.epfRegNo || profileForm.etfRegNo) {
+        updateEpfSettings({ epfRegNo: profileForm.epfRegNo, etfRegNo: profileForm.etfRegNo });
+      }
+      setClinicProfileSavedJustNow(true);
+      setClinicProfileSaveFeedback({
+        type: "success",
+        message: `Clinic profile and sign-in code "${profileForm.clinicCode || ""}" have been saved and synchronized to the cloud database successfully.`,
+      });
+      setSettingsSaveMsg("Clinic profile & code saved successfully!");
+      setTimeout(() => setClinicProfileSavedJustNow(false), 3500);
+      setTimeout(() => {
+        setClinicProfileSaveFeedback(null);
+        setSettingsSaveMsg("");
+      }, 6000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update clinic profile. Please check your connection.";
+      setClinicProfileSaveFeedback({
+        type: "error",
+        message: msg,
+      });
+      setSettingsSaveMsg(msg);
+    } finally {
+      setIsSavingClinicProfile(false);
+    }
+  };
+
   const [isSavingSalary, setIsSavingSalary] = useState(false);
   const [salarySaveFeedback, setSalarySaveFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
@@ -5149,8 +5185,52 @@ export default function Home() {
                         </div>
                       </div>
 
+                      {/* Interactive Confirmation Alert Banner */}
+                      {clinicProfileSaveFeedback && (
+                        <div
+                          className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200 ${
+                            clinicProfileSaveFeedback.type === "success"
+                              ? isDark
+                                ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
+                                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                              : isDark
+                              ? "bg-rose-950/40 border-rose-500/40 text-rose-300"
+                              : "bg-rose-50 border-rose-200 text-rose-800"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                clinicProfileSaveFeedback.type === "success"
+                                  ? "bg-emerald-500/20 text-emerald-500"
+                                  : "bg-rose-500/20 text-rose-500"
+                              }`}
+                            >
+                              {clinicProfileSaveFeedback.type === "success" ? (
+                                <Icons.Check className="w-4 h-4 stroke-[3]" />
+                              ) : (
+                                <Icons.AlertTriangle className="w-4 h-4 stroke-[3]" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black tracking-tight">
+                                {clinicProfileSaveFeedback.type === "success" ? "Changes Saved Successfully" : "Update Failed"}
+                              </p>
+                              <p className="text-xs opacity-90">{clinicProfileSaveFeedback.message}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setClinicProfileSaveFeedback(null)}
+                            className="p-1 rounded-lg hover:bg-black/10 transition opacity-70 hover:opacity-100"
+                          >
+                            <Icons.X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+
                       <div className="pt-3 flex items-center justify-between">
-                        {settingsSaveMsg && settingsTab === "company" ? (
+                        {settingsSaveMsg && settingsTab === "company" && !clinicProfileSaveFeedback ? (
                           <span className={`text-xs font-bold flex items-center gap-1.5 ${
                             settingsSaveMsg.includes("Failed") || settingsSaveMsg.includes("already taken") || settingsSaveMsg.includes("must be")
                               ? "text-rose-400"
@@ -5162,23 +5242,32 @@ export default function Home() {
                         ) : <span />}
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              await updateCompanyProfile(profileForm);
-                              if (profileForm.epfRegNo || profileForm.etfRegNo) {
-                                updateEpfSettings({ epfRegNo: profileForm.epfRegNo, etfRegNo: profileForm.etfRegNo });
-                              }
-                              setSettingsSaveMsg("Clinic profile & code saved successfully!");
-                              setTimeout(() => setSettingsSaveMsg(""), 4000);
-                            } catch (err: unknown) {
-                              const msg = err instanceof Error ? err.message : "Failed to update clinic profile";
-                              setSettingsSaveMsg(msg);
-                            }
-                          }}
-                          className="px-5 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
+                          disabled={isSavingClinicProfile}
+                          onClick={handleSaveClinicProfile}
+                          className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 ${
+                            isSavingClinicProfile
+                              ? "bg-slate-400 text-white cursor-not-allowed opacity-75"
+                              : clinicProfileSavedJustNow
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
+                              : "bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white shadow-[#0F85B0]/20"
+                          }`}
                         >
-                          <Icons.Check className="w-3.5 h-3.5" />
-                          <span>Save Clinic Profile</span>
+                          {isSavingClinicProfile ? (
+                            <>
+                              <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                              <span>Saving Profile...</span>
+                            </>
+                          ) : clinicProfileSavedJustNow ? (
+                            <>
+                              <Icons.Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>Saved Successfully!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Icons.Check className="w-3.5 h-3.5" />
+                              <span>Save Clinic Profile</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
