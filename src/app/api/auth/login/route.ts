@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Check PIN: verify against employee's portalPin (default is 1234)
-      const expectedPin = emp.portalPin || "1234";
+      const empWithPin = emp as (typeof emp & { portalPin?: string | null }) | null;
+      const expectedPin = empWithPin?.portalPin || "1234";
       if (staffPin !== expectedPin) {
         try {
           await db.auditLog.create({

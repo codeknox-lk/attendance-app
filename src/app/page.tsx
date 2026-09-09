@@ -1175,18 +1175,14 @@ export default function Home() {
 
   // ── Admin Credentials Change State ──
   const [adminCredCurrentPassword, setAdminCredCurrentPassword] = useState("");
-  const [adminCredNewUsername, setAdminCredNewUsername] = useState("");
+  const [adminCredCustomUsername, setAdminCredCustomUsername] = useState<string | null>(null);
+  const adminCredNewUsername = adminCredCustomUsername !== null ? adminCredCustomUsername : (currentUser?.username || "");
+  const setAdminCredNewUsername = (val: string) => setAdminCredCustomUsername(val);
   const [adminCredNewPassword, setAdminCredNewPassword] = useState("");
   const [adminCredConfirmPassword, setAdminCredConfirmPassword] = useState("");
   const [adminCredFeedback, setAdminCredFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isUpdatingAdminCreds, setIsUpdatingAdminCreds] = useState(false);
   const [showAdminPass, setShowAdminPass] = useState(false);
-
-  useEffect(() => {
-    if (currentUser?.username) {
-      setAdminCredNewUsername(currentUser.username);
-    }
-  }, [currentUser?.username]);
 
   const handleUpdateAdminCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1241,6 +1237,7 @@ export default function Home() {
       setAdminCredCurrentPassword("");
       setAdminCredNewPassword("");
       setAdminCredConfirmPassword("");
+      setAdminCredCustomUsername(null);
       setTimeout(() => setAdminCredFeedback(null), 8000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update administrator credentials";

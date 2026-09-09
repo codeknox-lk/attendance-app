@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
           attendanceBonusRate: attendanceBonusRate !== undefined ? Number(attendanceBonusRate) : 0,
           punctualBonusRate: punctualBonusRate !== undefined ? Number(punctualBonusRate) : 0,
           incomeBonusPercentage: incomeBonusPercentage !== undefined ? Number(incomeBonusPercentage) : 0,
-        },
+        } as any,
       });
       if (customOperatingHours && Array.isArray(customOperatingHours)) {
         for (const h of customOperatingHours) {
@@ -172,7 +172,7 @@ export async function PUT(req: NextRequest) {
           ...(attendanceBonusRate !== undefined && { attendanceBonusRate: Number(attendanceBonusRate) }),
           ...(punctualBonusRate !== undefined && { punctualBonusRate: Number(punctualBonusRate) }),
           ...(incomeBonusPercentage !== undefined && { incomeBonusPercentage: Number(incomeBonusPercentage) }),
-        },
+        } as any,
       });
       if (customOperatingHours && Array.isArray(customOperatingHours)) {
         await db.employeeOperatingHours.deleteMany({ where: { employeeId: employee.id } });
