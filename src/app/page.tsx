@@ -6,6 +6,7 @@ import {
   useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings, SalarySettings
 } from "./context/AppContext";
 import { LoginView } from "@/components/auth/LoginView";
+import { LogbookScannerModal } from "@/components/attendance/LogbookScannerModal";
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const NAV_TABS = [
 type TabId = typeof NAV_TABS[number]["id"];
 
 const SETTINGS_TABS = [
-  { id: "biometric", label: "Biometric Hardware" },
+  { id: "biometric", label: "Biometric & AI Services" },
   { id: "company", label: "Clinic Profile" },
   { id: "security", label: "Security & PIN" },
   { id: "epf", label: "Salary & Dynamic Bonuses" },
@@ -982,6 +983,7 @@ export default function Home() {
   });
   const [hoveredCalDate, setHoveredCalDate] = useState<string | null>(null);
   const calHoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [showAiScannerModal, setShowAiScannerModal] = useState(false);
 
   const handleCalCellEnter = (dateStr: string) => {
     if (calHoverTimerRef.current) {
@@ -1118,6 +1120,15 @@ export default function Home() {
   const [epfForm, setEpfForm] = useState<EpfSettings>(epfSettings);
   const [bioForm, setBioForm] = useState<BiometricSettings>(biometricSettings);
   const [cycleStartDayForm, setCycleStartDayForm] = useState<number>(payrollCycleStartDay);
+  const [geminiKeySettings, setGeminiKeySettings] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return localStorage.getItem("medicflow_gemini_api_key") || "";
+      } catch {}
+    }
+    return "";
+  });
+  const [geminiKeySaved, setGeminiKeySaved] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => { setProfileForm(companyProfile); }, [companyProfile]);
@@ -2172,18 +2183,30 @@ export default function Home() {
                     </span>
                   </div>
 
-                  {/* Right: Export button */}
-                  <button
-                    onClick={downloadAttendanceCSV}
-                    className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition-smooth flex items-center gap-2 shrink-0 ${
-                      isDark
-                        ? "bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-200 shadow-md"
-                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
-                    }`}
-                  >
-                    <Icons.Download className="w-3.5 h-3.5 text-[#38bdf8]" />
-                    <span>Export CSV</span>
-                  </button>
+                  {/* Right: Action buttons */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setShowAiScannerModal(true)}
+                      className="px-3.5 py-2 text-xs font-bold rounded-xl border transition-smooth flex items-center gap-2 shrink-0 bg-gradient-to-r from-teal-500 to-[#0ea5e9] text-white hover:brightness-110 shadow-sm border-teal-400/30 active:scale-[0.98]"
+                      title="Upload photo of handwritten logbook to auto-import attendance via Vision AI"
+                    >
+                      <Icons.Camera className="w-3.5 h-3.5" />
+                      <span>Scan Logbook</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded-md">AI</span>
+                    </button>
+
+                    <button
+                      onClick={downloadAttendanceCSV}
+                      className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition-smooth flex items-center gap-2 shrink-0 ${
+                        isDark
+                          ? "bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-200 shadow-md"
+                          : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
+                      }`}
+                    >
+                      <Icons.Download className="w-3.5 h-3.5 text-[#38bdf8]" />
+                      <span>Export CSV</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Status Pills */}
@@ -4809,6 +4832,83 @@ export default function Home() {
                           <span>{simResult}</span>
                         </div>
                       )}
+                    </div>
+
+                    {/* AI Vision & Logbook OCR Key Configuration */}
+                    <div className={`p-6 rounded-3xl border ${isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"} space-y-4`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                            isDark ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "bg-teal-50 text-teal-600 border border-teal-200"
+                          }`}>
+                            <Icons.Camera className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-black tracking-tight text-slate-900 dark:text-white">
+                                Google Gemini Vision OCR (Physical Logbook Scanner)
+                              </h4>
+                              <span className="text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-teal-500 to-[#0ea5e9] text-white px-2 py-0.5 rounded-md shadow-xs">
+                                AI Vision
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Extract and digitize physical handwritten paper attendance sheets directly into MedSync.
+                            </p>
+                          </div>
+                        </div>
+
+                        <a
+                          href="https://aistudio.google.com/app/apikey"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-bold text-[#0ea5e9] hover:underline flex items-center gap-1"
+                        >
+                          <span>Get Free Key</span>
+                          <span>↗</span>
+                        </a>
+                      </div>
+
+                      <div className="space-y-3 pt-1">
+                        <div>
+                          <label className={labelCls}>Google Gemini API Key</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={geminiKeySettings}
+                              onChange={(e) => {
+                                setGeminiKeySettings(e.target.value);
+                                setGeminiKeySaved(false);
+                              }}
+                              placeholder="AQ... or AIzaSy... (stored securely in browser & environment)"
+                              className={`${inputCls(isDark)} font-mono flex-1`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (typeof window !== "undefined") {
+                                  localStorage.setItem("medicflow_gemini_api_key", geminiKeySettings.trim());
+                                }
+                                setGeminiKeySaved(true);
+                                setTimeout(() => setGeminiKeySaved(false), 3000);
+                              }}
+                              className="px-4 py-2 bg-gradient-to-r from-teal-500 to-[#0ea5e9] hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-md transition shrink-0 flex items-center gap-1.5"
+                            >
+                              <Icons.Check className="w-3.5 h-3.5" />
+                              <span>Save Key</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {geminiKeySaved && (
+                          <div className={`p-3 rounded-xl text-xs border flex items-center gap-2 ${
+                            isDark ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold"
+                          }`}>
+                            <Icons.CheckCircle className="w-4 h-4 shrink-0" />
+                            <span>Gemini API Key successfully saved and active for Logbook Vision scanning!</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -9353,6 +9453,24 @@ export default function Home() {
           </div>
         );
       })()}
+
+      {/* ═══════════════ MODAL: PHYSICAL LOGBOOK AI SCANNER ═══════════════ */}
+      <LogbookScannerModal
+        isOpen={showAiScannerModal}
+        onClose={() => setShowAiScannerModal(false)}
+        isDark={isDark}
+        employees={employees}
+        defaultMonth={selectedMonth}
+        onImportSuccess={async (newLogs) => {
+          await triggerSync();
+          if (newLogs && newLogs.length > 0 && newLogs[0].date) {
+            const targetMonth = newLogs[0].date.slice(0, 7);
+            if (targetMonth) {
+              setSelectedMonth(targetMonth);
+            }
+          }
+        }}
+      />
     </div>
   );
 }
