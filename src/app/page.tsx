@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
-  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings, SalarySettings
+  useApp, Employee, AttendanceLog, Allowance, LeaveRequest, PublicHoliday, BiometricSettings, CompanyProfile, EpfSettings, SalarySettings, apiFetch
 } from "./context/AppContext";
 import { LoginView } from "@/components/auth/LoginView";
 import { LogbookScannerView } from "@/components/attendance/LogbookScannerView";
@@ -892,7 +892,7 @@ function SalaryTrendChart({ history, logs, isDark }: { history: PayrollPeriodSum
 
 export default function Home() {
   const {
-    currentUser, loginUser, logoutUser,
+    currentUser, setCurrentUser, loginUser, logoutUser,
     employees, attendanceLogs, allowances, employeeAllowances, operatingHours, leaveRequests,
     payrollHistory, auditLogs, publicHolidays, apitSlabs,
     biometricSettings, epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments,
@@ -1023,7 +1023,7 @@ export default function Home() {
   const [newEmp, setNewEmp] = useState<Omit<Employee,"id"|"active">>({
     firstName:"", lastName:"", role:"Nurse", payType:"Fixed Monthly",
     basicSalary:50000, hourlyRate:300, sessionRate:0, commissionRate:0,
-    biometricId:"", epfEligible:true, taxable:false,  branchId:null,
+    biometricId:"", portalPin:"1234", epfEligible:true, taxable:false,  branchId:null,
     allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3}, attendanceBonusRate:0, punctualBonusRate:0, incomeBonusPercentage:0,
   });
 
@@ -1170,6 +1170,83 @@ export default function Home() {
       setSettingsSaveMsg(msg);
     } finally {
       setIsSavingClinicProfile(false);
+    }
+  };
+
+  // ── Admin Credentials Change State ──
+  const [adminCredCurrentPassword, setAdminCredCurrentPassword] = useState("");
+  const [adminCredNewUsername, setAdminCredNewUsername] = useState("");
+  const [adminCredNewPassword, setAdminCredNewPassword] = useState("");
+  const [adminCredConfirmPassword, setAdminCredConfirmPassword] = useState("");
+  const [adminCredFeedback, setAdminCredFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isUpdatingAdminCreds, setIsUpdatingAdminCreds] = useState(false);
+  const [showAdminPass, setShowAdminPass] = useState(false);
+
+  useEffect(() => {
+    if (currentUser?.username) {
+      setAdminCredNewUsername(currentUser.username);
+    }
+  }, [currentUser?.username]);
+
+  const handleUpdateAdminCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminCredFeedback(null);
+    if (!adminCredCurrentPassword) {
+      setAdminCredFeedback({ type: "error", message: "Please enter your current administrator password to authorize this change." });
+      return;
+    }
+    if (!adminCredNewUsername || adminCredNewUsername.trim().length < 3) {
+      setAdminCredFeedback({ type: "error", message: "New username must be at least 3 characters long." });
+      return;
+    }
+    if (!adminCredNewPassword || adminCredNewPassword.trim().length < 4) {
+      setAdminCredFeedback({ type: "error", message: "New password must be at least 4 characters long." });
+      return;
+    }
+    if (adminCredNewPassword !== adminCredConfirmPassword) {
+      setAdminCredFeedback({ type: "error", message: "New password and confirmation password do not match." });
+      return;
+    }
+
+    setIsUpdatingAdminCreds(true);
+    try {
+      const res = await apiFetch("/api/auth/admin-credentials", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: adminCredCurrentPassword,
+          newUsername: adminCredNewUsername.trim(),
+          newPassword: adminCredNewPassword.trim(),
+          confirmPassword: adminCredConfirmPassword.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Failed to update admin credentials.");
+      }
+
+      setCurrentUser(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, username: data.user?.username || adminCredNewUsername.trim() };
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem("medicflow_user_session", JSON.stringify(updated)); } catch {}
+        }
+        return updated;
+      });
+
+      setAdminCredFeedback({
+        type: "success",
+        message: `Admin credentials updated successfully! Your sign-in username is now "${data.user?.username || adminCredNewUsername.trim()}".`,
+      });
+      setAdminCredCurrentPassword("");
+      setAdminCredNewPassword("");
+      setAdminCredConfirmPassword("");
+      setTimeout(() => setAdminCredFeedback(null), 8000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update administrator credentials";
+      setAdminCredFeedback({ type: "error", message: msg });
+    } finally {
+      setIsUpdatingAdminCreds(false);
     }
   };
 
@@ -1452,9 +1529,9 @@ export default function Home() {
 
   // ── Handlers ──
 
-  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, epfEligible:emp.epfEligible, taxable:emp.taxable,  branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage, customOperatingHours: emp.customOperatingHours || [] }); setShowAddEmpModal(true); };
+  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, portalPin:emp.portalPin || "1234", epfEligible:emp.epfEligible, taxable:emp.taxable,  branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage, customOperatingHours: emp.customOperatingHours || [] }); setShowAddEmpModal(true); };
 
-  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]}); };
+  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",portalPin:"1234",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]}); };
 
   const openDrawer = (log: AttendanceLog) => {
     if (!isUserAdmin) {
@@ -5396,6 +5473,133 @@ export default function Home() {
                         </button>
                       </form>
                     </div>
+
+                    {/* Administrator Login Credentials (Username & Password) Card */}
+                    <div className={`p-6 rounded-3xl border space-y-5 ${
+                      isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                            isDark ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400" : "bg-indigo-50 border-indigo-200 text-indigo-600"
+                          }`}>
+                            <Icons.Users className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white">Administrator Login Credentials</h4>
+                            <p className="text-xs text-slate-500">Change the sign-in username and password for Practice Admin portal access.</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-bold">
+                          Current: {currentUser?.username || "admin"}
+                        </span>
+                      </div>
+
+                      {adminCredFeedback && (
+                        <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 animate-in fade-in duration-200 ${
+                          adminCredFeedback.type === "success"
+                            ? isDark ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : isDark ? "bg-rose-950/40 border-rose-500/40 text-rose-300" : "bg-rose-50 border-rose-200 text-rose-800"
+                        }`}>
+                          <div className="flex items-center gap-2.5">
+                            {adminCredFeedback.type === "success" ? (
+                              <Icons.Check className="w-4 h-4 text-emerald-500 shrink-0 stroke-[3]" />
+                            ) : (
+                              <Icons.AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 stroke-[3]" />
+                            )}
+                            <p className="text-xs font-semibold">{adminCredFeedback.message}</p>
+                          </div>
+                          <button type="button" onClick={() => setAdminCredFeedback(null)} className="opacity-70 hover:opacity-100">
+                            <Icons.X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      <form onSubmit={handleUpdateAdminCredentials} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className={labelCls}>New Sign-In Username</label>
+                            <input
+                              required
+                              type="text"
+                              value={adminCredNewUsername}
+                              onChange={e => setAdminCredNewUsername(e.target.value)}
+                              placeholder="e.g. smileadmin"
+                              className={inputCls(isDark)}
+                            />
+                            <span className="text-[10px] text-slate-400 mt-1 block">Used at login alongside your Clinic Code.</span>
+                          </div>
+
+                          <div>
+                            <label className={labelCls}>Current Administrator Password</label>
+                            <input
+                              required
+                              type="password"
+                              value={adminCredCurrentPassword}
+                              onChange={e => setAdminCredCurrentPassword(e.target.value)}
+                              placeholder="Enter current password"
+                              className={inputCls(isDark)}
+                            />
+                            <span className="text-[10px] text-slate-400 mt-1 block">Required to authorize administrative credential updates.</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className={labelCls}>New Password</label>
+                              <button
+                                type="button"
+                                onClick={() => setShowAdminPass(!showAdminPass)}
+                                className="text-[10px] font-bold text-[#0ea5e9] hover:underline cursor-pointer"
+                              >
+                                {showAdminPass ? "Hide" : "Show"}
+                              </button>
+                            </div>
+                            <input
+                              required
+                              type={showAdminPass ? "text" : "password"}
+                              value={adminCredNewPassword}
+                              onChange={e => setAdminCredNewPassword(e.target.value)}
+                              placeholder="Min 4 characters"
+                              className={inputCls(isDark)}
+                            />
+                          </div>
+
+                          <div>
+                            <label className={labelCls}>Confirm New Password</label>
+                            <input
+                              required
+                              type={showAdminPass ? "text" : "password"}
+                              value={adminCredConfirmPassword}
+                              onChange={e => setAdminCredConfirmPassword(e.target.value)}
+                              placeholder="Repeat new password"
+                              className={inputCls(isDark)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end pt-2">
+                          <button
+                            type="submit"
+                            disabled={isUpdatingAdminCreds}
+                            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-[#0F85B0] hover:from-indigo-700 hover:to-[#0c6c8f] text-white text-xs font-bold rounded-xl shadow-md transition active:scale-95 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                          >
+                            {isUpdatingAdminCreds ? (
+                              <>
+                                <Icons.Refresh className="w-3.5 h-3.5 animate-spin" />
+                                <span>Updating Credentials...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Icons.Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>Save Admin Credentials</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
                 )}
 
@@ -7935,7 +8139,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className={labelCls}>Designation / Role</label>
                     <input 
@@ -7975,6 +8179,22 @@ export default function Home() {
                         placeholder="e.g. SH001"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">ID</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Staff Portal Access PIN</label>
+                    <div className="relative">
+                      <input 
+                        required 
+                        type="text"
+                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-10 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                          isDark ? "bg-slate-900 border-slate-700 text-[#38bdf8]" : "bg-white border-slate-200 text-[#0F85B0]"
+                        }`}
+                        value={newEmp.portalPin || "1234"} 
+                        onChange={e => setNewEmp(p => ({ ...p, portalPin: e.target.value }))}
+                        placeholder="1234"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">PIN</span>
                     </div>
                   </div>
                 </div>

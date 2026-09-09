@@ -58,7 +58,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const fillDemoStaff = () => {
     setLoginType("staff");
     setClinicCode(discoveredClinicCode || "SMILEHUB");
-    setBiometricId("101");
+    setBiometricId(discoveredClinicCode === "SMILEHUB" ? "SH001" : "101");
+    setPassword("1234");
     setErrorMsg("");
     setShowGuideModal(false);
   };
@@ -415,23 +416,62 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </div>
                 </>
               ) : (
-                <div className={`relative border rounded-xl transition-colors focus-within:ring-2 focus-within:ring-[#0F85B0]/20 focus-within:border-[#0F85B0] ${
-                  isDark ? "border-neutral-700 bg-neutral-900" : "border-neutral-200 bg-white"
-                }`}>
-                  <label className={`absolute left-4 top-2 text-[10px] font-semibold uppercase tracking-wider ${
-                    isDark ? "text-neutral-500" : "text-neutral-400"
-                  }`}>Biometric ID</label>
-                  <input
-                    type="text"
-                    required
-                    value={biometricId}
-                    onChange={(e) => setBiometricId(e.target.value)}
-                    className={`w-full px-4 pb-2 pt-6 bg-transparent outline-none text-sm font-medium ${
-                      isDark ? "text-white" : "text-slate-900"
-                    }`}
-                    placeholder="e.g. 101 or SH001"
-                  />
-                </div>
+                <>
+                  <div className={`relative border rounded-xl transition-colors focus-within:ring-2 focus-within:ring-[#0F85B0]/20 focus-within:border-[#0F85B0] ${
+                    isDark ? "border-neutral-700 bg-neutral-900" : "border-neutral-200 bg-white"
+                  }`}>
+                    <label className={`absolute left-4 top-2 text-[10px] font-semibold uppercase tracking-wider ${
+                      isDark ? "text-neutral-500" : "text-neutral-400"
+                    }`}>Biometric ID / Staff #</label>
+                    <input
+                      type="text"
+                      required
+                      value={biometricId}
+                      onChange={(e) => setBiometricId(e.target.value)}
+                      className={`w-full px-4 pb-2 pt-6 bg-transparent outline-none text-sm font-medium ${
+                        isDark ? "text-white" : "text-slate-900"
+                      }`}
+                      placeholder="e.g. 101 or SH001"
+                    />
+                  </div>
+
+                  <div className={`relative border rounded-xl transition-colors focus-within:ring-2 focus-within:ring-[#0F85B0]/20 focus-within:border-[#0F85B0] ${
+                    isDark ? "border-neutral-700 bg-neutral-900" : "border-neutral-200 bg-white"
+                  }`}>
+                    <label className={`absolute left-4 top-2 text-[10px] font-semibold uppercase tracking-wider ${
+                      isDark ? "text-neutral-500" : "text-neutral-400"
+                    }`}>Staff Access PIN / Password</label>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`w-full px-4 pb-2 pt-6 pr-12 bg-transparent outline-none text-sm font-medium ${
+                        isDark ? "text-white" : "text-slate-900"
+                      }`}
+                      placeholder="e.g. 1234"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className={`absolute right-4 top-1/2 -translate-y-1/2 ${
+                        isDark ? "text-neutral-500 hover:text-neutral-300" : "text-neutral-400 hover:text-slate-600"
+                      }`}
+                    >
+                      {showPassword ? (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </>
               )}
 
               {errorMsg && (
@@ -741,7 +781,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   onClick={fillDemoStaff}
                   className="py-2 px-4 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
                 >
-                  <span>Staff Portal Demo (Bio #101)</span>
+                  <span>Staff Portal Demo (Bio #{discoveredClinicCode === "SMILEHUB" ? "SH001" : "101"} / PIN: 1234)</span>
                 </button>
               </div>
             </div>
@@ -853,7 +893,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">Staff Portal</span>
                   </div>
                   <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    Employees can toggle to <strong>Staff Portal</strong> on the login page and enter the Clinic Code + their Biometric ID/PIN to inspect their personal punch logs, shift punctuality, and submit leave requests.
+                    Employees can toggle to <strong>Staff Portal</strong> on the login page and enter the Clinic Code + their Biometric ID + personal Access PIN (default initial PIN is <strong>1234</strong>) to inspect their personal punch logs, shift punctuality, and submit leave requests securely.
                   </p>
                 </div>
               </div>

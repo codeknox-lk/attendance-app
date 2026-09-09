@@ -32,6 +32,7 @@ export interface Employee {
   sessionRate: number;
   commissionRate: number;
   biometricId: string;
+  portalPin?: string;
   epfEligible: boolean;
   taxable: boolean;
   active: boolean;
@@ -222,6 +223,7 @@ export interface UserAccount {
 
 export interface AppContextProps {
   currentUser: UserAccount | null;
+  setCurrentUser: React.Dispatch<React.SetStateAction<UserAccount | null>>;
   loginUser: (payload: { username?: string; password?: string; pin?: string; loginType?: "admin" | "staff"; biometricId?: string; clinicCode?: string }) => Promise<{ success: boolean; error?: string }>;
   logoutUser: () => void;
   employees: Employee[];
@@ -1535,7 +1537,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      currentUser, loginUser, logoutUser,
+      currentUser, setCurrentUser, loginUser, logoutUser,
       employees, attendanceLogs, allowances, employeeAllowances, operatingHours, leaveRequests,
       payrollHistory, branches, auditLogs, publicHolidays, apitSlabs, biometricSettings,
       epfSettings, payrollCycleStartDay, adminPin, companyProfile, manualAdjustments, monthlyExcessIncome,

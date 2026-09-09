@@ -80,6 +80,7 @@ model Employee {
   sessionRate           Float    @default(0)
   commissionRate        Float    @default(0)
   biometricId           String
+  portalPin             String?  @default("1234")
   epfEligible           Boolean  @default(true)
   taxable               Boolean  @default(false)
   active                Boolean  @default(true)

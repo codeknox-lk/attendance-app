@@ -45,6 +45,14 @@ export async function POST(req: NextRequest) {
     // 1. Staff / Employee Self-Service Login
     if (loginType === "staff" || biometricId) {
       const bioId = String(biometricId || username).trim();
+      const staffPin = String(password || body.pin || body.portalPin || "").trim();
+
+      if (!staffPin) {
+        return NextResponse.json({ 
+          success: false, 
+          error: "Staff Access PIN is required to sign in. Default initial PIN is 1234." 
+        }, { status: 400 });
+      }
       
       const emp = await db.employee.findFirst({
         where: {
@@ -57,52 +65,73 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      if (emp) {
+      if (!emp) {
         try {
           await db.auditLog.create({
             data: {
               clinicId: clinic.id,
-              action: "LOGIN_SUCCESS",
+              action: "LOGIN_FAILED",
               entity: "Auth",
-              entityId: emp.id,
-              details: `Staff member ${emp.firstName} ${emp.lastName} (Bio #${emp.biometricId}) signed into staff portal`,
+              entityId: bioId,
+              details: `Staff login failed: Biometric ID #${bioId} not enrolled at clinic '${clinic.name}'`,
             },
           });
         } catch {}
 
-        return NextResponse.json({
-          success: true,
-          user: {
-            id: emp.id,
-            username: emp.biometricId,
-            name: `${emp.firstName} ${emp.lastName}`,
-            role: emp.role,
-            biometricId: emp.biometricId,
-            employeeId: emp.id,
-            clinicId: emp.clinicId,
-            clinicName: clinic.name,
-            clinicCode: clinic.clinicCode,
-            loginType: "staff",
-          },
-        });
+        return NextResponse.json({ 
+          success: false, 
+          error: `Staff ID '${bioId}' is not enrolled in ${clinic.name}. Please confirm your assigned biometric ID.` 
+        }, { status: 401 });
+      }
+
+      // Check PIN: verify against employee's portalPin (default is 1234)
+      const expectedPin = emp.portalPin || "1234";
+      if (staffPin !== expectedPin) {
+        try {
+          await db.auditLog.create({
+            data: {
+              clinicId: clinic.id,
+              action: "LOGIN_FAILED",
+              entity: "Auth",
+              entityId: emp.id,
+              details: `Staff login failed: Incorrect Access PIN entered for ${emp.firstName} ${emp.lastName}`,
+            },
+          });
+        } catch {}
+
+        return NextResponse.json({ 
+          success: false, 
+          error: `Incorrect Access PIN for ${emp.firstName} ${emp.lastName}. Default initial PIN is 1234.` 
+        }, { status: 401 });
       }
 
       try {
         await db.auditLog.create({
           data: {
             clinicId: clinic.id,
-            action: "LOGIN_FAILED",
+            action: "LOGIN_SUCCESS",
             entity: "Auth",
-            entityId: bioId,
-            details: `Staff login failed: Biometric ID #${bioId} not enrolled at clinic '${clinic.name}'`,
+            entityId: emp.id,
+            details: `Staff member ${emp.firstName} ${emp.lastName} (Bio #${emp.biometricId}) signed into staff portal`,
           },
         });
       } catch {}
 
-      return NextResponse.json({ 
-        success: false, 
-        error: `Staff ID '${bioId}' is not enrolled in ${clinic.name}. Please confirm your assigned biometric ID.` 
-      }, { status: 401 });
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: emp.id,
+          username: emp.biometricId,
+          name: `${emp.firstName} ${emp.lastName}`,
+          role: emp.role,
+          biometricId: emp.biometricId,
+          employeeId: emp.id,
+          clinicId: emp.clinicId,
+          clinicName: clinic.name,
+          clinicCode: clinic.clinicCode,
+          loginType: "staff",
+        },
+      });
     }
 
     // 2. Admin User Credentials Login (Strictly isolated to clinic.id)
