@@ -632,30 +632,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
             </div>
 
-            {/* Updated Feature Checklist */}
+            {/* Professional Feature Highlights */}
             <ul className="space-y-3">
               {[
-                { title: "AI handwritten logbook scanner (Vision AI)", isNew: true },
-                { title: "Access secure biometric attendance tools", isNew: false },
-                { title: "Track payroll, leaves, and staff performance", isNew: false },
-                { title: "Automated 2× holiday overtime & salary engine", isNew: true },
-                { title: "Manage roles with strict access control", isNew: false },
-                { title: "Cloud-synced dental clinical & operations data", isNew: false },
+                { title: "Direct biometric terminal synchronization (Hikvision)" },
+                { title: "AI-assisted physical logbook digitization & verification" },
+                { title: "Staff leave administration & clinic holiday schedules" },
+                { title: "Automated payroll processing with statutory contributions & overtime" },
+                { title: "Role-based access control with Master PIN authorization" },
+                { title: "Centralized cloud database with audit-ready reporting" },
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-white/95">
-                  <div className="w-5 h-5 rounded-full border border-white/40 flex items-center justify-center shrink-0 bg-white/10">
+                  <div className="w-5 h-5 rounded-full border border-white/40 flex items-center justify-center shrink-0 bg-white/10 shadow-sm">
                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-xs sm:text-sm leading-tight">{item.title}</span>
-                    {item.isNew && (
-                      <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 text-white px-1.5 py-0.2 rounded-md leading-none border border-white/30">
-                        NEW
-                      </span>
-                    )}
-                  </div>
+                  <span className="font-medium text-xs sm:text-sm leading-tight">{item.title}</span>
                 </li>
               ))}
             </ul>
