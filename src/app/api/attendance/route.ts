@@ -22,7 +22,24 @@ export async function GET(req: NextRequest) {
 
     const logs = await db.attendanceLog.findMany({
       where: whereClause,
-      include: { employee: true },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            biometricId: true,
+            payType: true,
+            basicSalary: true,
+            hourlyRate: true,
+            sessionRate: true,
+            epfEligible: true,
+            taxable: true,
+            active: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
 

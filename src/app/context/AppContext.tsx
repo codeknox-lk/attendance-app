@@ -886,14 +886,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     hydrateFromDatabase();
 
-    // Live background polling every 20 seconds
+    // Live background polling every 60 seconds (fetches today's active punches only to minimize network transfer)
     const pollInterval = setInterval(async () => {
       try {
         if (typeof document !== "undefined" && document.hidden) return;
 
         const today = new Date();
-        const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-        const attRes = await apiFetch(`/api/attendance?month=${currentMonth}`);
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        const attRes = await apiFetch(`/api/attendance?date=${todayStr}`);
         const attData = await attRes.json();
 
         if (attData.success && attData.logs) {
@@ -916,20 +916,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return [...dbLogs, ...existingToKeep].sort((a,b) => b.date.localeCompare(a.date));
           });
         }
-
-        // Also refresh leaves and employees if empty
-        setEmployeesRaw(currentEmps => {
-          if (currentEmps.length === 0) {
-            apiFetch("/api/employees").then(r => r.json()).then(d => {
-              if (d.success && Array.isArray(d.employees) && d.employees.length > 0) {
-                setEmployees(d.employees);
-              }
-            }).catch(() => {});
-          }
-          return currentEmps;
-        });
       } catch {}
-    }, 20000);
+    }, 60000);
 
     return () => clearInterval(pollInterval);
   }, []);
