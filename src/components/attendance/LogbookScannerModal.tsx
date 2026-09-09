@@ -450,7 +450,7 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                     <span>Staff Matching</span>
                   </div>
                   <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed">
-                    The AI cross-checks handwritten names against your {employees.length} active clinic staff members automatically.
+                    The AI cross-checks handwritten names against your {employees.filter(e => e.active !== false).length} active clinic staff members automatically.
                   </p>
                 </div>
                 <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-200/80"}`}>
