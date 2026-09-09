@@ -764,7 +764,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <div>
                   <p className="font-bold text-zinc-800 dark:text-zinc-200">AI Handwritten Logbook Scanner</p>
                   <p className="text-zinc-500 leading-relaxed">
-                    Under the <strong>Attendance</strong> tab, click <strong>"Scan Logbook"</strong> to upload handwritten register sheet photos for automated AI OCR and selective entry imports.
+                    Under the <strong>Attendance</strong> tab, click <strong>&ldquo;Scan Logbook&rdquo;</strong> to upload handwritten register sheet photos for automated AI OCR and selective entry imports.
                   </p>
                 </div>
               </div>
@@ -774,7 +774,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <div>
                   <p className="font-bold text-zinc-800 dark:text-zinc-200">Registering a New Clinic</p>
                   <p className="text-zinc-500 leading-relaxed">
-                    If you are setting up a fresh practice, click <strong>"Register Clinic"</strong> below to create an isolated database workspace with your preferred clinic code and admin account.
+                    If you are setting up a fresh practice, click <strong>&ldquo;Register Clinic&rdquo;</strong> below to create an isolated database workspace with your preferred clinic code and admin account.
                   </p>
                 </div>
               </div>
