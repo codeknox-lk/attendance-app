@@ -29,6 +29,90 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Modals
+  const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
+  const [showRegisterModal, setShowRegisterModal] = useState<boolean>(false);
+
+  // New clinic form states
+  const [regClinicName, setRegClinicName] = useState<string>("");
+  const [regClinicCode, setRegClinicCode] = useState<string>("");
+  const [regAdminName, setRegAdminName] = useState<string>("");
+  const [regUsername, setRegUsername] = useState<string>("");
+  const [regPassword, setRegPassword] = useState<string>("");
+  const [regEmail, setRegEmail] = useState<string>("");
+  const [regPhone, setRegPhone] = useState<string>("");
+  const [regIsSubmitting, setRegIsSubmitting] = useState<boolean>(false);
+  const [regErrorMsg, setRegErrorMsg] = useState<string>("");
+  const [regSuccessMsg, setRegSuccessMsg] = useState<string>("");
+
+  const fillDemoAdmin = () => {
+    setLoginType("admin");
+    setClinicCode("MEDSYNC");
+    setUsername("admin");
+    setPassword("admin");
+    setErrorMsg("");
+    setShowGuideModal(false);
+  };
+
+  const fillDemoStaff = () => {
+    setLoginType("staff");
+    setClinicCode("MEDSYNC");
+    setBiometricId("101");
+    setErrorMsg("");
+    setShowGuideModal(false);
+  };
+
+  const handleRegisterClinic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegErrorMsg("");
+    setRegSuccessMsg("");
+    setRegIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/auth/register-clinic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clinicName: regClinicName,
+          clinicCode: regClinicCode,
+          adminName: regAdminName,
+          username: regUsername,
+          password: regPassword,
+          email: regEmail,
+          phone: regPhone,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setRegErrorMsg(data.error || "Registration failed. Please verify the information.");
+        setRegIsSubmitting(false);
+        return;
+      }
+
+      setRegSuccessMsg(`Clinic '${data.clinic.name}' registered! Logging you in...`);
+      setClinicCode(data.clinic.clinicCode);
+      setUsername(data.user.username);
+      setPassword(regPassword);
+      setLoginType("admin");
+
+      setTimeout(async () => {
+        setShowRegisterModal(false);
+        await loginUser({
+          loginType: "admin",
+          clinicCode: data.clinic.clinicCode,
+          username: data.user.username,
+          password: regPassword,
+        });
+      }, 900);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error during registration.";
+      setRegErrorMsg(msg);
+    } finally {
+      setRegIsSubmitting(false);
+    }
+  };
+
   // Auto-changing feature carousel on right panel
   const [activeSlide, setActiveSlide] = useState<number>(0);
   const [isSlidePaused, setIsSlidePaused] = useState<boolean>(false);
@@ -367,6 +451,57 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 )}
               </button>
             </form>
+
+            {/* Quick Demo Credentials & Onboarding Links */}
+            <div className="mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-zinc-400">Evaluating?</span>
+                <button
+                  type="button"
+                  onClick={fillDemoAdmin}
+                  className="font-bold text-teal-600 dark:text-teal-400 hover:brightness-110 flex items-center gap-1 cursor-pointer bg-teal-500/10 dark:bg-teal-500/15 px-3 py-1 rounded-lg border border-teal-500/25 transition active:scale-95 shadow-xs"
+                  title="1-Click Fill Demo Credentials (MEDSYNC / admin)"
+                >
+                  <svg className="w-3.5 h-3.5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                  </svg>
+                  <span>Quick Demo Login</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between w-full text-[12px] px-1 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowGuideModal(true)}
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium flex items-center gap-1 cursor-pointer hover:underline"
+                >
+                  <svg className="w-3.5 h-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Setup Guide &amp; Demo Info</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegClinicName("");
+                    setRegClinicCode("");
+                    setRegAdminName("");
+                    setRegUsername("");
+                    setRegPassword("");
+                    setRegErrorMsg("");
+                    setRegSuccessMsg("");
+                    setShowRegisterModal(true);
+                  }}
+                  className="font-bold text-[#0F85B0] dark:text-[#38bdf8] hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <span>Register Clinic</span>
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -528,6 +663,329 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ─────────────────── MODAL 1: FIRST-TIME USER SETUP GUIDE ─────────────────── */}
+      {showGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border transition-all ${
+            isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"
+          }`}>
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">Getting Started with MedSync</h3>
+                  <p className="text-[11px] text-zinc-400">Quick start instructions &amp; demo credentials</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Quick Demo Access Card */}
+            <div className={`mt-4 p-4 rounded-2xl border ${
+              isDark ? "bg-teal-950/20 border-teal-800/50" : "bg-teal-50/70 border-teal-200/80"
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                  Pre-Configured Demo Credentials
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400">Cloud Database Connected</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3 font-mono">
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700">
+                  <span className="text-[10px] text-zinc-400 block font-sans font-bold uppercase">Clinic Code</span>
+                  <strong className="text-teal-600 dark:text-teal-400 font-bold">MEDSYNC</strong>
+                </div>
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700">
+                  <span className="text-[10px] text-zinc-400 block font-sans font-bold uppercase">Admin User / Pass</span>
+                  <strong>admin</strong> / <strong>admin</strong>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fillDemoAdmin}
+                  className="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                  </svg>
+                  <span>Fill Practice Admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={fillDemoStaff}
+                  className="py-2 px-3 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+                >
+                  <span>Fill Staff (Bio #101)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Step-by-Step Walkthrough */}
+            <div className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-1 text-xs">
+              <div className="flex gap-3">
+                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">1</span>
+                <div>
+                  <p className="font-bold text-zinc-800 dark:text-zinc-200">How Clinic Code Works</p>
+                  <p className="text-zinc-500 leading-relaxed">
+                    Every dental clinic has an assigned <strong>Clinic Code</strong>. Staff and administrators enter this code on the login page to direct their session to the correct clinic database.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">2</span>
+                <div>
+                  <p className="font-bold text-zinc-800 dark:text-zinc-200">Changing Your Clinic Code</p>
+                  <p className="text-zinc-500 leading-relaxed">
+                    Once signed in as Practice Admin, navigate to <strong>Settings &rarr; Clinic Profile</strong> to update your clinic name and choose your own custom Clinic Code anytime.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">3</span>
+                <div>
+                  <p className="font-bold text-zinc-800 dark:text-zinc-200">AI Handwritten Logbook Scanner</p>
+                  <p className="text-zinc-500 leading-relaxed">
+                    Under the <strong>Attendance</strong> tab, click <strong>"Scan Logbook"</strong> to upload handwritten register sheet photos for automated AI OCR and selective entry imports.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <span className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 font-bold text-[10px] flex items-center justify-center shrink-0">4</span>
+                <div>
+                  <p className="font-bold text-zinc-800 dark:text-zinc-200">Registering a New Clinic</p>
+                  <p className="text-zinc-500 leading-relaxed">
+                    If you are setting up a fresh practice, click <strong>"Register Clinic"</strong> below to create an isolated database workspace with your preferred clinic code and admin account.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────── MODAL 2: REGISTER NEW CLINIC ─────────────────── */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border transition-all ${
+            isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"
+          }`}>
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#0F85B0]/15 text-[#0F85B0] flex items-center justify-center font-bold">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 20V5l8 8 8-8v15" />
+                    <path d="M12 10v6M9 13h6" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">Register Your Dental Practice</h3>
+                  <p className="text-[11px] text-zinc-400">Set up a dedicated clinic workspace with custom code</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowRegisterModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {regErrorMsg && (
+              <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium">
+                {regErrorMsg}
+              </div>
+            )}
+
+            {regSuccessMsg && (
+              <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{regSuccessMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRegisterClinic} className="mt-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Clinic / Practice Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={regClinicName}
+                    onChange={(e) => {
+                      setRegClinicName(e.target.value);
+                      if (!regClinicCode) {
+                        const slug = e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase();
+                        if (slug) setRegClinicCode(slug);
+                      }
+                    }}
+                    placeholder="e.g. Apex Dental Studio"
+                    className="w-full px-3 py-2 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-transparent focus:outline-hidden focus:ring-2 focus:ring-[#0F85B0]/30"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      Clinic Code (Login ID) *
+                    </label>
+                    <span className="text-[9px] font-mono text-teal-600 font-bold">UNIQUE</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={regClinicCode}
+                    onChange={(e) => setRegClinicCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. APEX"
+                    className="w-full px-3 py-2 rounded-xl text-xs font-mono font-bold uppercase border border-zinc-200 dark:border-zinc-700 bg-transparent focus:outline-hidden focus:ring-2 focus:ring-[#0F85B0]/30 text-teal-600 dark:text-teal-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Admin Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={regAdminName}
+                    onChange={(e) => setRegAdminName(e.target.value)}
+                    placeholder="e.g. Dr. Sarah Silva"
+                    className="w-full px-3 py-2 rounded-xl text-xs border border-zinc-200 dark:border-zinc-700 bg-transparent focus:outline-hidden focus:ring-2 focus:ring-[#0F85B0]/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Admin Username *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value)}
+                    placeholder="e.g. admin_apex"
+                    className="w-full px-3 py-2 rounded-xl text-xs font-mono font-semibold border border-zinc-200 dark:border-zinc-700 bg-transparent focus:outline-hidden focus:ring-2 focus:ring-[#0F85B0]/30"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                  Admin Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="At least 4 characters"
+                  className="w-full px-3 py-2 rounded-xl text-xs font-mono border border-zinc-200 dark:border-zinc-700 bg-transparent focus:outline-hidden focus:ring-2 focus:ring-[#0F85B0]/30"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Contact Email (Optional)
+                  </label>
+                  <input
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="clinic@example.com"
+                    className="w-full px-3 py-2 rounded-xl text-xs border border-zinc-200 dark:border-zinc-700 bg-transparent focus:outline-hidden focus:ring-2 focus:ring-[#0F85B0]/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Contact Phone (Optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    placeholder="+94 77 123 4567"
+                    className="w-full px-3 py-2 rounded-xl text-xs border border-zinc-200 dark:border-zinc-700 bg-transparent focus:outline-hidden focus:ring-2 focus:ring-[#0F85B0]/30"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[10px] text-zinc-400 pt-1">
+                Your new clinic will automatically be configured with default operating hours, audit logging, and automated overtime rules.
+              </p>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  disabled={regIsSubmitting}
+                  onClick={() => setShowRegisterModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={regIsSubmitting}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-500 to-[#0ea5e9] text-white hover:brightness-110 active:scale-95 transition shadow-sm flex items-center gap-1.5"
+                >
+                  {regIsSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Creating Workspace...</span>
+                    </>
+                  ) : (
+                    <span>Create Clinic Workspace</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

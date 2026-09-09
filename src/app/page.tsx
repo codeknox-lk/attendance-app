@@ -5068,15 +5068,35 @@ export default function Home() {
                     <div className={`p-6 rounded-3xl border ${
                       isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80 shadow-xs"
                     } space-y-4`}>
-                      <div>
-                        <label className={labelCls}>Clinic / Entity Name</label>
-                        <input
-                          className={inputCls(isDark)}
-                          value={profileForm.name || ""}
-                          onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
-                          placeholder="e.g. Smile Hub Premium Dental Care"
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Clinic / Practice Name</label>
+                          <input
+                            className={inputCls(isDark)}
+                            value={profileForm.name || ""}
+                            onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
+                            placeholder="e.g. Smile Hub Premium Dental Care"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className={labelCls}>Clinic Code (Sign-In Identifier)</label>
+                            <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
+                              LOGIN ID
+                            </span>
+                          </div>
+                          <input
+                            className={`${inputCls(isDark)} font-mono font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400`}
+                            value={profileForm.clinicCode || ""}
+                            onChange={e => setProfileForm(p => ({ ...p, clinicCode: e.target.value.toUpperCase() }))}
+                            placeholder="e.g. MEDSYNC"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            Staff and admins enter this code on the login page to authenticate into your clinic.
+                          </p>
+                        </div>
                       </div>
+
                       <div>
                         <label className={labelCls}>Official Registered Address</label>
                         <textarea
@@ -5131,20 +5151,29 @@ export default function Home() {
 
                       <div className="pt-3 flex items-center justify-between">
                         {settingsSaveMsg && settingsTab === "company" ? (
-                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                          <span className={`text-xs font-bold flex items-center gap-1.5 ${
+                            settingsSaveMsg.includes("Failed") || settingsSaveMsg.includes("already taken") || settingsSaveMsg.includes("must be")
+                              ? "text-rose-400"
+                              : "text-emerald-400"
+                          }`}>
                             <Icons.Check className="w-3.5 h-3.5" />
                             <span>{settingsSaveMsg}</span>
                           </span>
                         ) : <span />}
                         <button
                           type="button"
-                          onClick={() => {
-                            updateCompanyProfile(profileForm);
-                            if (profileForm.epfRegNo || profileForm.etfRegNo) {
-                              updateEpfSettings({ epfRegNo: profileForm.epfRegNo, etfRegNo: profileForm.etfRegNo });
+                          onClick={async () => {
+                            try {
+                              await updateCompanyProfile(profileForm);
+                              if (profileForm.epfRegNo || profileForm.etfRegNo) {
+                                updateEpfSettings({ epfRegNo: profileForm.epfRegNo, etfRegNo: profileForm.etfRegNo });
+                              }
+                              setSettingsSaveMsg("Clinic profile & code saved successfully!");
+                              setTimeout(() => setSettingsSaveMsg(""), 4000);
+                            } catch (err: unknown) {
+                              const msg = err instanceof Error ? err.message : "Failed to update clinic profile";
+                              setSettingsSaveMsg(msg);
                             }
-                            setSettingsSaveMsg("Clinic profile saved successfully!");
-                            setTimeout(() => setSettingsSaveMsg(""), 3000);
                           }}
                           className="px-5 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-bold rounded-xl shadow-md shadow-[#0F85B0]/20 transition active:scale-95 flex items-center gap-1.5"
                         >

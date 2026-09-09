@@ -25,9 +25,37 @@ export async function PUT(req: NextRequest) {
 
     const body = await req.json();
 
+    let newClinicCode: string | undefined = undefined;
+    if (body.clinicCode !== undefined && typeof body.clinicCode === "string") {
+      const normalized = body.clinicCode.trim().toUpperCase();
+      if (normalized.length < 2 || normalized.length > 20 || !/^[A-Z0-9_-]+$/.test(normalized)) {
+        return NextResponse.json({
+          success: false,
+          error: "Clinic code must be between 2 and 20 characters (letters, numbers, underscores, and hyphens only).",
+        }, { status: 400 });
+      }
+
+      const existingClinic = await db.clinic.findFirst({
+        where: {
+          clinicCode: { equals: normalized, mode: "insensitive" },
+          id: { not: clinicId },
+        },
+      });
+
+      if (existingClinic) {
+        return NextResponse.json({
+          success: false,
+          error: `Clinic code '${normalized}' is already taken by another clinic. Please choose a different code.`,
+        }, { status: 400 });
+      }
+
+      newClinicCode = normalized;
+    }
+
     const clinic = await db.clinic.update({
       where: { id: clinicId },
       data: {
+        ...(newClinicCode ? { clinicCode: newClinicCode } : {}),
         name: body.name,
         address: body.address,
         phone: body.phone,

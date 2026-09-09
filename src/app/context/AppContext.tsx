@@ -202,6 +202,7 @@ export interface CompanyProfile {
   logoUrl?: string;
   epfRegNo?: string;
   etfRegNo?: string;
+  clinicCode?: string;
 }
 
 export interface UserAccount {
@@ -549,14 +550,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateCompanyProfile = async (profile: Partial<CompanyProfile>) => {
     const updated = { ...companyProfile, ...profile };
     setCompanyProfile(updated);
+    if (profile.clinicCode) {
+      setCurrentUser(prev => {
+        if (!prev) return prev;
+        const u = { ...prev, clinicCode: profile.clinicCode };
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem("medicflow_user_session", JSON.stringify(u)); } catch {}
+        }
+        return u;
+      });
+    }
     pushAudit({ action: "UPDATE", entity: "CompanyProfile", entityId: "COMPANY", details: "Updated clinic profile" });
     try {
-      await apiFetch("/api/clinics", {
+      const res = await apiFetch("/api/clinics", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),
       });
-    } catch {}
+      const data = await res.json();
+      if (!data.success && data.error) {
+        throw new Error(data.error);
+      }
+      return data;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update clinic profile";
+      throw new Error(msg);
+    }
   };
 
   const updatePayslipAdjustment = (key: string, adj: PayslipAdjustment) => {
@@ -803,8 +822,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const clnData = await clnRes.json();
             if (clnData.success && clnData.clinic) {
               setCurrentUser(prev => {
-                if (prev && prev.clinicId !== clnData.clinic.id) {
-                  const updated = { ...prev, clinicId: clnData.clinic.id, clinicName: clnData.clinic.name };
+                if (prev && (prev.clinicId !== clnData.clinic.id || prev.clinicCode !== clnData.clinic.clinicCode)) {
+                  const updated = { 
+                    ...prev, 
+                    clinicId: clnData.clinic.id, 
+                    clinicName: clnData.clinic.name,
+                    clinicCode: clnData.clinic.clinicCode || prev.clinicCode 
+                  };
                   if (typeof window !== "undefined") {
                     try {
                       localStorage.setItem("medicflow_user_session", JSON.stringify(updated));
@@ -818,6 +842,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               setCompanyProfile(prev => ({
                 ...prev,
                 name: clnData.clinic.name || prev.name,
+                clinicCode: clnData.clinic.clinicCode || prev.clinicCode,
                 address: clnData.clinic.address || prev.address,
                 phone: clnData.clinic.phone || prev.phone,
                 email: clnData.clinic.email || prev.email,
