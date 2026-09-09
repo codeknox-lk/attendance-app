@@ -2100,12 +2100,16 @@ export default function Home() {
 
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2 font-mono text-xs">
-                            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold">
-                              In: {log.checkIn}
+                            <span className={`px-2.5 py-1 rounded-lg border font-bold ${
+                              log.checkIn && log.checkIn !== "--:--:--" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-slate-500/10 border-slate-500/20 text-slate-400"
+                            }`}>
+                              In: {log.checkIn && log.checkIn !== "--:--:--" ? log.checkIn : "—"}
                             </span>
                             <span className="text-slate-600">→</span>
-                            <span className={`px-2.5 py-1 rounded-lg border font-bold ${log.checkOut ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/20 text-[#38bdf8]" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
-                              Out: {log.checkOut || "Active Shift"}
+                            <span className={`px-2.5 py-1 rounded-lg border font-bold ${
+                              log.checkOut ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/20 text-[#38bdf8]" : ["On-Leave", "Absent", "Holiday", "Clinic Closed"].includes(log.status) || !log.checkIn || log.checkIn === "--:--:--" ? "bg-slate-500/10 border-slate-500/20 text-slate-400" : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                            }`}>
+                              Out: {log.checkOut || (["On-Leave", "Absent", "Holiday", "Clinic Closed"].includes(log.status) || !log.checkIn || log.checkIn === "--:--:--" ? "—" : "Active Shift")}
                             </span>
                           </div>
                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border ${statusColor(log.status, isDark)}`}>
@@ -2301,6 +2305,12 @@ export default function Home() {
                           ? (isPunctual ? "On-Time" : "Late")
                           : log.status;
 
+                        const isNonWorking = ["On-Leave", "Absent", "Holiday", "Clinic Closed"].includes(displayStatus);
+                        const hasValidCheckIn = Boolean(log.checkIn && log.checkIn !== "--:--:--" && log.checkIn !== "–" && log.checkIn !== "-");
+                        const hasValidCheckOut = Boolean(log.checkOut && log.checkOut !== "--:--:--" && log.checkOut !== "–" && log.checkOut !== "-" && !log.checkOut.toLowerCase().includes("active"));
+                        const todayStr = new Date().toISOString().split("T")[0];
+                        const isLogToday = log.date === todayStr;
+
                         return (
                           <tr key={log.id} className={`transition ${isDark ? "hover:bg-slate-800/30" : "hover:bg-slate-50/80"}`}>
                             <td className="px-3 py-2.5 whitespace-nowrap">
@@ -2325,28 +2335,49 @@ export default function Home() {
                               </span>
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap">
-                              <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${isDark ? "bg-emerald-950/30 text-emerald-400 border border-emerald-800/40" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1.5" />
-                                {log.checkIn}
-                              </span>
+                              {hasValidCheckIn ? (
+                                <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${isDark ? "bg-emerald-950/30 text-emerald-400 border border-emerald-800/40" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1.5" />
+                                  {log.checkIn}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 dark:text-slate-500 font-mono text-xs select-none px-2 py-0.5">—</span>
+                              )}
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap">
-                              <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${log.checkOut ? (isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border border-[#bae6fd]") : (isDark ? "bg-amber-950/30 text-amber-400 border border-amber-800/40" : "bg-amber-50 text-amber-700 border border-amber-200")}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full inline-block mr-1.5 ${log.checkOut ? "bg-[#38bdf8]" : "bg-amber-400"}`} />
-                                {log.checkOut || "Active Shift"}
-                              </span>
+                              {hasValidCheckOut ? (
+                                <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border border-[#bae6fd]"}`}>
+                                  <span className="w-1.5 h-1.5 rounded-full inline-block mr-1.5 bg-[#38bdf8]" />
+                                  {log.checkOut}
+                                </span>
+                              ) : isNonWorking || !hasValidCheckIn ? (
+                                <span className="text-slate-400 dark:text-slate-500 font-mono text-xs select-none px-2 py-0.5">—</span>
+                              ) : isLogToday ? (
+                                <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${isDark ? "bg-amber-950/30 text-amber-400 border border-amber-800/40" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                                  <span className="w-1.5 h-1.5 rounded-full inline-block mr-1.5 bg-amber-400 animate-pulse" />
+                                  Active Shift
+                                </span>
+                              ) : (
+                                <span className="text-amber-500/80 font-mono text-[11px] italic px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                                  Missing Out
+                                </span>
+                              )}
                             </td>
                             <td className="px-3 py-2.5 whitespace-nowrap">
-                              {log.checkOut && log.checkOut !== "–" && !log.checkOut.toLowerCase().includes("active") ? (
+                              {hasValidCheckIn && hasValidCheckOut ? (
                                 <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-lg inline-flex items-center ${
                                   isDark ? "bg-[#0ea5e9]/10 text-[#38bdf8] border border-[#0ea5e9]/20" : "bg-[#f0f9ff] text-[#0c6c8f] border border-[#bae6fd]"
                                 }`}>
                                   {formatHoursAndMins(workedHours)}
                                 </span>
-                              ) : (
+                              ) : isNonWorking || !hasValidCheckIn ? (
+                                <span className="text-slate-400 dark:text-slate-500 font-mono text-xs select-none px-2 py-0.5">—</span>
+                              ) : isLogToday ? (
                                 <span className="text-amber-500 font-semibold italic text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
                                   Active Shift
                                 </span>
+                              ) : (
+                                <span className="text-slate-400 dark:text-slate-500 font-mono text-xs select-none px-2 py-0.5">—</span>
                               )}
                             </td>
                             <td className="px-3 py-2.5 text-center font-mono font-bold whitespace-nowrap">
@@ -4545,9 +4576,13 @@ export default function Home() {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
-                                    <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">In: {l.checkIn}</span>
+                                    <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                      In: {l.checkIn && l.checkIn !== "--:--:--" ? l.checkIn : "—"}
+                                    </span>
                                     <span>→</span>
-                                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">Out: {l.checkOut || "Active Shift"}</span>
+                                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
+                                      Out: {l.checkOut || (["On-Leave", "Absent", "Holiday", "Clinic Closed"].includes(l.status) || !l.checkIn || l.checkIn === "--:--:--" ? "—" : "Active Shift")}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
