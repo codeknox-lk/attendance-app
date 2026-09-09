@@ -2128,6 +2128,8 @@ export default function Home() {
                   isDark={isDark}
                   employees={employees}
                   existingAttendanceLogs={attendanceLogs}
+                  publicHolidays={publicHolidays}
+                  operatingHours={operatingHours}
                   defaultMonth={selectedMonth}
                   onBack={() => setAttendanceSubView("list")}
                   onImportSuccess={async (newLogs) => {

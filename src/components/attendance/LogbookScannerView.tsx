@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Employee, AttendanceLog } from "@/app/context/AppContext";
+import { Employee, AttendanceLog, PublicHoliday, ClinicOperatingHours } from "@/app/context/AppContext";
 
 interface RawScannedPunch {
   date?: string;
@@ -32,6 +32,8 @@ interface LogbookScannerViewProps {
   isDark: boolean;
   employees: Employee[];
   existingAttendanceLogs?: AttendanceLog[];
+  publicHolidays?: PublicHoliday[];
+  operatingHours?: ClinicOperatingHours[];
   defaultMonth?: string;
   onBack: () => void;
   onImportSuccess: (importedLogs: AttendanceLog[]) => void;
@@ -41,6 +43,8 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
   isDark,
   employees,
   existingAttendanceLogs = [],
+  publicHolidays = [],
+  operatingHours = [],
   defaultMonth,
   onBack,
   onImportSuccess,
@@ -82,7 +86,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
 
   // Conflict Resolution state
   const [globalConflictStrategy, setGlobalConflictStrategy] = useState<"merge" | "skip" | "overwrite">("merge");
-  const [conflictFilter, setConflictFilter] = useState<"all" | "conflicts" | "new" | "leave">("all");
+  const [conflictFilter, setConflictFilter] = useState<"all" | "conflicts" | "new" | "holiday" | "closed" | "leave" | "absent">("all");
 
   const getExistingRecord = (p: ScannedPunch) => {
     return existingAttendanceLogs.find((l) => l.employeeId === p.employeeId && l.date === p.date);
@@ -90,12 +94,18 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
 
   const conflictCount = punches.filter((p) => Boolean(getExistingRecord(p))).length;
   const newCount = punches.length - conflictCount;
-  const leaveCount = punches.filter((p) => p.status === "On-Leave" || p.status === "Absent").length;
+  const holidayCount = punches.filter((p) => p.status === "Holiday").length;
+  const closedCount = punches.filter((p) => p.status === "Clinic Closed").length;
+  const leaveCount = punches.filter((p) => p.status === "On-Leave").length;
+  const absentCount = punches.filter((p) => p.status === "Absent").length;
 
   const filteredPunches = punches.filter((p) => {
     if (conflictFilter === "conflicts") return Boolean(getExistingRecord(p));
     if (conflictFilter === "new") return !getExistingRecord(p);
-    if (conflictFilter === "leave") return p.status === "On-Leave" || p.status === "Absent";
+    if (conflictFilter === "holiday") return p.status === "Holiday";
+    if (conflictFilter === "closed") return p.status === "Clinic Closed";
+    if (conflictFilter === "leave") return p.status === "On-Leave";
+    if (conflictFilter === "absent") return p.status === "Absent";
     return true;
   });
 
@@ -182,6 +192,15 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
           biometricId: e.biometricId,
         }));
 
+      const monthHolidays = (publicHolidays || [])
+        .filter((h) => h.date.startsWith(targetMonth))
+        .map((h) => ({ date: h.date, name: h.name }));
+
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const closedDayNames = (operatingHours || [])
+        .filter((o) => !o.isOpen)
+        .map((o) => dayNames[o.dayOfWeek] || `Day ${o.dayOfWeek}`);
+
       const res = await fetch("/api/biometric/scan-logbook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,6 +209,8 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
           month: targetMonth,
           apiKey: geminiApiKey.trim() || undefined,
           employees: activeRoster,
+          holidays: monthHolidays,
+          closedDays: closedDayNames,
         }),
       });
 
@@ -229,22 +250,67 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
           else if (employees.length > 0) empId = employees[0].id;
         }
 
-        const isLeaveOrAbsent = p.status === "On-Leave" || p.status === "Absent";
-        const cleanCheckIn = isLeaveOrAbsent ? "" : p.checkIn || "";
-        const cleanCheckOut = isLeaveOrAbsent ? "" : p.checkOut || "";
+        const pDate = p.date || `${targetMonth}-01`;
+        const matchedHoliday = (publicHolidays || []).find((h) => h.date === pDate);
+
+        let dayOfWeek = -1;
+        try {
+          const parsedD = new Date(`${pDate}T00:00:00`);
+          if (!isNaN(parsedD.getTime())) {
+            dayOfWeek = parsedD.getDay();
+          }
+        } catch {}
+        const isScheduledClosed = dayOfWeek >= 0 && (operatingHours || []).some((o) => o.dayOfWeek === dayOfWeek && !o.isOpen);
+
+        // Check text clues for non-working status
+        const combinedText = `${p.status || ""} ${p.note || ""} ${p.employeeName || ""} ${p.rawRow || ""}`.toLowerCase();
+        const mentionsHoliday = combinedText.includes("holiday") || combinedText.includes("poya") || Boolean(matchedHoliday);
+        const mentionsClosed = combinedText.includes("closed") || (isScheduledClosed && !p.checkIn && !p.checkOut);
+        const mentionsLeave = combinedText.includes("leave") || combinedText.includes("sick") || combinedText.includes("sl") || combinedText.includes("cl") || combinedText.includes("casual") || combinedText.includes("annual");
+        const mentionsAbsent = combinedText.includes("absent") || combinedText.includes("no show");
+
+        let resolvedStatus = p.status || "On-Time";
+        let defaultNote = p.note || "";
+
+        // If no working punch was detected, accurately categorize the reason
+        if (!p.checkIn && !p.checkOut) {
+          if (mentionsHoliday || resolvedStatus === "Holiday") {
+            resolvedStatus = "Holiday";
+            defaultNote = p.note || (matchedHoliday ? matchedHoliday.name : "Public Holiday");
+          } else if (mentionsClosed || resolvedStatus === "Clinic Closed") {
+            resolvedStatus = "Clinic Closed";
+            defaultNote = p.note || "Clinic Closed";
+          } else if (mentionsAbsent || resolvedStatus === "Absent") {
+            resolvedStatus = "Absent";
+            defaultNote = p.note || "Absent";
+          } else if (mentionsLeave || resolvedStatus === "On-Leave") {
+            resolvedStatus = "On-Leave";
+            defaultNote = p.note || "Staff Leave";
+          } else if (resolvedStatus !== "On-Time" && resolvedStatus !== "Late" && resolvedStatus !== "Half-Day") {
+            resolvedStatus = "On-Leave";
+          }
+        }
+
+        const isNonWorking = resolvedStatus === "Holiday" || resolvedStatus === "Clinic Closed" || resolvedStatus === "On-Leave" || resolvedStatus === "Absent";
+        const cleanCheckIn = isNonWorking ? "" : p.checkIn || "";
+        const cleanCheckOut = isNonWorking ? "" : p.checkOut || "";
 
         return {
           id: `punch-${Date.now()}-${idx}`,
-          date: p.date || `${targetMonth}-01`,
+          date: pDate,
           employeeId: empId,
           detectedName: p.employeeName || "Unrecognized Staff",
           checkIn: cleanCheckIn,
           checkOut: cleanCheckOut,
-          status: p.status || (cleanCheckIn ? "On-Time" : "On-Leave"),
+          status: resolvedStatus,
           note:
-            p.note ||
-            (isLeaveOrAbsent
-              ? "On Leave / Day Off"
+            defaultNote ||
+            (isNonWorking
+              ? (resolvedStatus === "Holiday"
+                ? "Public Holiday"
+                : resolvedStatus === "Clinic Closed"
+                ? "Clinic Closed"
+                : "Staff Leave")
               : p.rawRow
               ? `OCR: ${p.rawRow}`
               : "Scanned via Physical Logbook AI"),
@@ -287,8 +353,9 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
 
         const updated = { ...p, [field]: value };
 
-        // If user sets status to On-Leave or Absent, clear working punch times
-        if (field === "status" && (value === "On-Leave" || value === "Absent")) {
+        // If user sets status to non-working, clear working punch times
+        const isNonWorking = value === "Holiday" || value === "Clinic Closed" || value === "On-Leave" || value === "Absent";
+        if (field === "status" && isNonWorking) {
           updated.checkIn = "";
           updated.checkOut = "";
         }
@@ -298,12 +365,13 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
           updated.checkIn = "08:30:00";
         }
 
-        // If user types a check-in time on an On-Leave / Absent row, switch status to On-Time
+        // If user types a check-in time on a non-working row, switch status to On-Time
+        const currentIsNonWorking = p.status === "Holiday" || p.status === "Clinic Closed" || p.status === "On-Leave" || p.status === "Absent";
         if (
           field === "checkIn" &&
           typeof value === "string" &&
           value.trim() !== "" &&
-          (p.status === "On-Leave" || p.status === "Absent")
+          currentIsNonWorking
         ) {
           updated.status = "On-Time";
         }
@@ -1060,6 +1128,38 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                     <span>Conflicts ({conflictCount})</span>
                   </button>
                 )}
+                {holidayCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setConflictFilter("holiday")}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                      conflictFilter === "holiday"
+                        ? isDark
+                          ? "bg-amber-950/60 border border-amber-600 text-amber-300"
+                          : "bg-amber-100 border border-amber-300 text-amber-800"
+                        : "text-amber-500/80 hover:text-amber-500"
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                    <span>Holidays ({holidayCount})</span>
+                  </button>
+                )}
+                {closedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setConflictFilter("closed")}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                      conflictFilter === "closed"
+                        ? isDark
+                          ? "bg-slate-800 border border-slate-600 text-slate-200"
+                          : "bg-slate-200 border border-slate-300 text-slate-800"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                    <span>Clinic Closed ({closedCount})</span>
+                  </button>
+                )}
                 {leaveCount > 0 && (
                   <button
                     type="button"
@@ -1074,6 +1174,22 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
                     <span>On-Leave ({leaveCount})</span>
+                  </button>
+                )}
+                {absentCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setConflictFilter("absent")}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                      conflictFilter === "absent"
+                        ? isDark
+                          ? "bg-rose-950/60 border border-rose-700 text-rose-300"
+                          : "bg-rose-100 border border-rose-300 text-rose-800"
+                        : "text-rose-500/80 hover:text-rose-500"
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                    <span>Absent ({absentCount})</span>
                   </button>
                 )}
               </div>
@@ -1133,16 +1249,28 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                     {filteredPunches.map((p) => {
                       const existing = getExistingRecord(p);
                       const rowAction = p.conflictAction || globalConflictStrategy;
-                      const isLeave = p.status === "On-Leave" || p.status === "Absent";
+                      const isNonWorking = p.status === "Holiday" || p.status === "Clinic Closed" || p.status === "On-Leave" || p.status === "Absent";
 
                       return (
                         <tr
                           key={p.id}
                           className={`transition ${
-                            isLeave
+                            p.status === "Holiday"
                               ? isDark
-                                ? "bg-purple-950/10 hover:bg-purple-950/20"
-                                : "bg-purple-50/30 hover:bg-purple-50/60"
+                                ? "bg-amber-950/15 hover:bg-amber-950/25"
+                                : "bg-amber-50/40 hover:bg-amber-50/70"
+                              : p.status === "Clinic Closed"
+                              ? isDark
+                                ? "bg-slate-900/30 hover:bg-slate-900/45"
+                                : "bg-slate-100/50 hover:bg-slate-100/80"
+                              : p.status === "On-Leave"
+                              ? isDark
+                                ? "bg-purple-950/15 hover:bg-purple-950/25"
+                                : "bg-purple-50/35 hover:bg-purple-50/65"
+                              : p.status === "Absent"
+                              ? isDark
+                                ? "bg-rose-950/15 hover:bg-rose-950/25"
+                                : "bg-rose-50/35 hover:bg-rose-50/65"
                               : existing
                               ? isDark
                                 ? "bg-amber-950/10 hover:bg-amber-950/20"
@@ -1186,16 +1314,28 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
 
                           {/* Check-In */}
                           <td className="py-2.5 px-3">
-                            {isLeave ? (
+                            {isNonWorking ? (
                               <div className="flex items-center">
                                 <span
-                                  className={`text-[11px] font-semibold px-2 py-1 rounded-md border italic ${
-                                    p.status === "On-Leave"
-                                      ? "text-purple-400 bg-purple-500/10 border-purple-500/20"
-                                      : "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md border italic flex items-center gap-1.5 ${
+                                    p.status === "Holiday"
+                                      ? "text-amber-500 dark:text-amber-400 bg-amber-500/10 border-amber-500/25"
+                                      : p.status === "Clinic Closed"
+                                      ? "text-slate-500 dark:text-slate-400 bg-slate-500/10 border-slate-500/25"
+                                      : p.status === "On-Leave"
+                                      ? "text-purple-500 dark:text-purple-400 bg-purple-500/10 border-purple-500/25"
+                                      : "text-rose-500 dark:text-rose-400 bg-rose-500/10 border-rose-500/25"
                                   }`}
                                 >
-                                  {p.status === "On-Leave" ? "— Not Working (Leave)" : "— Absent"}
+                                  <span>
+                                    {p.status === "Holiday"
+                                      ? `— Holiday ${p.note ? `(${p.note})` : ""}`
+                                      : p.status === "Clinic Closed"
+                                      ? "— Clinic Closed"
+                                      : p.status === "On-Leave"
+                                      ? `— Staff Leave ${p.note ? `(${p.note})` : ""}`
+                                      : "— Absent"}
+                                  </span>
                                 </span>
                               </div>
                             ) : (
@@ -1213,7 +1353,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
 
                           {/* Check-Out */}
                           <td className="py-2.5 px-3">
-                            {isLeave ? (
+                            {isNonWorking ? (
                               <span className="text-zinc-500 text-xs px-2">—</span>
                             ) : (
                               <input
@@ -1234,20 +1374,26 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                               value={p.status}
                               onChange={(e) => updatePunch(p.id, "status", e.target.value)}
                               className={`text-xs font-bold px-2 py-1 rounded-md border transition ${
-                                p.status === "On-Leave"
+                                p.status === "Holiday"
+                                  ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
+                                  : p.status === "Clinic Closed"
+                                  ? "text-slate-500 border-slate-500/30 bg-slate-500/10"
+                                  : p.status === "On-Leave"
                                   ? "text-purple-500 border-purple-500/30 bg-purple-500/10"
                                   : p.status === "Absent"
                                   ? "text-rose-500 border-rose-500/30 bg-rose-500/10"
                                   : p.status === "Late"
-                                  ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
-                                  : isDark
-                                  ? "bg-zinc-900 border-zinc-700 text-zinc-200"
-                                  : "bg-white border-zinc-300 text-zinc-800"
+                                  ? "text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10"
+                                  : p.status === "Half-Day"
+                                  ? "text-blue-500 border-blue-500/30 bg-blue-500/10"
+                                  : "text-emerald-500 border-emerald-500/30 bg-emerald-500/10"
                               }`}
                             >
                               <option value="On-Time">On-Time</option>
                               <option value="Late">Late</option>
                               <option value="Half-Day">Half-Day</option>
+                              <option value="Holiday">Holiday</option>
+                              <option value="Clinic Closed">Clinic Closed</option>
                               <option value="On-Leave">On-Leave</option>
                               <option value="Absent">Absent</option>
                             </select>

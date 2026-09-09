@@ -138,10 +138,10 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
-        const isLeaveOrAbsent = status === "On-Leave" || status === "Absent";
-        const finalCheckIn = checkIn && checkIn.trim() !== "" ? checkIn : (isLeaveOrAbsent ? "--:--:--" : "08:30:00");
-        const finalCheckOut = isLeaveOrAbsent ? null : (checkOut || null);
-        const finalOt = isLeaveOrAbsent ? 0 : (Number(overtimeHours) || 0);
+        const isNonWorking = status === "On-Leave" || status === "Absent" || status === "Holiday" || status === "Clinic Closed";
+        const finalCheckIn = checkIn && checkIn.trim() !== "" ? checkIn : (isNonWorking ? "--:--:--" : "08:30:00");
+        const finalCheckOut = isNonWorking ? null : (checkOut || null);
+        const finalOt = isNonWorking ? 0 : (Number(overtimeHours) || 0);
 
         savedLog = await db.attendanceLog.create({
           data: {

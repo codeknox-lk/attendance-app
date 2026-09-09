@@ -15,7 +15,7 @@ interface EmployeeRef {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { imageBase64, mimeType = "image/jpeg", month, employees = [], apiKey } = body;
+    const { imageBase64, mimeType = "image/jpeg", month, employees = [], apiKey, holidays = [], closedDays = [] } = body;
 
     if (!imageBase64) {
       return NextResponse.json({ success: false, error: "No logbook image provided" }, { status: 400 });
@@ -45,6 +45,16 @@ export async function POST(req: NextRequest) {
       .map((e) => `- Name: ${e.name} (ID: ${e.id}, Role: ${e.role || "Staff"}, Biometric/Staff #: ${e.biometricId || "N/A"})`)
       .join("\n");
 
+    const holidaysListPrompt = Array.isArray(holidays) && holidays.length > 0
+      ? (holidays as { date?: string; name?: string }[])
+          .map((h) => `- ${h.date}: ${h.name}`)
+          .join("\n")
+      : "(No custom public holidays configured)";
+
+    const closedDaysPrompt = Array.isArray(closedDays) && closedDays.length > 0
+      ? closedDays.join(", ")
+      : "(Clinic is open according to standard clinic schedule)";
+
     const prompt = `
 You are an expert Vision AI specialized in reading handwritten physical attendance sheets, timecards, and logbooks for dental and medical clinics.
 Examine the handwritten table in the provided image carefully and transcribe every visible attendance entry.
@@ -54,30 +64,52 @@ Target Month: ${targetMonth} (Format: YYYY-MM)
 Registered Clinic Staff Members to match against:
 ${staffListPrompt || "(No staff list provided, extract names directly as written)"}
 
+Known Public / Clinic Holidays:
+${holidaysListPrompt}
+
+Scheduled Clinic Closed Days:
+${closedDaysPrompt}
+
 Guidelines:
 1. STAFF MATCHING: Match the handwritten staff name to one of the Registered Clinic Staff Members above.
    - If matched, set "matchedEmployeeId" to their corresponding ID, and "employeeName" to their registered full name.
    - If the name on paper does not match any registered staff member, set "employeeName" to the handwritten text as read, and "matchedEmployeeId" to null.
 2. DATES: If the paper only has day numbers (e.g. "1", "02", "15", "30"), construct the full date as "${targetMonth}-DD" where DD is zero-padded (e.g. "${targetMonth}-01", "${targetMonth}-15").
-3. LEAVE, SICK & DAY-OFF DETECTION (CRITICAL):
-   - Check the row for handwritten indicators that staff was NOT working: "Leave", "On Leave", "L", "SL", "Sick", "CL", "Casual", "AL", "Annual Leave", "Off", "Day Off", "D/O", "Absent", "Ab", "No show", or diagonal slash across times.
-   - For ANY non-working/leave row:
-     - Set "status" to "On-Leave" (or "Absent" if explicitly noted as absent/no-show).
-     - Set "checkIn" to null (CRITICAL: Leave rows do NOT have working check-in times!).
-     - Set "checkOut" to null.
-     - Set "note" to the reason (e.g. "On Leave", "Sick Leave (SL)", "Casual Leave (CL)", "Day Off").
+3. NON-WORKING DAYS, HOLIDAYS & LEAVE DETECTION (CRITICAL):
+   - When a row indicates staff did NOT work, determine the exact classification:
+     a) "Holiday": If the text explicitly notes "Holiday", "HOLIDAY MONDAY", "Poya", "Mercantile Holiday", "Public Holiday", or if the date matches a known public holiday.
+        - Set "status" to "Holiday"
+        - Set "checkIn" to null
+        - Set "checkOut" to null
+        - Set "note" to the holiday name or "Public Holiday"
+     b) "Clinic Closed": If the text notes "Closed", "Clinic Closed", "Off day - Clinic", or if it's a scheduled clinic closed day with no staff working.
+        - Set "status" to "Clinic Closed"
+        - Set "checkIn" to null
+        - Set "checkOut" to null
+        - Set "note" to "Clinic Closed"
+     c) "On-Leave": If an individual staff member took leave ("Leave", "On Leave", "L", "SL", "Sick", "CL", "Casual", "AL", "Annual Leave", "Off", "Day Off", "D/O").
+        - Set "status" to "On-Leave"
+        - Set "checkIn" to null
+        - Set "checkOut" to null
+        - Set "note" to the leave reason (e.g. "Sick Leave (SL)", "Casual Leave (CL)", "Annual Leave")
+     d) "Absent": If staff was absent without approval ("Absent", "AB", "No show").
+        - Set "status" to "Absent"
+        - Set "checkIn" to null
+        - Set "checkOut" to null
+        - Set "note" to "Absent without leave"
 4. WORKING PUNCH TIMES:
    - When a staff member was present and worked, read handwritten check-in and check-out times and convert to 24-hour "HH:mm" format (e.g. "07:30", "08:30", "13:05", "17:00", "20:20").
    - If handwritten in 12-hour format (e.g. "1:15 pm", "7:40 am"), accurately convert to 24h ("13:15", "07:40").
    - If check-out is blank or missing, set "checkOut" to null.
-   - CRITICAL RULE: If a staff member has recorded working check-in/out times, their status MUST be "On-Time", "Late", or "Half-Day". They CANNOT be marked "On-Leave" or "Absent" if they were present and working!
+   - CRITICAL RULE: If a staff member has recorded working check-in/out times, their status MUST be "On-Time", "Late", or "Half-Day". They CANNOT be marked "On-Leave", "Holiday", or "Clinic Closed" if they were present and working!
 5. STATUS DEFINITIONS:
-   - "On-Leave": Staff was on leave, sick, casual, day off, or holiday (checkIn must be null).
-   - "Absent": Staff was absent without leave (checkIn must be null).
    - "On-Time": Present staff who arrived on or before expected shift start (~08:30).
    - "Late": Present staff who arrived past expected shift start.
    - "Half-Day": Present staff who worked a partial shift or left early.
-6. Skip rows that are completely blank or marked as clinic closed days with no staff punch.
+   - "Holiday": Public holiday or declared clinic holiday (checkIn must be null).
+   - "Clinic Closed": Scheduled or emergency clinic closure (checkIn must be null).
+   - "On-Leave": Individual staff member taking approved leave or sick day (checkIn must be null).
+   - "Absent": Staff member absent without approval (checkIn must be null).
 
 You must respond with strictly valid JSON adhering to this schema:
 {
@@ -88,7 +120,7 @@ You must respond with strictly valid JSON adhering to this schema:
       "matchedEmployeeId": "string or null",
       "checkIn": "HH:mm or null",
       "checkOut": "HH:mm or null",
-      "status": "On-Time or Late or Half-Day or On-Leave or Absent",
+      "status": "On-Time or Late or Half-Day or Holiday or Clinic Closed or On-Leave or Absent",
       "note": "string"
     }
   ]
