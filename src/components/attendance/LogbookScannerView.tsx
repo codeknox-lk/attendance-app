@@ -1312,7 +1312,9 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                     }`}
                   >
                     <tr>
-                      <th className="py-2.5 px-3 w-10 text-center">
+                      <th className={`py-2.5 px-3 w-10 text-center sticky left-0 z-20 shadow-[1px_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_rgba(255,255,255,0.05)] ${
+                        isDark ? "bg-zinc-900" : "bg-zinc-100"
+                      }`}>
                         <input
                           type="checkbox"
                           checked={isAllFilteredSelected}
@@ -1324,14 +1326,14 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                           title={isAllFilteredSelected ? "Untick all in this view" : "Tick all in this view"}
                         />
                       </th>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Matched Employee</th>
-                      <th className="py-2.5 px-3">Check-In</th>
-                      <th className="py-2.5 px-3">Check-Out</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3">System Match</th>
-                      <th className="py-2.5 px-3">Action</th>
-                      <th className="py-2.5 px-3 text-center">Remove</th>
+                      <th className="py-2.5 px-3 min-w-[130px]">Date</th>
+                      <th className="py-2.5 px-3 min-w-[200px]">Matched Employee</th>
+                      <th className="py-2.5 px-3 min-w-[100px]">Check-In</th>
+                      <th className="py-2.5 px-3 min-w-[100px]">Check-Out</th>
+                      <th className="py-2.5 px-3 min-w-[120px]">Status</th>
+                      <th className="py-2.5 px-3 min-w-[120px]">System Match</th>
+                      <th className="py-2.5 px-3 min-w-[150px]">Action</th>
+                      <th className="py-2.5 px-3 text-center min-w-[60px]">Remove</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-850">
@@ -1341,37 +1343,28 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                       const isNonWorking = p.status === "Holiday" || p.status === "Clinic Closed" || p.status === "On-Leave" || p.status === "Absent";
                       const isSelected = selectedPunchIds.has(p.id);
 
+                      // Row background based on status
+                      const rowBg = p.status === "Holiday"
+                        ? isDark ? "bg-amber-950/20" : "bg-amber-50/70"
+                        : p.status === "Clinic Closed"
+                        ? isDark ? "bg-slate-900/40" : "bg-slate-100/80"
+                        : p.status === "On-Leave"
+                        ? isDark ? "bg-purple-950/20" : "bg-purple-50/70"
+                        : p.status === "Absent"
+                        ? isDark ? "bg-rose-950/20" : "bg-rose-50/70"
+                        : existing
+                        ? isDark ? "bg-amber-950/15" : "bg-amber-50/50"
+                        : isDark ? "bg-zinc-900/90" : "bg-white";
+
                       return (
                         <tr
                           key={p.id}
                           className={`transition ${!isSelected ? "opacity-45 saturate-50" : ""} ${
-                            p.status === "Holiday"
-                              ? isDark
-                                ? "bg-amber-950/15 hover:bg-amber-950/25"
-                                : "bg-amber-50/40 hover:bg-amber-50/70"
-                              : p.status === "Clinic Closed"
-                              ? isDark
-                                ? "bg-slate-900/30 hover:bg-slate-900/45"
-                                : "bg-slate-100/50 hover:bg-slate-100/80"
-                              : p.status === "On-Leave"
-                              ? isDark
-                                ? "bg-purple-950/15 hover:bg-purple-950/25"
-                                : "bg-purple-50/35 hover:bg-purple-50/65"
-                              : p.status === "Absent"
-                              ? isDark
-                                ? "bg-rose-950/15 hover:bg-rose-950/25"
-                                : "bg-rose-50/35 hover:bg-rose-50/65"
-                              : existing
-                              ? isDark
-                                ? "bg-amber-950/10 hover:bg-amber-950/20"
-                                : "bg-amber-50/40 hover:bg-amber-50/70"
-                              : isDark
-                              ? "hover:bg-zinc-800/30"
-                              : "hover:bg-zinc-50/60"
-                          }`}
+                            isDark ? "hover:bg-zinc-800/50" : "hover:bg-zinc-50"
+                          } ${rowBg}`}
                         >
-                          {/* Checkbox Tick */}
-                          <td className="py-2.5 px-3 text-center w-10">
+                          {/* Checkbox Tick - Sticky Left */}
+                          <td className={`py-2.5 px-3 text-center w-10 sticky left-0 z-10 shadow-[1px_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_rgba(255,255,255,0.05)] ${rowBg}`}>
                             <input
                               type="checkbox"
                               checked={isSelected}
