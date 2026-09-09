@@ -9460,6 +9460,7 @@ export default function Home() {
         onClose={() => setShowAiScannerModal(false)}
         isDark={isDark}
         employees={employees}
+        existingAttendanceLogs={attendanceLogs}
         defaultMonth={selectedMonth}
         onImportSuccess={async (newLogs) => {
           await triggerSync();

@@ -92,20 +92,51 @@ export async function POST(req: NextRequest) {
         where: { employeeId: dbEmp.id, date: logDate, clinicId },
       });
 
+      const action = item.conflictAction || body.defaultConflictStrategy || "merge";
+
       let savedLog = null;
       if (existing) {
-        savedLog = await db.attendanceLog.update({
-          where: { id: existing.id, clinicId },
-          data: {
-            ...(checkIn && { checkIn }),
-            ...(checkOut && { checkOut }),
-            ...(status && { status }),
-            ...(overtimeHours !== undefined && { overtimeHours: Number(overtimeHours) }),
-            ...(noPayHours !== undefined && { noPayHours: Number(noPayHours) }),
-            ...(authMethod && { authMethod }),
-          },
-          include: { employee: true },
-        });
+        if (action === "skip") {
+          // Admin chose to skip existing records
+          savedLogs.push(existing);
+          continue;
+        }
+
+        if (action === "merge") {
+          // Smart Merge: Preserve precise biometric hardware check-in if present
+          const isBiometric = existing.authMethod && (existing.authMethod.includes("Fingerprint") || existing.authMethod.includes("Face") || existing.authMethod.includes("Card"));
+          
+          const finalCheckIn = isBiometric && existing.checkIn ? existing.checkIn : (checkIn || existing.checkIn);
+          const finalCheckOut = existing.checkOut ? existing.checkOut : (checkOut || null);
+          const finalAuth = isBiometric && checkOut ? `${existing.authMethod} + Logbook` : (existing.authMethod || authMethod || "Physical Logbook");
+
+          savedLog = await db.attendanceLog.update({
+            where: { id: existing.id, clinicId },
+            data: {
+              checkIn: finalCheckIn,
+              checkOut: finalCheckOut,
+              ...(status && !isBiometric && { status }),
+              ...(overtimeHours !== undefined && { overtimeHours: Number(overtimeHours) }),
+              ...(noPayHours !== undefined && { noPayHours: Number(noPayHours) }),
+              authMethod: finalAuth,
+            },
+            include: { employee: true },
+          });
+        } else {
+          // Overwrite mode
+          savedLog = await db.attendanceLog.update({
+            where: { id: existing.id, clinicId },
+            data: {
+              ...(checkIn && { checkIn }),
+              ...(checkOut && { checkOut }),
+              ...(status && { status }),
+              ...(overtimeHours !== undefined && { overtimeHours: Number(overtimeHours) }),
+              ...(noPayHours !== undefined && { noPayHours: Number(noPayHours) }),
+              ...(authMethod && { authMethod }),
+            },
+            include: { employee: true },
+          });
+        }
       } else {
         savedLog = await db.attendanceLog.create({
           data: {

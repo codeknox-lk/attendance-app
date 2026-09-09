@@ -25,6 +25,7 @@ interface ScannedPunch {
   status: string;
   note: string;
   confidence?: number;
+  conflictAction?: "merge" | "skip" | "overwrite";
 }
 
 interface LogbookScannerModalProps {
@@ -32,6 +33,7 @@ interface LogbookScannerModalProps {
   onClose: () => void;
   isDark: boolean;
   employees: Employee[];
+  existingAttendanceLogs?: AttendanceLog[];
   defaultMonth?: string; // e.g. "2026-08" or "2026-09"
   onImportSuccess: (importedLogs: AttendanceLog[]) => void;
 }
@@ -41,6 +43,7 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
   onClose,
   isDark,
   employees,
+  existingAttendanceLogs = [],
   defaultMonth,
   onImportSuccess,
 }) => {
@@ -88,6 +91,23 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
+
+  // Conflict Resolution state
+  const [globalConflictStrategy, setGlobalConflictStrategy] = useState<"merge" | "skip" | "overwrite">("merge");
+  const [conflictFilter, setConflictFilter] = useState<"all" | "conflicts" | "new">("all");
+
+  const getExistingRecord = (p: ScannedPunch) => {
+    return existingAttendanceLogs.find(l => l.employeeId === p.employeeId && l.date === p.date);
+  };
+
+  const conflictCount = punches.filter(p => Boolean(getExistingRecord(p))).length;
+  const newCount = punches.length - conflictCount;
+
+  const filteredPunches = punches.filter(p => {
+    if (conflictFilter === "conflicts") return Boolean(getExistingRecord(p));
+    if (conflictFilter === "new") return !getExistingRecord(p);
+    return true;
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -261,21 +281,28 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
     setErrorMessage(null);
 
     try {
-      // Format payload for batch /api/attendance
-      const payloadLogs = punches.map(p => {
-        const emp = employees.find(e => e.id === p.employeeId);
-        return {
-          employeeId: p.employeeId,
-          biometricId: emp?.biometricId || p.employeeId,
-          employeeFirstName: emp?.firstName || "Staff",
-          employeeLastName: emp?.lastName || "",
-          date: p.date,
-          checkIn: p.checkIn || "08:30:00",
-          checkOut: p.checkOut || null,
-          status: p.status || "On-Time",
-          authMethod: "Physical Logbook (AI OCR)",
-        };
-      });
+      // Format payload for batch /api/attendance, filtering skipped records
+      const payloadLogs = punches
+        .filter(p => {
+          const action = p.conflictAction || globalConflictStrategy;
+          const existing = getExistingRecord(p);
+          return !(existing && action === "skip");
+        })
+        .map(p => {
+          const emp = employees.find(e => e.id === p.employeeId);
+          return {
+            employeeId: p.employeeId,
+            biometricId: emp?.biometricId || p.employeeId,
+            employeeFirstName: emp?.firstName || "Staff",
+            employeeLastName: emp?.lastName || "",
+            date: p.date,
+            checkIn: p.checkIn || "08:30:00",
+            checkOut: p.checkOut || null,
+            status: p.status || "On-Time",
+            authMethod: "Physical Logbook (AI OCR)",
+            conflictAction: p.conflictAction || globalConflictStrategy,
+          };
+        });
 
       let clinicId = "default-clinic-id";
       if (typeof window !== "undefined") {
@@ -291,7 +318,7 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
           "Content-Type": "application/json",
           "x-clinic-id": clinicId,
         },
-        body: JSON.stringify({ logs: payloadLogs }),
+        body: JSON.stringify({ logs: payloadLogs, defaultConflictStrategy: globalConflictStrategy }),
       });
 
       const data = await res.json();
@@ -639,28 +666,132 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
 
           {/* 3. Interactive Preview & Verification Table */}
           {punches.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              {/* Conflict Notification Banner */}
+              {conflictCount > 0 && (
+                <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                  isDark ? "bg-amber-950/20 border-amber-800/40 text-amber-200" : "bg-amber-50/80 border-amber-200 text-amber-900 shadow-xs"
+                }`}>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 font-bold text-xs">
+                      <span>⚡ Existing Record Conflict Detected</span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-[11px]">
+                        {conflictCount} of {punches.length} dates already exist in system
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Staff already have biometric (fingerprint/face) or manual records on these dates. Select how to resolve matches:
+                    </p>
+                  </div>
+
+                  {/* Resolution Strategy Selector */}
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setGlobalConflictStrategy("merge")}
+                      className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition flex items-center gap-1.5 ${
+                        globalConflictStrategy === "merge"
+                          ? "bg-teal-500 text-white shadow-xs"
+                          : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                      }`}
+                      title="Preserve accurate biometric hardware check-in, fill missing check-out from paper sheet"
+                    >
+                      <span>🛡️</span>
+                      <span>Merge &amp; Fill Missing</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGlobalConflictStrategy("skip")}
+                      className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition flex items-center gap-1.5 ${
+                        globalConflictStrategy === "skip"
+                          ? "bg-amber-500 text-white shadow-xs"
+                          : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                      }`}
+                      title="Keep existing system records untouched, only import dates with zero logs"
+                    >
+                      <span>⏭️</span>
+                      <span>Skip Existing</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGlobalConflictStrategy("overwrite")}
+                      className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition flex items-center gap-1.5 ${
+                        globalConflictStrategy === "overwrite"
+                          ? "bg-rose-500 text-white shadow-xs"
+                          : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                      }`}
+                      title="Replace existing times with logbook handwriting"
+                    >
+                      <span>🔄</span>
+                      <span>Overwrite All</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Table Toolbar: Filter pills and Add Row */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                    Recognized Punches ({punches.length})
-                  </h4>
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    Punches:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setConflictFilter("all")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+                        conflictFilter === "all"
+                          ? isDark ? "bg-zinc-800 text-white border border-zinc-700" : "bg-zinc-900 text-white"
+                          : "text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      All ({punches.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConflictFilter("new")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1 ${
+                        conflictFilter === "new"
+                          ? isDark ? "bg-emerald-950/60 border border-emerald-700 text-emerald-300" : "bg-emerald-100 border border-emerald-300 text-emerald-800"
+                          : "text-emerald-500/80 hover:text-emerald-500"
+                      }`}
+                    >
+                      <span>🟢 New Only ({newCount})</span>
+                    </button>
+                    {conflictCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setConflictFilter("conflicts")}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1 ${
+                          conflictFilter === "conflicts"
+                            ? isDark ? "bg-amber-950/60 border border-amber-700 text-amber-300" : "bg-amber-100 border border-amber-300 text-amber-800"
+                            : "text-amber-500/80 hover:text-amber-500"
+                        }`}
+                      >
+                        <span>⚡ Conflicts ({conflictCount})</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#0ea5e9]/10 text-[#0ea5e9] border border-[#0ea5e9]/20 font-bold">
                     Target: {targetMonth}
                   </span>
+                  <button
+                    type="button"
+                    onClick={addManualPunch}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1.5 transition ${
+                      isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <span>+</span>
+                    <span>Add Row</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={addManualPunch}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1.5 transition ${
-                    isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50"
-                  }`}
-                >
-                  <span>+</span>
-                  <span>Add Row</span>
-                </button>
               </div>
 
+              {/* Data Table */}
               <div className={`rounded-xl border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
                 <div className="overflow-x-auto max-h-[360px]">
                   <table className="w-full text-xs">
@@ -669,111 +800,160 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                         isDark ? "bg-zinc-950 border-zinc-800" : "bg-zinc-100 border-zinc-200"
                       }`}>
                         <th className="text-left py-2.5 px-3">Date</th>
-                        <th className="text-left py-2.5 px-3">Detected Name</th>
                         <th className="text-left py-2.5 px-3">Assign Clinic Staff</th>
                         <th className="text-left py-2.5 px-3">In Time</th>
                         <th className="text-left py-2.5 px-3">Out Time</th>
                         <th className="text-left py-2.5 px-3">Status</th>
+                        <th className="text-left py-2.5 px-3">Existing System Record</th>
+                        <th className="text-left py-2.5 px-3">Import Action</th>
                         <th className="text-center py-2.5 px-3">Action</th>
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${isDark ? "divide-zinc-800/60" : "divide-zinc-100"}`}>
-                      {punches.map((p) => (
-                        <tr key={p.id} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-zinc-50"}>
-                          {/* Date Input */}
-                          <td className="py-2 px-3">
-                            <input
-                              type="date"
-                              value={p.date}
-                              onChange={(e) => updatePunch(p.id, "date", e.target.value)}
-                              className={`text-xs font-mono px-2 py-1 rounded-md border w-32 ${
-                                isDark ? "bg-zinc-900 border-zinc-700 text-zinc-100" : "bg-white border-zinc-300 text-zinc-800"
-                              }`}
-                            />
-                          </td>
+                      {filteredPunches.map((p) => {
+                        const existing = getExistingRecord(p);
+                        const rowAction = p.conflictAction || globalConflictStrategy;
 
-                          {/* Detected Name */}
-                          <td className="py-2 px-3">
-                            <span className="text-[11px] font-mono text-zinc-400 bg-zinc-500/10 px-2 py-0.5 rounded-md">
-                              {p.detectedName}
-                            </span>
-                          </td>
+                        return (
+                          <tr key={p.id} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-zinc-50"}>
+                            {/* Date Input */}
+                            <td className="py-2 px-3">
+                              <input
+                                type="date"
+                                value={p.date}
+                                onChange={(e) => updatePunch(p.id, "date", e.target.value)}
+                                className={`text-xs font-mono px-2 py-1 rounded-md border w-32 ${
+                                  isDark ? "bg-zinc-900 border-zinc-700 text-zinc-100" : "bg-white border-zinc-300 text-zinc-800"
+                                }`}
+                              />
+                            </td>
 
-                          {/* Employee Selector */}
-                          <td className="py-2 px-3">
-                            <select
-                              value={p.employeeId}
-                              onChange={(e) => updatePunch(p.id, "employeeId", e.target.value)}
-                              className={`text-xs font-semibold px-2 py-1 rounded-md border w-44 ${
-                                isDark ? "bg-zinc-900 border-zinc-700 text-zinc-100" : "bg-white border-zinc-300 text-zinc-800"
-                              }`}
-                            >
-                              {employees.map(emp => (
-                                <option key={emp.id} value={emp.id}>
-                                  {emp.firstName} {emp.lastName} ({emp.role})
-                                </option>
-                              ))}
-                            </select>
-                          </td>
+                            {/* Employee Selector & Detected Name */}
+                            <td className="py-2 px-3">
+                              <div className="flex flex-col gap-1">
+                                <select
+                                  value={p.employeeId}
+                                  onChange={(e) => updatePunch(p.id, "employeeId", e.target.value)}
+                                  className={`text-xs font-semibold px-2 py-1 rounded-md border w-44 ${
+                                    isDark ? "bg-zinc-900 border-zinc-700 text-zinc-100" : "bg-white border-zinc-300 text-zinc-800"
+                                  }`}
+                                >
+                                  {employees.map(emp => (
+                                    <option key={emp.id} value={emp.id}>
+                                      {emp.firstName} {emp.lastName} ({emp.role})
+                                    </option>
+                                  ))}
+                                </select>
+                                <span className="text-[10px] font-mono text-zinc-400">
+                                  OCR: {p.detectedName}
+                                </span>
+                              </div>
+                            </td>
 
-                          {/* Check-In */}
-                          <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              placeholder="08:30:00"
-                              value={p.checkIn}
-                              onChange={(e) => updatePunch(p.id, "checkIn", e.target.value)}
-                              className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
-                                isDark ? "bg-zinc-900 border-zinc-700 text-emerald-400" : "bg-white border-zinc-300 text-emerald-700"
-                              }`}
-                            />
-                          </td>
+                            {/* Check-In */}
+                            <td className="py-2 px-3">
+                              <input
+                                type="text"
+                                placeholder="08:30:00"
+                                value={p.checkIn}
+                                onChange={(e) => updatePunch(p.id, "checkIn", e.target.value)}
+                                className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
+                                  isDark ? "bg-zinc-900 border-zinc-700 text-emerald-400" : "bg-white border-zinc-300 text-emerald-700"
+                                }`}
+                              />
+                            </td>
 
-                          {/* Check-Out */}
-                          <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              placeholder="17:00:00"
-                              value={p.checkOut}
-                              onChange={(e) => updatePunch(p.id, "checkOut", e.target.value)}
-                              className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
-                                isDark ? "bg-zinc-900 border-zinc-700 text-blue-400" : "bg-white border-zinc-300 text-blue-700"
-                              }`}
-                            />
-                          </td>
+                            {/* Check-Out */}
+                            <td className="py-2 px-3">
+                              <input
+                                type="text"
+                                placeholder="17:00:00"
+                                value={p.checkOut}
+                                onChange={(e) => updatePunch(p.id, "checkOut", e.target.value)}
+                                className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
+                                  isDark ? "bg-zinc-900 border-zinc-700 text-blue-400" : "bg-white border-zinc-300 text-blue-700"
+                                }`}
+                              />
+                            </td>
 
-                          {/* Status */}
-                          <td className="py-2 px-3">
-                            <select
-                              value={p.status}
-                              onChange={(e) => updatePunch(p.id, "status", e.target.value)}
-                              className={`text-xs font-bold px-2 py-1 rounded-md border ${
-                                isDark ? "bg-zinc-900 border-zinc-700 text-zinc-200" : "bg-white border-zinc-300 text-zinc-800"
-                              }`}
-                            >
-                              <option value="On-Time">On-Time</option>
-                              <option value="Late">Late</option>
-                              <option value="Half-Day">Half-Day</option>
-                              <option value="On-Leave">On-Leave</option>
-                              <option value="Absent">Absent</option>
-                            </select>
-                          </td>
+                            {/* Status */}
+                            <td className="py-2 px-3">
+                              <select
+                                value={p.status}
+                                onChange={(e) => updatePunch(p.id, "status", e.target.value)}
+                                className={`text-xs font-bold px-2 py-1 rounded-md border ${
+                                  isDark ? "bg-zinc-900 border-zinc-700 text-zinc-200" : "bg-white border-zinc-300 text-zinc-800"
+                                }`}
+                              >
+                                <option value="On-Time">On-Time</option>
+                                <option value="Late">Late</option>
+                                <option value="Half-Day">Half-Day</option>
+                                <option value="On-Leave">On-Leave</option>
+                                <option value="Absent">Absent</option>
+                              </select>
+                            </td>
 
-                          {/* Delete */}
-                          <td className="py-2 px-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => removePunch(p.id)}
-                              className="p-1 rounded-md text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
-                              title="Delete Row"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            {/* Existing System Record Match */}
+                            <td className="py-2 px-3">
+                              {existing ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 w-fit">
+                                    <span>⚡</span>
+                                    <span>Exists ({existing.authMethod || "Biometric"})</span>
+                                  </span>
+                                  <span className="text-[10px] font-mono text-zinc-400">
+                                    In: {existing.checkIn || "--"} | Out: {existing.checkOut || "Active"}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 w-fit">
+                                  <span>🟢</span>
+                                  <span>New Date</span>
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Conflict Action Selector */}
+                            <td className="py-2 px-3">
+                              {existing ? (
+                                <select
+                                  value={rowAction}
+                                  onChange={(e) => updatePunch(p.id, "conflictAction", e.target.value as "merge" | "skip" | "overwrite")}
+                                  className={`text-[11px] font-bold px-2 py-1 rounded-md border ${
+                                    rowAction === "merge"
+                                      ? "text-teal-500 border-teal-500/30 bg-teal-500/10"
+                                      : rowAction === "skip"
+                                      ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
+                                      : "text-rose-500 border-rose-500/30 bg-rose-500/10"
+                                  }`}
+                                >
+                                  <option value="merge">🛡️ Merge (Keep Biometric)</option>
+                                  <option value="skip">⏭️ Skip Existing</option>
+                                  <option value="overwrite">🔄 Overwrite Record</option>
+                                </select>
+                              ) : (
+                                <span className="text-[11px] text-zinc-400 font-medium">
+                                  Insert Clean
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Delete */}
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => removePunch(p.id)}
+                                className="p-1 rounded-md text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                                title="Delete Row"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -788,7 +968,10 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
         }`}>
           <div className="text-xs text-zinc-400">
             {punches.length > 0 ? (
-              <span>{punches.length} punch records ready to be committed to system</span>
+              <span>
+                {punches.filter(p => !(getExistingRecord(p) && (p.conflictAction || globalConflictStrategy) === "skip")).length} of {punches.length} punches ready to import
+                {conflictCount > 0 ? ` (${conflictCount} existing merged/resolved)` : ""}
+              </span>
             ) : (
               <span>Select logbook photo and click Analyze to begin</span>
             )}
@@ -829,7 +1012,9 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Confirm & Import {punches.length} Punches</span>
+                  <span>
+                    Confirm &amp; Import {punches.filter(p => !(getExistingRecord(p) && (p.conflictAction || globalConflictStrategy) === "skip")).length} Punches
+                  </span>
                 </>
               )}
             </button>
