@@ -44,10 +44,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [regIsSubmitting, setRegIsSubmitting] = useState<boolean>(false);
   const [regErrorMsg, setRegErrorMsg] = useState<string>("");
   const [regSuccessMsg, setRegSuccessMsg] = useState<string>("");
+  const [discoveredClinicCode, setDiscoveredClinicCode] = useState<string>("SMILEHUB");
 
   const fillDemoAdmin = () => {
     setLoginType("admin");
-    setClinicCode("MEDSYNC");
+    setClinicCode(discoveredClinicCode || "SMILEHUB");
     setUsername("admin");
     setPassword("admin");
     setErrorMsg("");
@@ -56,7 +57,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const fillDemoStaff = () => {
     setLoginType("staff");
-    setClinicCode("MEDSYNC");
+    setClinicCode(discoveredClinicCode || "SMILEHUB");
     setBiometricId("101");
     setErrorMsg("");
     setShowGuideModal(false);
@@ -198,11 +199,24 @@ export const LoginView: React.FC<LoginViewProps> = ({
         const savedCode = localStorage.getItem("medsync_saved_clinic_code");
         const savedBio = localStorage.getItem("medsync_saved_biometric_id");
         setTimeout(() => {
-          if (savedCode) setClinicCode(savedCode);
+          if (savedCode && savedCode !== "MEDSYNC") setClinicCode(savedCode);
           if (savedBio) setBiometricId(savedBio);
         }, 0);
       } catch {}
     }
+
+    fetch("/api/clinics")
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.clinic?.clinicCode) {
+          setDiscoveredClinicCode(d.clinic.clinicCode);
+          setClinicCode(prev => {
+            if (!prev || prev === "MEDSYNC") return d.clinic.clinicCode;
+            return prev;
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -339,7 +353,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   className={`w-full px-4 pb-2 pt-6 bg-transparent outline-none text-sm font-medium ${
                     isDark ? "text-white" : "text-slate-900"
                   }`}
-                  placeholder="e.g. MEDSYNC"
+                  placeholder={`e.g. ${discoveredClinicCode}`}
                 />
               </div>
 
@@ -460,7 +474,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   type="button"
                   onClick={fillDemoAdmin}
                   className="font-bold text-teal-600 dark:text-teal-400 hover:brightness-110 flex items-center gap-1 cursor-pointer bg-teal-500/10 dark:bg-teal-500/15 px-3 py-1 rounded-lg border border-teal-500/25 transition active:scale-95 shadow-xs"
-                  title="1-Click Fill Demo Credentials (MEDSYNC / admin)"
+                  title={`1-Click Fill Demo Credentials (${discoveredClinicCode} / admin)`}
                 >
                   <svg className="w-3.5 h-3.5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
@@ -703,7 +717,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 font-mono">
                 <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
                   <span className="text-[10px] text-zinc-400 font-sans font-bold uppercase">Clinic Code</span>
-                  <strong className="text-teal-600 dark:text-teal-400 font-bold text-sm">MEDSYNC</strong>
+                  <strong className="text-teal-600 dark:text-teal-400 font-bold text-sm">{discoveredClinicCode}</strong>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
                   <span className="text-[10px] text-zinc-400 font-sans font-bold uppercase">Admin User / Pass</span>
