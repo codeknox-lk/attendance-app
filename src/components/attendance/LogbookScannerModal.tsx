@@ -393,42 +393,73 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
           <div className={`rounded-xl border p-4 transition-all ${
             isDark ? "bg-zinc-950/60 border-zinc-800/80" : "bg-teal-50/50 border-teal-100 text-zinc-800"
           }`}>
-            <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowInstructions(p => !p)}>
+            <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setShowInstructions(p => !p)}>
               <div className="flex items-center gap-2.5">
                 <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-teal-500/20 text-teal-600 dark:text-teal-400 text-xs font-bold">
-                  ℹ️
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" strokeWidth={3} strokeLinecap="round" />
+                  </svg>
                 </div>
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-teal-600 dark:text-teal-400">
                   Best Practices for Maximum AI Recognition Accuracy
                 </h4>
               </div>
-              <span className="text-xs text-zinc-400 font-medium">
-                {showInstructions ? "Hide Instructions ▲" : "Show Instructions ▼"}
+              <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
+                <span>{showInstructions ? "Hide Instructions" : "Show Instructions"}</span>
+                <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${showInstructions ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </span>
             </div>
 
             {showInstructions && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-3 pt-3 border-t border-zinc-200/40 dark:border-zinc-800/60 text-xs">
                 <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-200/80"}`}>
-                  <span className="font-bold text-teal-600 dark:text-teal-400 block mb-1">📸 Flat & Even Light</span>
+                  <div className="flex items-center gap-1.5 font-bold text-teal-600 dark:text-teal-400 mb-1">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <circle cx="12" cy="13" r="3" />
+                    </svg>
+                    <span>Flat &amp; Even Light</span>
+                  </div>
                   <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed">
                     Take a clear, top-down photo under bright lighting. Avoid tilted angles, finger shadows, or paper folds.
                   </p>
                 </div>
                 <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-200/80"}`}>
-                  <span className="font-bold text-teal-600 dark:text-teal-400 block mb-1">🗓️ Target Month</span>
+                  <div className="flex items-center gap-1.5 font-bold text-teal-600 dark:text-teal-400 mb-1">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" strokeLinecap="round" />
+                      <line x1="8" y1="2" x2="8" y2="6" strokeLinecap="round" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <span>Target Month</span>
+                  </div>
                   <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed">
                     Set the target month selector below (e.g., August 2026) so row day numbers (1–31) map to exact calendar dates.
                   </p>
                 </div>
                 <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-200/80"}`}>
-                  <span className="font-bold text-teal-600 dark:text-teal-400 block mb-1">👥 Staff Matching</span>
+                  <div className="flex items-center gap-1.5 font-bold text-teal-600 dark:text-teal-400 mb-1">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span>Staff Matching</span>
+                  </div>
                   <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed">
                     The AI cross-checks handwritten names against your {employees.length} active clinic staff members automatically.
                   </p>
                 </div>
                 <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-white border-zinc-200/80"}`}>
-                  <span className="font-bold text-teal-600 dark:text-teal-400 block mb-1">✍️ Editable Review</span>
+                  <div className="flex items-center gap-1.5 font-bold text-teal-600 dark:text-teal-400 mb-1">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Editable Review</span>
+                  </div>
                   <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed">
                     Review every recognized punch in the interactive table before importing. Correct or delete rows anytime.
                   </p>
@@ -547,9 +578,12 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                       href="https://aistudio.google.com/app/apikey"
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[10px] font-semibold text-[#0ea5e9] hover:underline"
+                      className="text-[10px] font-semibold text-[#0ea5e9] hover:underline flex items-center gap-1"
                     >
-                      Get Free Key ↗
+                      <span>Get Free Key</span>
+                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
                     </a>
                   </div>
 
@@ -568,9 +602,18 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                           isDark ? "bg-zinc-900 border-zinc-700 text-white" : "bg-white border-zinc-300 text-zinc-800"
                         }`}
                       />
-                      <p className="text-[10px] text-zinc-400">
-                        {geminiApiKey.trim() ? "✓ Key saved in your browser" : "Enter your Google Gemini API key to enable AI OCR"}
-                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
+                        {geminiApiKey.trim() ? (
+                          <>
+                            <svg className="w-3 h-3 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">Key saved in browser</span>
+                          </>
+                        ) : (
+                          <span>Enter your Google Gemini API key to enable AI OCR</span>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between py-1.5 px-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
@@ -641,7 +684,9 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
             <div className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs font-semibold ${
               isDark ? "bg-rose-950/40 border-rose-800 text-rose-300" : "bg-rose-50 border-rose-200 text-rose-700"
             }`}>
-              <span className="text-rose-500">⚠️</span>
+              <svg className="w-4 h-4 shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
               <span>{errorMessage}</span>
             </div>
           )}
@@ -651,15 +696,20 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
               isDark ? "bg-emerald-950/40 border-emerald-800 text-emerald-300" : "bg-emerald-50 border-emerald-200 text-emerald-700"
             }`}>
               <div className="flex items-center gap-2">
-                <span className="text-emerald-500">✓</span>
+                <svg className="w-4 h-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 <span>{successNotice}</span>
               </div>
               <button
                 type="button"
                 onClick={addManualPunch}
-                className="text-[11px] underline font-bold hover:text-emerald-400"
+                className="text-[11px] underline font-bold hover:text-emerald-400 flex items-center gap-1"
               >
-                + Add Manual Row
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Manual Row</span>
               </button>
             </div>
           )}
@@ -674,7 +724,12 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                 }`}>
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2 font-bold text-xs">
-                      <span>⚡ Existing Record Conflict Detected</span>
+                      <div className="flex items-center gap-1.5 text-amber-500">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Existing Record Conflict Detected</span>
+                      </div>
                       <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-[11px]">
                         {conflictCount} of {punches.length} dates already exist in system
                       </span>
@@ -696,7 +751,9 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                       }`}
                       title="Preserve accurate biometric hardware check-in, fill missing check-out from paper sheet"
                     >
-                      <span>🛡️</span>
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
                       <span>Merge &amp; Fill Missing</span>
                     </button>
                     <button
@@ -709,7 +766,9 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                       }`}
                       title="Keep existing system records untouched, only import dates with zero logs"
                     >
-                      <span>⏭️</span>
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
                       <span>Skip Existing</span>
                     </button>
                     <button
@@ -722,7 +781,9 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                       }`}
                       title="Replace existing times with logbook handwriting"
                     >
-                      <span>🔄</span>
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
                       <span>Overwrite All</span>
                     </button>
                   </div>
@@ -750,25 +811,29 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setConflictFilter("new")}
-                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1 ${
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
                         conflictFilter === "new"
                           ? isDark ? "bg-emerald-950/60 border border-emerald-700 text-emerald-300" : "bg-emerald-100 border border-emerald-300 text-emerald-800"
                           : "text-emerald-500/80 hover:text-emerald-500"
                       }`}
                     >
-                      <span>🟢 New Only ({newCount})</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span>New Only ({newCount})</span>
                     </button>
                     {conflictCount > 0 && (
                       <button
                         type="button"
                         onClick={() => setConflictFilter("conflicts")}
-                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1 ${
+                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
                           conflictFilter === "conflicts"
                             ? isDark ? "bg-amber-950/60 border border-amber-700 text-amber-300" : "bg-amber-100 border border-amber-300 text-amber-800"
                             : "text-amber-500/80 hover:text-amber-500"
                         }`}
                       >
-                        <span>⚡ Conflicts ({conflictCount})</span>
+                        <svg className="w-3 h-3 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Conflicts ({conflictCount})</span>
                       </button>
                     )}
                   </div>
@@ -898,7 +963,9 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                               {existing ? (
                                 <div className="flex flex-col gap-0.5">
                                   <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 w-fit">
-                                    <span>⚡</span>
+                                    <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
                                     <span>Exists ({existing.authMethod || "Biometric"})</span>
                                   </span>
                                   <span className="text-[10px] font-mono text-zinc-400">
@@ -906,8 +973,8 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                                   </span>
                                 </div>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 w-fit">
-                                  <span>🟢</span>
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 w-fit">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                                   <span>New Date</span>
                                 </span>
                               )}
@@ -927,9 +994,9 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                                       : "text-rose-500 border-rose-500/30 bg-rose-500/10"
                                   }`}
                                 >
-                                  <option value="merge">🛡️ Merge (Keep Biometric)</option>
-                                  <option value="skip">⏭️ Skip Existing</option>
-                                  <option value="overwrite">🔄 Overwrite Record</option>
+                                  <option value="merge">Merge (Keep Biometric)</option>
+                                  <option value="skip">Skip Existing</option>
+                                  <option value="overwrite">Overwrite Record</option>
                                 </select>
                               ) : (
                                 <span className="text-[11px] text-zinc-400 font-medium">
