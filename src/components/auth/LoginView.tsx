@@ -29,6 +29,85 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Auto-changing feature carousel on right panel
+  const [activeSlide, setActiveSlide] = useState<number>(0);
+  const [isSlidePaused, setIsSlidePaused] = useState<boolean>(false);
+
+  const featureSlides = [
+    {
+      badge: "AI VISION SCANNER",
+      badgeClass: "bg-teal-500/15 text-teal-800 border-teal-500/30",
+      title: "Handwritten Logbook OCR",
+      metric: "100%",
+      metricLabel: "Transcription Accuracy",
+      progressWidth: "w-full",
+      barColor: "bg-gradient-to-r from-teal-500 to-[#0ea5e9]",
+      detail: {
+        tag: "AI",
+        name: "Nikila Sarani",
+        sub: "2026-08-30 • 07:55:00 In",
+        status: "On-Time",
+        statusClass: "bg-emerald-50 text-emerald-700 border-emerald-200"
+      }
+    },
+    {
+      badge: "BIOMETRIC LIVE SYNC",
+      badgeClass: "bg-sky-500/15 text-sky-800 border-sky-500/30",
+      title: "Real-time Terminal Sync",
+      metric: "94%",
+      metricLabel: "Staff Attendance Rate",
+      progressWidth: "w-[94%]",
+      barColor: "bg-gradient-to-r from-sky-500 to-blue-600",
+      detail: {
+        tag: "LIVE",
+        name: "DS-K1T320MFWX",
+        sub: "Facial & Fingerprint Recognition",
+        status: "Online",
+        statusClass: "bg-sky-50 text-[#0c6c8f] border-sky-200"
+      }
+    },
+    {
+      badge: "PAYROLL & OVERTIME",
+      badgeClass: "bg-amber-500/15 text-amber-900 border-amber-500/30",
+      title: "Automated Wages & OT",
+      metric: "+38h 24m",
+      metricLabel: "Approved Overtime",
+      progressWidth: "w-4/5",
+      barColor: "bg-gradient-to-r from-amber-500 to-orange-500",
+      detail: {
+        tag: "2×",
+        name: "Poya & Public Holidays",
+        sub: "Automated double-time OT rules",
+        status: "Approved",
+        statusClass: "bg-amber-50 text-amber-800 border-amber-300"
+      }
+    },
+    {
+      badge: "LEAVE & CLINIC SCHEDULES",
+      badgeClass: "bg-purple-500/15 text-purple-900 border-purple-500/30",
+      title: "Holidays & Clinic Closed Days",
+      metric: "100%",
+      metricLabel: "Schedule Compliance",
+      progressWidth: "w-full",
+      barColor: "bg-gradient-to-r from-purple-500 to-pink-500",
+      detail: {
+        tag: "CAL",
+        name: "Clinic Closed & Leaves",
+        sub: "Separated from unexcused absence",
+        status: "Configured",
+        statusClass: "bg-purple-50 text-purple-800 border-purple-200"
+      }
+    },
+  ];
+
+  useEffect(() => {
+    if (isSlidePaused) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % featureSlides.length);
+    }, 4200);
+    return () => clearInterval(interval);
+  }, [isSlidePaused, featureSlides.length]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -304,55 +383,144 @@ export const LoginView: React.FC<LoginViewProps> = ({
               Talk, track, and grow<br/>your clinic, all on<br/>MedSync.
             </h2>
 
-            {/* Simulated App Graphic */}
-            <div className="w-full max-w-[320px] bg-white rounded-t-3xl shadow-2xl overflow-hidden mt-8 mb-8 border-t-4 border-x-4 border-white/20">
-              <div className="h-48 bg-slate-50 p-6 flex flex-col justify-between">
-                <div className="flex justify-between items-center">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-slate-600">MS</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-slate-800 font-bold text-sm">
-                    <svg className="w-4 h-4 text-[#0F85B0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 20V5l8 8 8-8v15" />
-                      <path d="M12 10v6M9 13h6" />
-                    </svg>
-                    MedSync
-                  </div>
-                  <div className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                  </div>
-                </div>
+            {/* Dynamic Auto-Changing App Showcase Carousel */}
+            <div
+              className="w-full max-w-[340px] bg-white rounded-3xl shadow-2xl overflow-hidden mt-6 mb-6 border-4 border-white/20 transition-all duration-300 relative group"
+              onMouseEnter={() => setIsSlidePaused(true)}
+              onMouseLeave={() => setIsSlidePaused(false)}
+            >
+              {/* Simulated Clinic OS Card */}
+              <div className="p-5 bg-gradient-to-b from-slate-50 to-white flex flex-col justify-between min-h-[225px]">
                 
-                <div className="mt-6">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Total Attendance</p>
-                  <div className="flex justify-between items-end">
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">85%</h3>
-                    <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white pb-0.5">+</div>
+                {/* Top Card Header */}
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
+                    <div className="w-5 h-5 rounded-md bg-[#0F85B0]/15 flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 text-[#0F85B0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 20V5l8 8 8-8v15" />
+                        <path d="M12 10v6M9 13h6" />
+                      </svg>
+                    </div>
+                    <span>MedSync</span>
+                  </div>
+
+                  <span className={`text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full border transition-all duration-300 ${featureSlides[activeSlide].badgeClass}`}>
+                    {featureSlides[activeSlide].badge}
+                  </span>
+                </div>
+
+                {/* Animated Metric Block */}
+                <div className="my-1 transition-all duration-500 transform">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">
+                    {featureSlides[activeSlide].title}
+                  </p>
+                  <div className="flex justify-between items-baseline">
+                    <h3 className="text-3xl font-black text-slate-900 tracking-tight font-mono">
+                      {featureSlides[activeSlide].metric}
+                    </h3>
+                    <span className="text-[10px] font-semibold text-slate-500">
+                      {featureSlides[activeSlide].metricLabel}
+                    </span>
+                  </div>
+
+                  {/* Progress Line */}
+                  <div className="mt-2.5 h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
+                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${featureSlides[activeSlide].progressWidth} ${featureSlides[activeSlide].barColor}`} />
                   </div>
                 </div>
-                
-                <div className="mt-4 flex gap-2">
-                  <div className="h-2 flex-1 bg-emerald-500 rounded-full" />
-                  <div className="h-2 w-1/4 bg-[#0F85B0] rounded-full" />
+
+                {/* Live Detail Preview Snippet */}
+                <div className="mt-3">
+                  <div className="bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-[#0F85B0]/15 text-[#0F85B0] font-black text-[9px] flex items-center justify-center shadow-xs">
+                        {featureSlides[activeSlide].detail.tag}
+                      </span>
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-800 leading-tight">
+                          {featureSlides[activeSlide].detail.name}
+                        </p>
+                        <p className="text-[9px] font-mono text-slate-500">
+                          {featureSlides[activeSlide].detail.sub}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black border ${featureSlides[activeSlide].detail.statusClass}`}>
+                      {featureSlides[activeSlide].detail.status}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Carousel Controls & Indicator Dots */}
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    {featureSlides.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveSlide(idx)}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          activeSlide === idx
+                            ? "w-6 bg-[#0F85B0]"
+                            : "w-1.5 bg-slate-300 hover:bg-slate-400"
+                        }`}
+                        title={`Slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSlide((prev) => (prev - 1 + featureSlides.length) % featureSlides.length)}
+                      className="w-5 h-5 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center transition cursor-pointer"
+                      title="Previous"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <span className="font-mono">{activeSlide + 1}/{featureSlides.length}</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSlide((prev) => (prev + 1) % featureSlides.length)}
+                      className="w-5 h-5 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center transition cursor-pointer"
+                      title="Next"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            {/* Checklist */}
-            <ul className="space-y-4">
+            {/* Updated Feature Checklist */}
+            <ul className="space-y-3">
               {[
-                "Access secure biometric attendance tools",
-                "Track payroll, leaves, and staff performance",
-                "Manage roles with strict access control",
-                "Cloud-synced dental clinical data"
+                { title: "AI handwritten logbook scanner (Vision AI)", isNew: true },
+                { title: "Access secure biometric attendance tools", isNew: false },
+                { title: "Track payroll, leaves, and staff performance", isNew: false },
+                { title: "Automated 2× holiday overtime & salary engine", isNew: true },
+                { title: "Manage roles with strict access control", isNew: false },
+                { title: "Cloud-synced dental clinical & operations data", isNew: false },
               ].map((item, i) => (
-                <li key={i} className="flex items-center gap-4 text-white/90">
-                  <div className="w-6 h-6 rounded-full border border-white/40 flex items-center justify-center shrink-0">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <li key={i} className="flex items-center gap-3 text-white/95">
+                  <div className="w-5 h-5 rounded-full border border-white/40 flex items-center justify-center shrink-0 bg-white/10">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <span className="font-medium text-sm sm:text-base">{item}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-xs sm:text-sm leading-tight">{item.title}</span>
+                    {item.isNew && (
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 text-white px-1.5 py-0.2 rounded-md leading-none border border-white/30">
+                        NEW
+                      </span>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
