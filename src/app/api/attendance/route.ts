@@ -138,15 +138,20 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
+        const isLeaveOrAbsent = status === "On-Leave" || status === "Absent";
+        const finalCheckIn = checkIn && checkIn.trim() !== "" ? checkIn : (isLeaveOrAbsent ? "--:--:--" : "08:30:00");
+        const finalCheckOut = isLeaveOrAbsent ? null : (checkOut || null);
+        const finalOt = isLeaveOrAbsent ? 0 : (Number(overtimeHours) || 0);
+
         savedLog = await db.attendanceLog.create({
           data: {
             clinicId,
             employeeId: dbEmp.id,
             date: logDate,
-            checkIn: checkIn || "08:30:00",
-            checkOut: checkOut || null,
+            checkIn: finalCheckIn,
+            checkOut: finalCheckOut,
             status: status || "On-Time",
-            overtimeHours: Number(overtimeHours) || 0,
+            overtimeHours: finalOt,
             noPayHours: Number(noPayHours) || 0,
             authMethod: authMethod || "Physical Logbook",
           },

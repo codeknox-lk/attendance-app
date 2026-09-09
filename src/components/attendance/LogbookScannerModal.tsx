@@ -94,7 +94,7 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
 
   // Conflict Resolution state
   const [globalConflictStrategy, setGlobalConflictStrategy] = useState<"merge" | "skip" | "overwrite">("merge");
-  const [conflictFilter, setConflictFilter] = useState<"all" | "conflicts" | "new">("all");
+  const [conflictFilter, setConflictFilter] = useState<"all" | "conflicts" | "new" | "leave">("all");
 
   const getExistingRecord = (p: ScannedPunch) => {
     return existingAttendanceLogs.find(l => l.employeeId === p.employeeId && l.date === p.date);
@@ -102,10 +102,12 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
 
   const conflictCount = punches.filter(p => Boolean(getExistingRecord(p))).length;
   const newCount = punches.length - conflictCount;
+  const leaveCount = punches.filter(p => p.status === "On-Leave" || p.status === "Absent").length;
 
   const filteredPunches = punches.filter(p => {
     if (conflictFilter === "conflicts") return Boolean(getExistingRecord(p));
     if (conflictFilter === "new") return !getExistingRecord(p);
+    if (conflictFilter === "leave") return p.status === "On-Leave" || p.status === "Absent";
     return true;
   });
 
@@ -220,21 +222,25 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
           else if (employees.length > 0) empId = employees[0].id;
         }
 
+        const isLeaveOrAbsent = p.status === "On-Leave" || p.status === "Absent";
+        const cleanCheckIn = isLeaveOrAbsent ? "" : (p.checkIn || "");
+        const cleanCheckOut = isLeaveOrAbsent ? "" : (p.checkOut || "");
+
         return {
           id: `punch-${Date.now()}-${idx}`,
           date: p.date || `${targetMonth}-01`,
           employeeId: empId,
           detectedName: p.employeeName || "Unrecognized Staff",
-          checkIn: p.checkIn || "08:30:00",
-          checkOut: p.checkOut || "",
-          status: p.status || "On-Time",
-          note: p.note || (p.rawRow ? `OCR: ${p.rawRow}` : "Scanned via Physical Logbook AI"),
+          checkIn: cleanCheckIn,
+          checkOut: cleanCheckOut,
+          status: p.status || (cleanCheckIn ? "On-Time" : "On-Leave"),
+          note: p.note || (isLeaveOrAbsent ? "On Leave / Day Off" : p.rawRow ? `OCR: ${p.rawRow}` : "Scanned via Physical Logbook AI"),
           confidence: p.confidence || 0.9,
         };
       });
 
       setPunches(formatted);
-      setSuccessNotice(`Successfully extracted ${formatted.length} punches! Review and adjust below before importing.`);
+      setSuccessNotice(`Successfully extracted ${formatted.length} records! Review and adjust below before importing.`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An unexpected error occurred during AI analysis.";
       setErrorMessage(msg);
@@ -249,7 +255,29 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
 
   // Update a punch row
   const updatePunch = (id: string, field: keyof ScannedPunch, value: string | number) => {
-    setPunches(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    setPunches(prev => prev.map(p => {
+      if (p.id !== id) return p;
+
+      const updated = { ...p, [field]: value };
+
+      // If user sets status to On-Leave or Absent, clear working punch times
+      if (field === "status" && (value === "On-Leave" || value === "Absent")) {
+        updated.checkIn = "";
+        updated.checkOut = "";
+      }
+
+      // If user sets status to On-Time / Late / Half-Day and checkIn is empty, provide default start
+      if (field === "status" && (value === "On-Time" || value === "Late" || value === "Half-Day") && !updated.checkIn) {
+        updated.checkIn = "08:30:00";
+      }
+
+      // If user types a check-in time on an On-Leave / Absent row, switch status to On-Time
+      if (field === "checkIn" && typeof value === "string" && value.trim() !== "" && (p.status === "On-Leave" || p.status === "Absent")) {
+        updated.status = "On-Time";
+      }
+
+      return updated;
+    }));
   };
 
   // Remove a punch row
@@ -836,6 +864,20 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                         <span>Conflicts ({conflictCount})</span>
                       </button>
                     )}
+                    {leaveCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setConflictFilter("leave")}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                          conflictFilter === "leave"
+                            ? isDark ? "bg-purple-950/60 border border-purple-700 text-purple-300" : "bg-purple-100 border border-purple-300 text-purple-800"
+                            : "text-purple-500/80 hover:text-purple-500"
+                        }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+                        <span>On-Leave ({leaveCount})</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -856,54 +898,64 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                 </div>
               </div>
 
-              {/* Data Table */}
-              <div className={`rounded-xl border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
-                <div className="overflow-x-auto max-h-[360px]">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className={`text-[10px] uppercase tracking-wider text-zinc-400 border-b sticky top-0 z-10 ${
-                        isDark ? "bg-zinc-950 border-zinc-800" : "bg-zinc-100 border-zinc-200"
-                      }`}>
-                        <th className="text-left py-2.5 px-3">Date</th>
-                        <th className="text-left py-2.5 px-3">Assign Clinic Staff</th>
-                        <th className="text-left py-2.5 px-3">In Time</th>
-                        <th className="text-left py-2.5 px-3">Out Time</th>
-                        <th className="text-left py-2.5 px-3">Status</th>
-                        <th className="text-left py-2.5 px-3">Existing System Record</th>
-                        <th className="text-left py-2.5 px-3">Import Action</th>
-                        <th className="text-center py-2.5 px-3">Action</th>
+              {/* Table wrapper */}
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs">
+                <div className="max-h-[380px] overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className={`sticky top-0 z-10 text-[11px] font-bold uppercase tracking-wider border-b ${
+                      isDark ? "bg-zinc-900 border-zinc-800 text-zinc-400" : "bg-zinc-100/90 border-zinc-200 text-zinc-500"
+                    }`}>
+                      <tr>
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3">Matched Employee</th>
+                        <th className="py-2.5 px-3">Check-In</th>
+                        <th className="py-2.5 px-3">Check-Out</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">System Match</th>
+                        <th className="py-2.5 px-3">Action</th>
+                        <th className="py-2.5 px-3 text-center">Remove</th>
                       </tr>
                     </thead>
-                    <tbody className={`divide-y ${isDark ? "divide-zinc-800/60" : "divide-zinc-100"}`}>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-850">
                       {filteredPunches.map((p) => {
                         const existing = getExistingRecord(p);
                         const rowAction = p.conflictAction || globalConflictStrategy;
+                        const isLeave = p.status === "On-Leave" || p.status === "Absent";
 
                         return (
-                          <tr key={p.id} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-zinc-50"}>
-                            {/* Date Input */}
+                          <tr
+                            key={p.id}
+                            className={`transition ${
+                              isLeave
+                                ? isDark ? "bg-purple-950/10 hover:bg-purple-950/20" : "bg-purple-50/30 hover:bg-purple-50/60"
+                                : existing
+                                ? isDark ? "bg-amber-950/10 hover:bg-amber-950/20" : "bg-amber-50/40 hover:bg-amber-50/70"
+                                : isDark ? "hover:bg-zinc-800/30" : "hover:bg-zinc-50/60"
+                            }`}
+                          >
+                            {/* Date */}
                             <td className="py-2 px-3">
                               <input
                                 type="date"
                                 value={p.date}
                                 onChange={(e) => updatePunch(p.id, "date", e.target.value)}
-                                className={`text-xs font-mono px-2 py-1 rounded-md border w-32 ${
-                                  isDark ? "bg-zinc-900 border-zinc-700 text-zinc-100" : "bg-white border-zinc-300 text-zinc-800"
+                                className={`text-xs font-mono px-2 py-1 rounded-md border ${
+                                  isDark ? "bg-zinc-900 border-zinc-700 text-white" : "bg-white border-zinc-300 text-zinc-800"
                                 }`}
                               />
                             </td>
 
-                            {/* Employee Selector & Detected Name */}
+                            {/* Employee select */}
                             <td className="py-2 px-3">
-                              <div className="flex flex-col gap-1">
+                              <div className="flex flex-col gap-0.5">
                                 <select
                                   value={p.employeeId}
                                   onChange={(e) => updatePunch(p.id, "employeeId", e.target.value)}
-                                  className={`text-xs font-semibold px-2 py-1 rounded-md border w-44 ${
-                                    isDark ? "bg-zinc-900 border-zinc-700 text-zinc-100" : "bg-white border-zinc-300 text-zinc-800"
+                                  className={`text-xs font-semibold px-2 py-1 rounded-md border truncate max-w-[200px] ${
+                                    isDark ? "bg-zinc-900 border-zinc-700 text-white" : "bg-white border-zinc-300 text-zinc-800"
                                   }`}
                                 >
-                                  {employees.map(emp => (
+                                  {employees.map((emp) => (
                                     <option key={emp.id} value={emp.id}>
                                       {emp.firstName} {emp.lastName} ({emp.role})
                                     </option>
@@ -917,28 +969,44 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
 
                             {/* Check-In */}
                             <td className="py-2 px-3">
-                              <input
-                                type="text"
-                                placeholder="08:30:00"
-                                value={p.checkIn}
-                                onChange={(e) => updatePunch(p.id, "checkIn", e.target.value)}
-                                className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
-                                  isDark ? "bg-zinc-900 border-zinc-700 text-emerald-400" : "bg-white border-zinc-300 text-emerald-700"
-                                }`}
-                              />
+                              {isLeave ? (
+                                <div className="flex items-center">
+                                  <span className={`text-[11px] font-semibold px-2 py-1 rounded-md border italic ${
+                                    p.status === "On-Leave"
+                                      ? "text-purple-400 bg-purple-500/10 border-purple-500/20"
+                                      : "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                                  }`}>
+                                    {p.status === "On-Leave" ? "— Not Working (Leave)" : "— Absent"}
+                                  </span>
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="08:30:00"
+                                  value={p.checkIn}
+                                  onChange={(e) => updatePunch(p.id, "checkIn", e.target.value)}
+                                  className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
+                                    isDark ? "bg-zinc-900 border-zinc-700 text-emerald-400" : "bg-white border-zinc-300 text-emerald-700"
+                                  }`}
+                                />
+                              )}
                             </td>
 
                             {/* Check-Out */}
                             <td className="py-2 px-3">
-                              <input
-                                type="text"
-                                placeholder="17:00:00"
-                                value={p.checkOut}
-                                onChange={(e) => updatePunch(p.id, "checkOut", e.target.value)}
-                                className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
-                                  isDark ? "bg-zinc-900 border-zinc-700 text-blue-400" : "bg-white border-zinc-300 text-blue-700"
-                                }`}
-                              />
+                              {isLeave ? (
+                                <span className="text-zinc-500 text-xs px-2">—</span>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="17:00:00"
+                                  value={p.checkOut}
+                                  onChange={(e) => updatePunch(p.id, "checkOut", e.target.value)}
+                                  className={`text-xs font-mono px-2 py-1 rounded-md border w-24 ${
+                                    isDark ? "bg-zinc-900 border-zinc-700 text-blue-400" : "bg-white border-zinc-300 text-blue-700"
+                                  }`}
+                                />
+                              )}
                             </td>
 
                             {/* Status */}
@@ -946,8 +1014,14 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
                               <select
                                 value={p.status}
                                 onChange={(e) => updatePunch(p.id, "status", e.target.value)}
-                                className={`text-xs font-bold px-2 py-1 rounded-md border ${
-                                  isDark ? "bg-zinc-900 border-zinc-700 text-zinc-200" : "bg-white border-zinc-300 text-zinc-800"
+                                className={`text-xs font-bold px-2 py-1 rounded-md border transition ${
+                                  p.status === "On-Leave"
+                                    ? "text-purple-500 border-purple-500/30 bg-purple-500/10"
+                                    : p.status === "Absent"
+                                    ? "text-rose-500 border-rose-500/30 bg-rose-500/10"
+                                    : p.status === "Late"
+                                    ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
+                                    : isDark ? "bg-zinc-900 border-zinc-700 text-zinc-200" : "bg-white border-zinc-300 text-zinc-800"
                                 }`}
                               >
                                 <option value="On-Time">On-Time</option>

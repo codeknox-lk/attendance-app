@@ -59,11 +59,24 @@ Guidelines:
    - If matched, set "matchedEmployeeId" to their corresponding ID, and "employeeName" to their registered full name.
    - If the name on paper does not match any registered staff member, set "employeeName" to the handwritten text as read, and "matchedEmployeeId" to null.
 2. DATES: If the paper only has day numbers (e.g. "1", "02", "15", "30"), construct the full date as "${targetMonth}-DD" where DD is zero-padded (e.g. "${targetMonth}-01", "${targetMonth}-15").
-3. TIMES: Read handwritten check-in and check-out times and convert to 24-hour "HH:mm" format (e.g. "07:30", "13:05", "15:30", "20:20").
+3. LEAVE, SICK & DAY-OFF DETECTION (CRITICAL):
+   - Check the row for handwritten indicators that staff was NOT working: "Leave", "On Leave", "L", "SL", "Sick", "CL", "Casual", "AL", "Annual Leave", "Off", "Day Off", "D/O", "Absent", "Ab", "No show", or diagonal slash across times.
+   - For ANY non-working/leave row:
+     - Set "status" to "On-Leave" (or "Absent" if explicitly noted as absent/no-show).
+     - Set "checkIn" to null (CRITICAL: Leave rows do NOT have working check-in times!).
+     - Set "checkOut" to null.
+     - Set "note" to the reason (e.g. "On Leave", "Sick Leave (SL)", "Casual Leave (CL)", "Day Off").
+4. WORKING PUNCH TIMES:
+   - When a staff member was present and worked, read handwritten check-in and check-out times and convert to 24-hour "HH:mm" format (e.g. "07:30", "08:30", "13:05", "17:00", "20:20").
    - If handwritten in 12-hour format (e.g. "1:15 pm", "7:40 am"), accurately convert to 24h ("13:15", "07:40").
    - If check-out is blank or missing, set "checkOut" to null.
-4. REMARKS & NOTES: Note any special remarks written in the log (e.g. "Day off", "Leave", "Half day", "Sick", "Poya", "Holiday", "Closed").
-5. STATUS: Estimate status as "On-Time", "Late", "Half-Day", or "On-Leave" based on the timestamps and notes.
+   - CRITICAL RULE: If a staff member has recorded working check-in/out times, their status MUST be "On-Time", "Late", or "Half-Day". They CANNOT be marked "On-Leave" or "Absent" if they were present and working!
+5. STATUS DEFINITIONS:
+   - "On-Leave": Staff was on leave, sick, casual, day off, or holiday (checkIn must be null).
+   - "Absent": Staff was absent without leave (checkIn must be null).
+   - "On-Time": Present staff who arrived on or before expected shift start (~08:30).
+   - "Late": Present staff who arrived past expected shift start.
+   - "Half-Day": Present staff who worked a partial shift or left early.
 6. Skip rows that are completely blank or marked as clinic closed days with no staff punch.
 
 You must respond with strictly valid JSON adhering to this schema:
@@ -73,9 +86,9 @@ You must respond with strictly valid JSON adhering to this schema:
       "date": "YYYY-MM-DD",
       "employeeName": "string",
       "matchedEmployeeId": "string or null",
-      "checkIn": "HH:mm",
+      "checkIn": "HH:mm or null",
       "checkOut": "HH:mm or null",
-      "status": "On-Time",
+      "status": "On-Time or Late or Half-Day or On-Leave or Absent",
       "note": "string"
     }
   ]
@@ -138,7 +151,53 @@ You must respond with strictly valid JSON adhering to this schema:
       }
     }
 
-    const punches = Array.isArray(parsed.punches) ? parsed.punches : [];
+    interface RawVisionPunch {
+      date?: string;
+      employeeName?: string;
+      matchedEmployeeId?: string | null;
+      checkIn?: string | null;
+      checkOut?: string | null;
+      status?: string;
+      note?: string;
+    }
+
+    const rawPunches = Array.isArray(parsed.punches) ? (parsed.punches as RawVisionPunch[]) : [];
+
+    // Sanitize and normalize punches
+    const punches = rawPunches.map((p) => {
+      const hasWorkingTimes = Boolean(p.checkIn && p.checkIn.toString().trim() !== "" && p.checkIn.toString().trim() !== "--");
+      const noteLower = (p.note || "").toLowerCase();
+      const isExplicitLeaveNote =
+        noteLower.includes("leave") ||
+        noteLower.includes("sick") ||
+        noteLower.includes("casual") ||
+        noteLower.includes("off") ||
+        noteLower.includes("absent");
+
+      let finalStatus = p.status || (hasWorkingTimes ? "On-Time" : "On-Leave");
+
+      if (isExplicitLeaveNote || (!hasWorkingTimes && (finalStatus === "On-Leave" || finalStatus === "Absent"))) {
+        // Staff was on leave or absent: NEVER return fake working times
+        finalStatus = finalStatus === "Absent" || noteLower.includes("absent") ? "Absent" : "On-Leave";
+        return {
+          ...p,
+          checkIn: null,
+          checkOut: null,
+          status: finalStatus,
+          note: p.note || (finalStatus === "On-Leave" ? "On Leave / Day Off" : "Absent"),
+        };
+      }
+
+      // If they had working check-in/out times recorded, they cannot be on leave!
+      if (hasWorkingTimes && (finalStatus === "On-Leave" || finalStatus === "Absent")) {
+        finalStatus = "On-Time";
+      }
+
+      return {
+        ...p,
+        status: finalStatus,
+      };
+    });
 
     return NextResponse.json({
       success: true,
