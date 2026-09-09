@@ -635,7 +635,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             {/* Professional Feature Highlights */}
             <ul className="space-y-3">
               {[
-                { title: "Direct biometric terminal synchronization (Hikvision)" },
+                { title: "Direct biometric terminal synchronization" },
                 { title: "AI-assisted physical logbook digitization & verification" },
                 { title: "Staff leave administration & clinic holiday schedules" },
                 { title: "Automated payroll processing with statutory contributions & overtime" },
@@ -784,7 +784,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </div>
                   <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
                     MedSync supports hybrid attendance:
-                    <br/>• <strong>Live Terminal Sync</strong>: Real-time biometric facial/fingerprint streaming via your Hikvision DS-K1T320MFWX device.
+                    <br/>• <strong>Live Terminal Sync</strong>: Real-time biometric facial/fingerprint streaming via your biometric hardware terminal.
                     <br/>• <strong>AI Logbook Scanner</strong>: Snap a photo of handwritten attendance logbooks &mdash; Google Gemini Vision OCR transcribes dates, staff names, check-in/out times, and lets you selectively tick entries to import.
                   </p>
                 </div>
