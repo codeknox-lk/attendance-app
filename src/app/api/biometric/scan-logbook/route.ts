@@ -128,45 +128,79 @@ You must respond with strictly valid JSON adhering to this schema:
 `;
 
     // Call Gemini Vision with model fallback
-    const candidateModels = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"];
+    const candidateModels = [
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-3-flash-preview",
+      "gemini-flash-latest",
+      "gemini-3.8-flash",
+      "gemini-3.7-flash",
+    ];
     let rawText = "";
     let lastError: unknown = null;
 
     for (const model of candidateModels) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { text: prompt },
-                {
-                  inlineData: {
-                    mimeType: mimeType || "image/jpeg",
-                    data: cleanBase64,
+      let attempts = 0;
+      while (attempts < 2) {
+        attempts++;
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  {
+                    inlineData: {
+                      mimeType: mimeType || "image/jpeg",
+                      data: cleanBase64,
+                    },
                   },
-                },
-              ],
+                ],
+              },
+            ],
+            config: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
             },
-          ],
-          config: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-          },
-        });
+          });
 
-        rawText = response.text || "";
-        if (rawText) break;
-      } catch (err) {
-        lastError = err;
-        console.warn(`[SCAN-LOGBOOK] Model ${model} failed, trying fallback...`, err);
+          rawText = response.text || "";
+          if (rawText) break;
+        } catch (err: unknown) {
+          lastError = err;
+          console.warn(`[SCAN-LOGBOOK] Model ${model} attempt ${attempts} failed:`, err instanceof Error ? err.message : err);
+          // If error is transient, wait briefly before retrying or switching
+          await new Promise((resolve) => setTimeout(resolve, 400));
+        }
       }
+      if (rawText) break;
     }
 
     if (!rawText) {
-      const errMsg = lastError instanceof Error ? lastError.message : "Failed to generate vision content from Gemini API";
-      return NextResponse.json({ success: false, error: errMsg }, { status: 500 });
+      let friendlyMsg = "Failed to generate vision content from Gemini API.";
+      if (lastError instanceof Error) {
+        try {
+          const parsedErr = JSON.parse(lastError.message);
+          if (parsedErr?.error?.message) {
+            friendlyMsg = parsedErr.error.message;
+          } else {
+            friendlyMsg = lastError.message;
+          }
+        } catch {
+          friendlyMsg = lastError.message;
+        }
+      } else if (typeof lastError === "string") {
+        try {
+          const parsedErr = JSON.parse(lastError);
+          if (parsedErr?.error?.message) friendlyMsg = parsedErr.error.message;
+          else friendlyMsg = lastError;
+        } catch {
+          friendlyMsg = lastError;
+        }
+      }
+      return NextResponse.json({ success: false, error: friendlyMsg }, { status: 500 });
     }
 
     // Parse JSON

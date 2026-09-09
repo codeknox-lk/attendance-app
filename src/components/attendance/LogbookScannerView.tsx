@@ -957,7 +957,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 font-medium">
-                <span>Gemini 2.5 Flash Vision OCR</span>
+                <span>Gemini 3.6 Flash Vision OCR</span>
                 <span>{analyzeProgress < 100 ? "Processing document..." : "Extraction Ready!"}</span>
               </div>
             </div>
