@@ -770,6 +770,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
                       transition: "transform 0.15s ease",
                     }}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={previewUrl}
                       alt="Physical logbook preview"
