@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
           const hashedPin = await hashPassword(staffPin);
           await db.employee.update({
             where: { id: emp.id },
-            data: { portalPin: hashedPin } as any,
+            data: { portalPin: hashedPin } as unknown as Parameters<typeof db.employee.update>[0]["data"],
           });
         } catch {}
       }
