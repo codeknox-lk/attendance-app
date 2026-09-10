@@ -18,12 +18,24 @@ export async function POST(req: NextRequest) {
 
     const normalizedClinicCode = trimmedCode.toUpperCase();
 
-    // Find clinic strictly by clinicCode (case-insensitive)
-    const clinic = await db.clinic.findFirst({
+    // Find clinic strictly by clinicCode (case-insensitive) or primary clinic aliases
+    let clinic = await db.clinic.findFirst({
       where: {
         clinicCode: { equals: normalizedClinicCode, mode: "insensitive" },
       },
     });
+
+    if (!clinic && (normalizedClinicCode === "MEDSYNC" || normalizedClinicCode === "SMILEHUB")) {
+      clinic = await db.clinic.findFirst({
+        where: {
+          OR: [
+            { clinicCode: { in: ["MEDSYNC", "SMILEHUB"], mode: "insensitive" } },
+            { id: "default-clinic-id" },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }
 
     if (!clinic) {
       try {

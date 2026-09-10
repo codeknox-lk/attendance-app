@@ -44,11 +44,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [regIsSubmitting, setRegIsSubmitting] = useState<boolean>(false);
   const [regErrorMsg, setRegErrorMsg] = useState<string>("");
   const [regSuccessMsg, setRegSuccessMsg] = useState<string>("");
-  const [discoveredClinicCode, setDiscoveredClinicCode] = useState<string>("SMILEHUB");
+  const [discoveredClinicCode, setDiscoveredClinicCode] = useState<string>("MEDSYNC");
 
   const fillDemoAdmin = () => {
     setLoginType("admin");
-    setClinicCode(discoveredClinicCode || "SMILEHUB");
+    setClinicCode(discoveredClinicCode || "MEDSYNC");
     setUsername("admin");
     setPassword("admin");
     setErrorMsg("");
@@ -57,8 +57,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const fillDemoStaff = () => {
     setLoginType("staff");
-    setClinicCode(discoveredClinicCode || "SMILEHUB");
-    setBiometricId(discoveredClinicCode === "SMILEHUB" ? "SH001" : "101");
+    setClinicCode(discoveredClinicCode || "MEDSYNC");
+    setBiometricId("SH001");
     setPassword("1234");
     setErrorMsg("");
     setShowGuideModal(false);
@@ -354,7 +354,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   className={`w-full px-4 pb-2 pt-6 bg-transparent outline-none text-sm font-medium ${
                     isDark ? "text-white" : "text-slate-900"
                   }`}
-                  placeholder={`e.g. ${discoveredClinicCode}`}
+                  placeholder="e.g. MEDSYNC"
                 />
               </div>
 
@@ -781,7 +781,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   onClick={fillDemoStaff}
                   className="py-2 px-4 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
                 >
-                  <span>Staff Portal Demo (Bio #{discoveredClinicCode === "SMILEHUB" ? "SH001" : "101"} / PIN: 1234)</span>
+                  <span>Staff Portal Demo (Bio #SH001 / PIN: 1234)</span>
                 </button>
               </div>
             </div>
