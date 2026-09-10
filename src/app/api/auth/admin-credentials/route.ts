@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getClinicId } from "@/lib/clinic";
+import { hashPassword, verifyAndCheckRehash } from "@/lib/auth-crypto";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -22,11 +23,9 @@ export async function PUT(req: NextRequest) {
 
     // 2. Verify current password
     const currPassTrimmed = (currentPassword || "").trim();
-    const isCurrentPasswordValid =
-      admin.password === currPassTrimmed ||
-      (currPassTrimmed === "admin" && admin.password === "admin123");
+    const passCheck = await verifyAndCheckRehash(currPassTrimmed, admin.password);
 
-    if (!isCurrentPasswordValid) {
+    if (!passCheck.valid) {
       return NextResponse.json({
         success: false,
         error: "Current password is incorrect. Please verify your current administrator password.",
@@ -64,20 +63,29 @@ export async function PUT(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // 4. Validate new password
+    // 4. Validate and hash new password
     const trimmedPassword = (newPassword || "").trim();
-    if (!trimmedPassword || trimmedPassword.length < 4) {
-      return NextResponse.json({
-        success: false,
-        error: "New password must be at least 4 characters long.",
-      }, { status: 400 });
-    }
+    let finalHashedPassword = admin.password;
 
-    if (confirmPassword !== undefined && trimmedPassword !== (confirmPassword || "").trim()) {
-      return NextResponse.json({
-        success: false,
-        error: "New password and confirmation password do not match.",
-      }, { status: 400 });
+    if (trimmedPassword) {
+      if (trimmedPassword.length < 4) {
+        return NextResponse.json({
+          success: false,
+          error: "New password must be at least 4 characters long.",
+        }, { status: 400 });
+      }
+
+      if (confirmPassword !== undefined && trimmedPassword !== (confirmPassword || "").trim()) {
+        return NextResponse.json({
+          success: false,
+          error: "New password and confirmation password do not match.",
+        }, { status: 400 });
+      }
+
+      finalHashedPassword = await hashPassword(trimmedPassword);
+    } else if (passCheck.needsRehash) {
+      // Rehash legacy plaintext current password
+      finalHashedPassword = await hashPassword(currPassTrimmed);
     }
 
     // 5. Update admin credentials in database
@@ -85,7 +93,7 @@ export async function PUT(req: NextRequest) {
       where: { id: admin.id },
       data: {
         username: trimmedUsername,
-        password: trimmedPassword,
+        password: finalHashedPassword,
       },
     });
 

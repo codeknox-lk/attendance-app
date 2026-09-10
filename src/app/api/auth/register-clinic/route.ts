@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hashPassword } from "@/lib/auth-crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
         adminUsers: {
           create: {
             username: cleanUsername,
-            password: password,
+            password: await hashPassword(password),
             name: adminName ? adminName.trim() : "Clinic Administrator",
             role: "Admin",
           },

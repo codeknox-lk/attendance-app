@@ -2,9 +2,11 @@ import { Pool } from "pg";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://neondb_owner:npg_ZPbqFIE2WYk7@ep-weathered-mode-azl26d7m-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("Missing required environment variable: DATABASE_URL. Please define it in your .env file or deployment settings.");
+}
 
 const globalForDb = globalThis as unknown as {
   prisma?: PrismaClient;

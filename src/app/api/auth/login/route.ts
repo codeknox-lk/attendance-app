@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hashPassword, verifyAndCheckRehash } from "@/lib/auth-crypto";
+import { checkRateLimit, recordFailedAttempt, resetRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,6 +44,18 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+    const targetIdentifier = String(biometricId || username || "anonymous").trim();
+    const rateKey = `login:${clientIp}:${clinic.clinicCode}:${targetIdentifier}`;
+
+    const limitStatus = checkRateLimit(rateKey, 5, 10 * 60 * 1000);
+    if (limitStatus.isLimited) {
+      return NextResponse.json({
+        success: false,
+        error: `Too many failed sign-in attempts. For your security, this account is temporarily locked. Please retry in ${limitStatus.retryAfterSec} seconds.`,
+      }, { status: 429 });
+    }
+
     // 1. Staff / Employee Self-Service Login
     if (loginType === "staff" || biometricId) {
       const bioId = String(biometricId || username).trim();
@@ -50,22 +64,43 @@ export async function POST(req: NextRequest) {
       if (!staffPin) {
         return NextResponse.json({ 
           success: false, 
-          error: "Staff Access PIN is required to sign in. Default initial PIN is 1234." 
+          error: "Staff Access PIN is required to log into the staff self-service portal." 
         }, { status: 400 });
       }
-      
-      const emp = await db.employee.findFirst({
+
+      // Check for exact biometric ID match within the identified clinic
+      let emp = await db.employee.findFirst({
         where: {
           clinicId: clinic.id,
-          OR: [
-            { biometricId: { equals: bioId, mode: "insensitive" } },
-            { id: bioId },
-            { firstName: { equals: bioId, mode: "insensitive" } },
-          ],
+          biometricId: bioId,
+          active: true,
         },
       });
 
+      // Fallback: Case-insensitive biometric ID
       if (!emp) {
+        emp = await db.employee.findFirst({
+          where: {
+            clinicId: clinic.id,
+            biometricId: { equals: bioId, mode: "insensitive" },
+            active: true,
+          },
+        });
+      }
+
+      // Fallback: Numeric matching (e.g. 101 matching SH101 or 0101)
+      if (!emp && /^\d+$/.test(bioId)) {
+        const allClinicEmps = await db.employee.findMany({
+          where: { clinicId: clinic.id, active: true },
+        });
+        emp = allClinicEmps.find(e => {
+          const numOnly = e.biometricId.replace(/\D/g, "");
+          return numOnly === bioId || parseInt(numOnly, 10) === parseInt(bioId, 10);
+        }) || null;
+      }
+
+      if (!emp) {
+        recordFailedAttempt(rateKey);
         try {
           await db.auditLog.create({
             data: {
@@ -87,7 +122,10 @@ export async function POST(req: NextRequest) {
       // Check PIN: verify against employee's portalPin (default is 1234)
       const empWithPin = emp as (typeof emp & { portalPin?: string | null }) | null;
       const expectedPin = empWithPin?.portalPin || "1234";
-      if (staffPin !== expectedPin) {
+
+      const pinCheck = await verifyAndCheckRehash(staffPin, expectedPin);
+      if (!pinCheck.valid) {
+        recordFailedAttempt(rateKey);
         try {
           await db.auditLog.create({
             data: {
@@ -104,6 +142,19 @@ export async function POST(req: NextRequest) {
           success: false, 
           error: `Incorrect Access PIN for ${emp.firstName} ${emp.lastName}. Default initial PIN is 1234.` 
         }, { status: 401 });
+      }
+
+      resetRateLimit(rateKey);
+
+      // Auto-rehash if stored as plaintext
+      if (pinCheck.needsRehash) {
+        try {
+          const hashedPin = await hashPassword(staffPin);
+          await db.employee.update({
+            where: { id: emp.id },
+            data: { portalPin: hashedPin } as any,
+          });
+        } catch {}
       }
 
       try {
@@ -146,11 +197,30 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const isPasswordValid =
-      admin &&
-      (admin.password === password || (password === "admin" && admin.password === "admin123"));
+    if (!admin) {
+      recordFailedAttempt(rateKey);
+      return NextResponse.json({ 
+        success: false, 
+        error: `No administrator found with username '${username}' at ${clinic.name}.` 
+      }, { status: 401 });
+    }
 
-    if (admin && isPasswordValid) {
+    const passCheck = await verifyAndCheckRehash(password, admin.password);
+
+    if (passCheck.valid) {
+      resetRateLimit(rateKey);
+
+      // Auto-rehash if stored as legacy plaintext
+      if (passCheck.needsRehash) {
+        try {
+          const hashedPass = await hashPassword(password);
+          await db.adminUser.update({
+            where: { id: admin.id },
+            data: { password: hashedPass },
+          });
+        } catch {}
+      }
+
       try {
         await db.auditLog.create({
           data: {
@@ -178,21 +248,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    recordFailedAttempt(rateKey);
+    const updatedLimit = checkRateLimit(rateKey, 5, 10 * 60 * 1000);
+
     try {
       await db.auditLog.create({
         data: {
           clinicId: clinic.id,
           action: "LOGIN_FAILED",
           entity: "Auth",
-          entityId: String(username || "UNKNOWN"),
-          details: `Admin login failed: Invalid credentials for user '${username}' at clinic '${clinic.name}'`,
+          entityId: admin.id,
+          details: `Administrator login failed: Invalid password for user '${admin.username}'`,
         },
       });
     } catch {}
 
+    const remainingMsg = updatedLimit.remainingAttempts > 0 
+      ? ` (${updatedLimit.remainingAttempts} attempt${updatedLimit.remainingAttempts === 1 ? "" : "s"} remaining)`
+      : "";
+
     return NextResponse.json({ 
       success: false, 
-      error: `Invalid username or password for ${clinic.name}. Please verify your administrator credentials.` 
+      error: `Invalid credentials for clinic '${clinic.name}'. Please check your password${remainingMsg}.` 
     }, { status: 401 });
 
   } catch (error: unknown) {

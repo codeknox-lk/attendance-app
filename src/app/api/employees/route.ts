@@ -229,12 +229,54 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (target) {
+      const logCount = await db.attendanceLog.count({ where: { employeeId: target.id } });
+      const leaveCount = await db.leaveRequest.count({ where: { employeeId: target.id } });
+
+      if (logCount > 0 || leaveCount > 0) {
+        // Soft-delete: deactivate profile to preserve labor statutory audit records
+        await db.employee.update({
+          where: { id: target.id },
+          data: { active: false },
+        });
+
+        try {
+          await db.auditLog.create({
+            data: {
+              clinicId,
+              action: "ARCHIVE_EMPLOYEE",
+              entity: "Employee",
+              entityId: target.id,
+              details: `Archived/deactivated employee ${target.firstName} ${target.lastName} (Bio #${target.biometricId}) preserving ${logCount} attendance logs and ${leaveCount} leave records.`,
+            },
+          });
+        } catch {}
+
+        return NextResponse.json({ 
+          success: true, 
+          deactivated: true,
+          message: `Employee ${target.firstName} ${target.lastName} has ${logCount} attendance record(s). Profile safely archived to comply with statutory audit regulations.`,
+        });
+      }
+
+      // Safe permanent deletion for profiles with zero historical records
       await db.employee.delete({
         where: { id: target.id },
       });
+
+      try {
+        await db.auditLog.create({
+          data: {
+            clinicId,
+            action: "DELETE_EMPLOYEE",
+            entity: "Employee",
+            entityId: target.id,
+            details: `Permanently removed employee ${target.firstName} ${target.lastName} (Bio #${target.biometricId}) with zero historical records.`,
+          },
+        });
+      } catch {}
     }
 
-    return NextResponse.json({ success: true, message: "Employee deleted successfully" });
+    return NextResponse.json({ success: true, message: "Employee removed successfully" });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error deleting employee";
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
