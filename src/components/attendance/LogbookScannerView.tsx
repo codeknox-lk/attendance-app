@@ -15,6 +15,13 @@ interface RawScannedPunch {
   confidence?: number;
 }
 
+interface ScanApiResponse {
+  success?: boolean;
+  error?: string;
+  punches?: RawScannedPunch[];
+  detectedCount?: number;
+}
+
 interface ScannedPunch {
   id: string;
   date: string;
@@ -149,6 +156,39 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to compress image in browser to avoid Vercel 4.5MB payload limit and speed up vision analysis
+  const compressImageForVision = (dataUrl: string, maxWidth = 1600, quality = 0.85): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxWidth) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxWidth) / height);
+            height = maxWidth;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
   // Handle file selection
   const handleFileChange = (file: File | null) => {
     if (!file) return;
@@ -158,8 +198,15 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
     setZoomLevel(1);
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setPreviewUrl(reader.result as string);
+    reader.onload = async () => {
+      const rawDataUrl = reader.result as string;
+      try {
+        // Compress immediately so memory and upload stay lean
+        const optimized = await compressImageForVision(rawDataUrl);
+        setPreviewUrl(optimized);
+      } catch {
+        setPreviewUrl(rawDataUrl);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -221,6 +268,11 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
     }, 380);
 
     try {
+      // Ensure image is compressed before sending over HTTP
+      const uploadPayload = previewUrl.length > 500000 
+        ? await compressImageForVision(previewUrl, 1600, 0.82) 
+        : previewUrl;
+
       const activeRoster = employees
         .filter((e) => e.active !== false)
         .map((e) => ({
@@ -243,7 +295,7 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: previewUrl,
+          imageBase64: uploadPayload,
           month: targetMonth,
           apiKey: geminiApiKey.trim() || undefined,
           employees: activeRoster,
@@ -252,10 +304,28 @@ export const LogbookScannerView: React.FC<LogbookScannerViewProps> = ({
         }),
       });
 
-      const data = await res.json();
+      // Safely parse response to avoid Safari "The string did not match the expected pattern" on HTML error pages
+      const contentType = res.headers.get("content-type") || "";
+      let data: ScanApiResponse | null = null;
+      if (contentType.includes("application/json")) {
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error("Unable to parse server response as JSON.");
+        }
+      } else {
+        const text = await res.text();
+        if (res.status === 413) {
+          throw new Error("The uploaded photo exceeds Vercel's serverless size limit (4.5 MB). The image has been auto-compressed; please try clicking Extract again.");
+        }
+        if (res.status === 504 || res.status === 502) {
+          throw new Error("Vision AI analysis timed out. Please try again with a clearer or cropped section of the logbook.");
+        }
+        throw new Error(`Server returned status ${res.status}: ${text.slice(0, 120) || "Unknown server response"}`);
+      }
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to scan handwritten logbook.");
+      if (!data || !res.ok || !data.success) {
+        throw new Error(data?.error || "Failed to scan handwritten logbook.");
       }
 
       if (progressTimerRef.current) {

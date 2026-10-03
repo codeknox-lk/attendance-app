@@ -127,14 +127,13 @@ You must respond with strictly valid JSON adhering to this schema:
 }
 `;
 
-    // Call Gemini Vision with model fallback
+    // Call Gemini Vision with model fallback (official Google models)
     const candidateModels = [
-      "gemini-3.6-flash",
-      "gemini-3.5-flash",
-      "gemini-3-flash-preview",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
       "gemini-flash-latest",
-      "gemini-3.8-flash",
-      "gemini-3.7-flash",
     ];
     let rawText = "";
     let lastError: unknown = null;

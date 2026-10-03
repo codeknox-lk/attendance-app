@@ -35,19 +35,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
     }
 
-    const payroll = await db.payrollPeriod.create({
-      data: {
-        clinicId,
-        month,
-        label,
-        grossSalaryPool: Number(grossSalaryPool) || 0,
-        netRemittances: Number(netRemittances) || 0,
-        totalEpf: Number(totalEpf) || 0,
-        totalEtf: Number(totalEtf) || 0,
-        totalApit: Number(totalApit) || 0,
-        employeeCount: Number(employeeCount) || 0,
-      },
+    const existing = await db.payrollPeriod.findFirst({
+      where: { clinicId, month },
     });
+
+    let payroll;
+    if (existing) {
+      payroll = await db.payrollPeriod.update({
+        where: { id: existing.id },
+        data: {
+          label,
+          status: "Finalized",
+          finalizedAt: new Date(),
+          grossSalaryPool: Number(grossSalaryPool) || 0,
+          netRemittances: Number(netRemittances) || 0,
+          totalEpf: Number(totalEpf) || 0,
+          totalEtf: Number(totalEtf) || 0,
+          totalApit: Number(totalApit) || 0,
+          employeeCount: Number(employeeCount) || 0,
+        },
+      });
+    } else {
+      payroll = await db.payrollPeriod.create({
+        data: {
+          clinicId,
+          month,
+          label,
+          status: "Finalized",
+          finalizedAt: new Date(),
+          grossSalaryPool: Number(grossSalaryPool) || 0,
+          netRemittances: Number(netRemittances) || 0,
+          totalEpf: Number(totalEpf) || 0,
+          totalEtf: Number(totalEtf) || 0,
+          totalApit: Number(totalApit) || 0,
+          employeeCount: Number(employeeCount) || 0,
+        },
+      });
+    }
     return NextResponse.json({ success: true, payroll });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to create payroll";

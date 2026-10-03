@@ -48,7 +48,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const fillDemoAdmin = () => {
     setLoginType("admin");
-    setClinicCode(discoveredClinicCode || "MEDSYNC");
+    // Always target the isolated SUNRISE demo clinic — never real clinic data
+    setClinicCode("SUNRISE");
     setUsername("admin");
     setPassword("admin");
     setErrorMsg("");
@@ -513,13 +514,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <button
                   type="button"
                   onClick={fillDemoAdmin}
-                  className="font-bold text-teal-600 dark:text-teal-400 hover:brightness-110 flex items-center gap-1 cursor-pointer bg-teal-500/10 dark:bg-teal-500/15 px-3 py-1 rounded-lg border border-teal-500/25 transition active:scale-95 shadow-xs"
-                  title={`1-Click Fill Demo Credentials (${discoveredClinicCode} / admin)`}
+                  className="font-bold text-teal-600 dark:text-teal-400 hover:brightness-110 flex items-center gap-1.5 cursor-pointer bg-teal-500/10 dark:bg-teal-500/15 px-3 py-1 rounded-lg border border-teal-500/25 transition active:scale-95 shadow-xs"
+                  title="1-Click Demo Login — Sunrise Medical Centre (isolated demo data, not real clinic)"
                 >
                   <svg className="w-3.5 h-3.5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
                   </svg>
                   <span>Quick Demo Login</span>
+                  <span className="ml-0.5 text-[9px] font-black uppercase tracking-wide bg-teal-500/20 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded-md border border-teal-500/30">DEMO</span>
                 </button>
               </div>
 
@@ -757,7 +759,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3 font-mono">
                 <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
                   <span className="text-[10px] text-zinc-400 font-sans font-bold uppercase">Clinic Code</span>
-                  <strong className="text-teal-600 dark:text-teal-400 font-bold text-sm">{discoveredClinicCode}</strong>
+                  <strong className="text-teal-600 dark:text-teal-400 font-bold text-sm">SUNRISE</strong>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
                   <span className="text-[10px] text-zinc-400 font-sans font-bold uppercase">Admin User / Pass</span>

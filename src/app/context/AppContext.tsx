@@ -1228,9 +1228,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const finalizePayroll = async (period: Omit<PayrollPeriod,"id"|"finalizedAt"|"status">) => {
-    if (payrollHistory.find(p => p.month===period.month)) return;
+    if (payrollHistory.find(p => p.month===period.month && p.status==="Finalized")) return;
     const np: PayrollPeriod = { ...period, id: `PAY-${Date.now()}`, status: "Finalized", finalizedAt: nowStr() };
-    setPayrollHistory(p => [np,...p]);
+    setPayrollHistory(p => [np, ...p.filter(item => item.month !== period.month)]);
     pushAudit({ action: "FINALIZE", entity: "PayrollPeriod", entityId: np.id, details: `Finalized ${period.label}` });
     try {
       await apiFetch("/api/payroll", {

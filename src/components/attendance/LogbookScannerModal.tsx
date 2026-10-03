@@ -15,6 +15,13 @@ interface RawScannedPunch {
   confidence?: number;
 }
 
+interface ScanApiResponse {
+  success?: boolean;
+  error?: string;
+  punches?: RawScannedPunch[];
+  detectedCount?: number;
+}
+
 interface ScannedPunch {
   id: string;
   date: string;
@@ -130,10 +137,49 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
     setSuccessNotice(null);
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setPreviewUrl(reader.result as string);
+    reader.onload = async () => {
+      const rawDataUrl = reader.result as string;
+      try {
+        const optimized = await compressImageForVision(rawDataUrl);
+        setPreviewUrl(optimized);
+      } catch {
+        setPreviewUrl(rawDataUrl);
+      }
     };
     reader.readAsDataURL(file);
+  };
+
+  // Helper to compress image in browser
+  const compressImageForVision = (dataUrl: string, maxWidth = 1600, quality = 0.85): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxWidth) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxWidth) / height);
+            height = maxWidth;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
   };
 
   // Drag and drop handlers
@@ -174,6 +220,10 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
         setAnalyzeStep("Interpreting handwriting & matching staff columns...");
       }, 2500);
 
+      const uploadPayload = previewUrl.length > 500000 
+        ? await compressImageForVision(previewUrl, 1600, 0.82) 
+        : previewUrl;
+
       const res = await fetch("/api/biometric/scan-logbook", {
         method: "POST",
         headers: {
@@ -183,7 +233,7 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
             : {}),
         },
         body: JSON.stringify({
-          imageBase64: previewUrl,
+          imageBase64: uploadPayload,
           targetMonth,
           staffList: employees.map(e => ({
             id: e.id,
@@ -196,10 +246,28 @@ export const LogbookScannerModal: React.FC<LogbookScannerModalProps> = ({
       });
 
       clearTimeout(timer);
-      const data = await res.json();
+      
+      const contentType = res.headers.get("content-type") || "";
+      let data: ScanApiResponse | null = null;
+      if (contentType.includes("application/json")) {
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error("Unable to parse server response as JSON.");
+        }
+      } else {
+        const text = await res.text();
+        if (res.status === 413) {
+          throw new Error("The uploaded photo exceeds Vercel's serverless size limit (4.5 MB). The image has been auto-compressed; please try clicking Extract again.");
+        }
+        if (res.status === 504 || res.status === 502) {
+          throw new Error("Vision AI analysis timed out. Please try again with a clearer or cropped section of the logbook.");
+        }
+        throw new Error(`Server returned status ${res.status}: ${text.slice(0, 120) || "Unknown server response"}`);
+      }
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to scan handwritten logbook.");
+      if (!data || !res.ok || !data.success) {
+        throw new Error(data?.error || "Failed to scan handwritten logbook.");
       }
 
       const rawPunches = data.punches || [];
