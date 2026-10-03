@@ -127,54 +127,53 @@ You must respond with strictly valid JSON adhering to this schema:
 }
 `;
 
-    // Call Gemini Vision with model fallback (official Google models)
+    // Call Gemini Vision with model fallback (ordered by capacity and availability)
     const candidateModels = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
       "gemini-1.5-flash",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-1.5-flash-8b",
       "gemini-1.5-pro",
-      "gemini-flash-latest",
     ];
     let rawText = "";
     let lastError: unknown = null;
 
     for (const model of candidateModels) {
-      let attempts = 0;
-      while (attempts < 2) {
-        attempts++;
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: prompt },
-                  {
-                    inlineData: {
-                      mimeType: mimeType || "image/jpeg",
-                      data: cleanBase64,
-                    },
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType: mimeType || "image/jpeg",
+                    data: cleanBase64,
                   },
-                ],
-              },
-            ],
-            config: {
-              responseMimeType: "application/json",
-              temperature: 0.1,
+                },
+              ],
             },
-          });
+          ],
+          config: {
+            responseMimeType: "application/json",
+            temperature: 0.1,
+          },
+        });
 
-          rawText = response.text || "";
-          if (rawText) break;
-        } catch (err: unknown) {
-          lastError = err;
-          console.warn(`[SCAN-LOGBOOK] Model ${model} attempt ${attempts} failed:`, err instanceof Error ? err.message : err);
-          // If error is transient, wait briefly before retrying or switching
-          await new Promise((resolve) => setTimeout(resolve, 400));
+        rawText = response.text || "";
+        if (rawText) {
+          console.log(`[SCAN-LOGBOOK] Successfully analyzed with model: ${model}`);
+          break;
         }
+      } catch (err: unknown) {
+        lastError = err;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`[SCAN-LOGBOOK] Model ${model} failed: ${errMsg}. Trying next candidate model...`);
+        // If error is high demand / 503, immediately continue to next model in list
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
-      if (rawText) break;
     }
 
     if (!rawText) {
@@ -198,6 +197,10 @@ You must respond with strictly valid JSON adhering to this schema:
         } catch {
           friendlyMsg = lastError;
         }
+      }
+
+      if (friendlyMsg.includes("high demand") || friendlyMsg.includes("overloaded")) {
+        friendlyMsg = "Google Gemini vision servers are experiencing high demand right now. Please wait 10-15 seconds and click 'Extract Punches via AI' again.";
       }
       return NextResponse.json({ success: false, error: friendlyMsg }, { status: 500 });
     }
