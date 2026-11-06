@@ -24,6 +24,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
+          rel="stylesheet"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -39,12 +45,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans selection:bg-[#0F85B0] selection:text-white relative">
-        {/* Global Ambient Glows */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
-          <div className="absolute top-[-15%] left-[-10%] w-[50vw] h-[50vw] bg-[#0F85B0]/10 blur-[120px] rounded-full mix-blend-screen"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] bg-[#0F85B0]/5 blur-[100px] rounded-full mix-blend-screen"></div>
-        </div>
+      <body className="min-h-full flex flex-col font-sans selection:bg-sky-500 selection:text-white bg-[#fafafa] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors duration-200 relative antialiased">
         <AppProvider>
           {children}
         </AppProvider>

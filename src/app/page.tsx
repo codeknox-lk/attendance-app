@@ -38,26 +38,26 @@ type SettingsTabId = typeof SETTINGS_TABS[number]["id"];
 
 const statusColor = (status: string, dark: boolean): string => {
   const map: Record<string, [string, string]> = {
-    "On-Time":  ["text-emerald-600 bg-emerald-50 border-emerald-200",  "text-emerald-400 bg-emerald-950/40 border-emerald-900"],
-    Late:       ["text-amber-600 bg-amber-50 border-amber-200",         "text-amber-400 bg-amber-950/40 border-amber-900"],
-    "Half-Day": ["text-blue-600 bg-blue-50 border-blue-200",            "text-blue-400 bg-blue-950/40 border-blue-900"],
-    "On-Leave": ["text-purple-600 bg-purple-50 border-purple-200",      "text-purple-400 bg-purple-950/40 border-purple-900"],
-    Absent:     ["text-rose-600 bg-rose-50 border-rose-200",            "text-rose-400 bg-rose-950/40 border-rose-900"],
-    Pending:    ["text-amber-600 bg-amber-50 border-amber-200",         "text-amber-400 bg-amber-950/40 border-amber-900"],
-    Approved:   ["text-emerald-600 bg-emerald-50 border-emerald-200",   "text-emerald-400 bg-emerald-950/40 border-emerald-900"],
-    Rejected:   ["text-rose-600 bg-rose-50 border-rose-200",            "text-rose-400 bg-rose-950/40 border-rose-900"],
-    Connected:  ["text-emerald-600 bg-emerald-50 border-emerald-200",   "text-emerald-400 bg-emerald-950/40 border-emerald-900"],
-    Disconnected:["text-rose-600 bg-rose-50 border-rose-200",           "text-rose-400 bg-rose-950/40 border-rose-900"],
-    Finalized:  ["text-[#0F85B0] bg-[#f0f9ff] border-[#bae6fd]",      "text-[#38bdf8] bg-[#042633]/40 border-[#06394d]"],
-    Draft:      ["text-zinc-600 bg-zinc-50 border-zinc-200",            "text-zinc-400 bg-zinc-900 border-zinc-800"],
+    "On-Time":  ["text-emerald-700 bg-emerald-50/80 border-emerald-200/80 font-medium", "text-emerald-400 bg-emerald-950/30 border-emerald-800/40 font-medium"],
+    Late:       ["text-amber-700 bg-amber-50/80 border-amber-200/80 font-medium",       "text-amber-400 bg-amber-950/30 border-amber-800/40 font-medium"],
+    "Half-Day": ["text-blue-700 bg-blue-50/80 border-blue-200/80 font-medium",          "text-blue-400 bg-blue-950/30 border-blue-800/40 font-medium"],
+    "On-Leave": ["text-purple-700 bg-purple-50/80 border-purple-200/80 font-medium",    "text-purple-400 bg-purple-950/30 border-purple-800/40 font-medium"],
+    Absent:     ["text-rose-700 bg-rose-50/80 border-rose-200/80 font-medium",          "text-rose-400 bg-rose-950/30 border-rose-800/40 font-medium"],
+    Pending:    ["text-amber-700 bg-amber-50/80 border-amber-200/80 font-medium",       "text-amber-400 bg-amber-950/30 border-amber-800/40 font-medium"],
+    Approved:   ["text-emerald-700 bg-emerald-50/80 border-emerald-200/80 font-medium", "text-emerald-400 bg-emerald-950/30 border-emerald-800/40 font-medium"],
+    Rejected:   ["text-rose-700 bg-rose-50/80 border-rose-200/80 font-medium",          "text-rose-400 bg-rose-950/30 border-rose-800/40 font-medium"],
+    Connected:  ["text-emerald-700 bg-emerald-50/80 border-emerald-200/80 font-medium", "text-emerald-400 bg-emerald-950/30 border-emerald-800/40 font-medium"],
+    Disconnected:["text-rose-700 bg-rose-50/80 border-rose-200/80 font-medium",         "text-rose-400 bg-rose-950/30 border-rose-800/40 font-medium"],
+    Finalized:  ["text-sky-700 bg-sky-50/80 border-sky-200/80 font-medium",             "text-sky-400 bg-sky-950/30 border-sky-800/40 font-medium"],
+    Draft:      ["text-zinc-600 bg-zinc-100 border-zinc-200 font-medium",               "text-zinc-400 bg-zinc-900 border-zinc-800 font-medium"],
   };
-  const pair = map[status] ?? ["text-zinc-600 bg-zinc-50 border-zinc-200", "text-zinc-400 bg-zinc-900 border-zinc-800"];
+  const pair = map[status] ?? ["text-zinc-600 bg-zinc-100 border-zinc-200 font-medium", "text-zinc-400 bg-zinc-900 border-zinc-800 font-medium"];
   return pair[dark ? 1 : 0];
 };
 
-const inputCls = (dark: boolean) => `w-full border rounded-md px-3 py-2 text-xs focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 ${dark ? "bg-zinc-950 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-800"}`;
-const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5";
-const cardCls = (dark: boolean) => `rounded-2xl border p-5 backdrop-blur-xl transition-all ${dark ? "bg-white/5 border-white/10 shadow-xl" : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"}`;
+const inputCls = (dark: boolean) => `w-full border rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all ${dark ? "bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-600" : "bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 shadow-xs"}`;
+const labelCls = "block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5 tracking-tight";
+const cardCls = (dark: boolean) => `rounded-xl border p-5 transition-all duration-200 ${dark ? "bg-[#111114] border-white/[0.08] hover:border-white/[0.12] shadow-sm" : "bg-white border-zinc-200/80 hover:border-zinc-300 shadow-[0_1px_3px_0_rgb(0_0_0/0.03)]"}`;
 
 const daySuffix = (d: number) => d===1||d===21||d===31?"st":d===2||d===22?"nd":d===3||d===23?"rd":"th";
 
@@ -1860,7 +1860,7 @@ export default function Home() {
 
   // ─── MAIN APPLICATION RENDER ──────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen flex flex-1 print:min-h-0 print:block print:bg-white ${isDark ? "dark bg-[#090d16] text-slate-100" : "bg-slate-50 text-slate-800"}`} style={isDark ? { colorScheme: "dark" } : {}}>
+    <div className={`min-h-screen flex flex-1 print:min-h-0 print:block print:bg-white ${isDark ? "dark bg-[#09090b] text-zinc-100" : "bg-[#fafafa] text-zinc-900"}`} style={isDark ? { colorScheme: "dark" } : {}}>
       {/* ── Mobile/Tablet Backdrop Drawer Overlay ── */}
       <div
         className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden print:hidden ${
@@ -1873,23 +1873,23 @@ export default function Home() {
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 border-r flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } ${isDark ? "bg-slate-900 border-slate-800 shadow-2xl" : "bg-white border-slate-200 shadow-2xl"}`}
+        } ${isDark ? "bg-[#111114] border-zinc-800 shadow-2xl" : "bg-white border-zinc-200 shadow-2xl"}`}
       >
         <div className="p-4 overflow-y-auto">
-          <div className="flex items-center justify-between mb-7 px-1">
+          <div className="flex items-center justify-between mb-6 px-1">
             <div className="flex items-center gap-2.5">
-              <div className={`h-9 w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60" : "bg-white border border-slate-200"}`}>
+              <div className={`h-8 w-8 rounded-lg p-1.5 flex items-center justify-center shrink-0 ${isDark ? "bg-zinc-800/90 border border-zinc-700/60" : "bg-zinc-100 border border-zinc-200"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/logo.png" alt="MedSync" className="w-full h-full object-contain" />
               </div>
               <div>
-                <h1 className={`font-extrabold text-sm tracking-tight bg-gradient-to-r ${isDark ? "from-white via-slate-200 to-[#7dd3fc]" : "from-slate-900 via-indigo-950 to-[#0F85B0]"} bg-clip-text text-transparent`}>MedSync</h1>
-                <p className={`text-[10px] ${isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"} font-semibold tracking-wider uppercase leading-none mt-0.5`}>Clinic OS</p>
+                <h1 className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">MedSync</h1>
+                <p className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold tracking-wider uppercase leading-none mt-0.5">Clinic OS</p>
               </div>
             </div>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className={`p-1.5 rounded-lg transition ${isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"}`}
+              className={`p-1.5 rounded-lg transition ${isDark ? "text-zinc-400 hover:text-white hover:bg-zinc-800" : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"}`}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1914,31 +1914,31 @@ export default function Home() {
                       setActiveTab(tab.id);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold rounded-lg transition-smooth ${
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
                     isActive
                       ? isDark
-                        ? "bg-gradient-to-r from-indigo-950/60 to-slate-900 text-white border-l-2 border-[#0ea5e9] shadow-sm"
-                        : "bg-gradient-to-r from-[#f0f9ff] to-white text-[#06394d] border-l-2 border-[#0F85B0] shadow-sm font-bold"
+                        ? "bg-zinc-800 text-zinc-100 shadow-xs border border-white/[0.08]"
+                        : "bg-zinc-100 text-zinc-950 shadow-xs border border-zinc-200/80 font-bold"
                       : isDark
-                        ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
-                    <svg className={`w-4 h-4 shrink-0 transition-smooth ${isActive ? (isDark ? "text-[#38bdf8]" : "text-[#0F85B0]") : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-4 h-4 shrink-0 transition-colors ${isActive ? (isDark ? "text-sky-400" : "text-sky-600") : "text-zinc-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon}/>
                     </svg>
                     <span className="truncate">{tab.label}</span>
                   </div>
                   {isProtected && !isAdminAuthenticated && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">PIN</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 dark:text-amber-400 font-bold border border-amber-500/20">PIN</span>
                   )}
                 </button>
               );
             })}
           </nav>
         </div>
-        <div className={`p-4 border-t space-y-2 shrink-0 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+        <div className={`p-4 border-t space-y-2 shrink-0 ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
           <button
             type="button"
             onClick={() => {
@@ -1954,18 +1954,18 @@ export default function Home() {
                 setShowAdminPinModal(true);
               }
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg border transition-smooth cursor-pointer ${
+            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
               isUserAdmin
                 ? isDark
-                  ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald"
-                  : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
+                  ? "bg-emerald-950/30 border-emerald-800/50 text-emerald-400"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-xs"
                 : isDark
-                  ? "bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800"
-                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800"
+                  : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
             }`}
           >
             <span className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${isUserAdmin ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}/>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isUserAdmin ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"}`}/>
               <span className="whitespace-nowrap">{isUserAdmin ? "Session Active" : "Admin Locked"}</span>
             </span>
             <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{isUserAdmin ? "Lock" : "Unlock"}</span>
@@ -1976,12 +1976,12 @@ export default function Home() {
             onClick={toggleTheme}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg border transition cursor-pointer ${
               isDark
-                ? "bg-slate-800/40 hover:bg-slate-800 border-slate-800 text-slate-300"
-                : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                ? "bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300"
+                : "bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 shadow-xs"
             }`}
           >
             <span className="flex items-center gap-2">
-              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" /> : <Icons.Moon className="w-3.5 h-3.5 text-[#0ea5e9] shrink-0" />}
+              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" /> : <Icons.Moon className="w-3.5 h-3.5 text-sky-500 shrink-0" />}
               <span className="whitespace-nowrap">{isDark ? "Light Mode" : "Dark Mode"}</span>
             </span>
           </button>
@@ -1989,16 +1989,16 @@ export default function Home() {
       </aside>
 
       {/* ── Desktop Pinned Sidebar (Fixed to screen) ── */}
-      <aside className={`hidden lg:flex w-52 xl:w-60 fixed inset-y-0 left-0 z-30 border-r flex-col justify-between transition-all ${isDark ? "bg-[#090d16] border-slate-800/80 backdrop-blur-xl" : "bg-white border-slate-200 backdrop-blur-xl shadow-sm"}`}>
+      <aside className={`hidden lg:flex w-56 xl:w-64 fixed inset-y-0 left-0 z-30 border-r flex-col justify-between transition-all ${isDark ? "bg-[#0d0d10] border-zinc-800/80" : "bg-white border-zinc-200/90 shadow-[1px_0_3px_0_rgba(0,0,0,0.02)]"}`}>
         <div className="p-3.5 xl:p-4 overflow-y-auto flex-1">
           <div className="flex items-center gap-2.5 mb-6 xl:mb-7 px-1">
-            <div className={`h-8 w-8 xl:h-9 xl:w-9 rounded-xl p-1.5 flex items-center justify-center shadow-md transition-all shrink-0 ${isDark ? "bg-slate-800/90 border border-slate-700/60 shadow-black/40" : "bg-white border border-slate-200 shadow-slate-200"}`}>
+            <div className={`h-8 w-8 rounded-lg p-1.5 flex items-center justify-center shrink-0 ${isDark ? "bg-zinc-800/90 border border-zinc-700/60" : "bg-zinc-100 border border-zinc-200 shadow-xs"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="MedSync" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className={`font-extrabold text-sm tracking-tight bg-gradient-to-r ${isDark ? "from-white via-slate-200 to-[#7dd3fc]" : "from-slate-900 via-indigo-950 to-[#0F85B0]"} bg-clip-text text-transparent`}>MedSync</h1>
-              <p className={`text-[10px] ${isDark ? "text-[#38bdf8]" : "text-[#0F85B0]"} font-semibold tracking-wider uppercase leading-none mt-0.5`}>Clinic OS</p>
+              <h1 className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">MedSync</h1>
+              <p className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold tracking-wider uppercase leading-none mt-0.5">Clinic OS</p>
             </div>
           </div>
           <nav className="space-y-1">
@@ -2018,31 +2018,31 @@ export default function Home() {
                       setActiveTab(tab.id);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 xl:py-2.5 text-xs font-semibold rounded-lg transition-smooth ${
+                  className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 xl:py-2 text-xs font-semibold rounded-lg transition-all ${
                     isActive
                       ? isDark
-                        ? "bg-gradient-to-r from-indigo-950/60 to-slate-900 text-white border-l-2 border-[#0ea5e9] shadow-sm"
-                        : "bg-gradient-to-r from-[#f0f9ff] to-white text-[#06394d] border-l-2 border-[#0F85B0] shadow-sm font-bold"
+                        ? "bg-zinc-800/90 text-zinc-100 shadow-xs border border-white/[0.08]"
+                        : "bg-zinc-100 text-zinc-950 shadow-xs border border-zinc-200/80 font-bold"
                       : isDark
-                        ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850/50"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70"
                   }`}
                 >
                   <div className="flex items-center gap-2 xl:gap-2.5 truncate">
-                    <svg className={`w-4 h-4 shrink-0 transition-smooth ${isActive ? (isDark ? "text-[#38bdf8]" : "text-[#0F85B0]") : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-4 h-4 shrink-0 transition-colors ${isActive ? (isDark ? "text-sky-400" : "text-sky-600") : "text-zinc-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon}/>
                     </svg>
                     <span className="truncate">{tab.label}</span>
                   </div>
                   {isProtected && !isAdminAuthenticated && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">PIN</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 dark:text-amber-400 font-bold border border-amber-500/20">PIN</span>
                   )}
                 </button>
               );
             })}
           </nav>
         </div>
-        <div className={`p-3.5 xl:p-4 border-t space-y-2 shrink-0 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+        <div className={`p-3.5 xl:p-4 border-t space-y-2 shrink-0 ${isDark ? "border-zinc-850" : "border-zinc-200"}`}>
           <button
             type="button"
             onClick={() => {
@@ -2058,18 +2058,18 @@ export default function Home() {
                 setShowAdminPinModal(true);
               }
             }}
-            className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 text-xs font-bold rounded-lg border transition-smooth cursor-pointer ${
+            className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
               isUserAdmin
                 ? isDark
-                  ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald"
-                  : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
+                  ? "bg-emerald-950/30 border-emerald-800/50 text-emerald-400"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-xs"
                 : isDark
-                  ? "bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800"
-                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800"
+                  : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
             }`}
           >
             <span className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${isUserAdmin ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}/>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isUserAdmin ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"}`}/>
               <span className="whitespace-nowrap">{isUserAdmin ? "Session Active" : "Admin Locked"}</span>
             </span>
             <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{isUserAdmin ? "Lock" : "Unlock"}</span>
@@ -2080,12 +2080,12 @@ export default function Home() {
             onClick={toggleTheme}
             className={`w-full flex items-center justify-between px-2.5 xl:px-3 py-2 text-xs font-semibold rounded-lg border transition cursor-pointer ${
               isDark
-                ? "bg-slate-800/40 hover:bg-slate-800 border-slate-800 text-slate-300"
-                : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                ? "bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300"
+                : "bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 shadow-xs"
             }`}
           >
             <span className="flex items-center gap-2">
-              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" /> : <Icons.Moon className="w-3.5 h-3.5 text-[#0ea5e9] shrink-0" />}
+              {isDark ? <Icons.Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" /> : <Icons.Moon className="w-3.5 h-3.5 text-sky-500 shrink-0" />}
               <span className="whitespace-nowrap">{isDark ? "Light Mode" : "Dark Mode"}</span>
             </span>
           </button>
@@ -2093,14 +2093,14 @@ export default function Home() {
       </aside>
 
       {/* ── Main Area (Offset by fixed sidebar on desktop) ── */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-52 xl:pl-60 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-56 xl:pl-64 min-h-screen">
         {/* Header (Sticky at top) */}
-        <header className={`h-14 sticky top-0 z-40 border-b flex items-center justify-between px-3 sm:px-5 lg:px-6 shrink-0 backdrop-blur-xl transition-all ${isDark ? "bg-[#090d16]/95 border-slate-800/80" : "bg-white/95 border-slate-200 shadow-xs"}`}>
+        <header className={`h-13 sticky top-0 z-40 border-b flex items-center justify-between px-3 sm:px-5 lg:px-6 shrink-0 backdrop-blur-md transition-all ${isDark ? "bg-[#09090b]/80 border-zinc-800/80" : "bg-white/80 border-zinc-200/80 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]"}`}>
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Hamburger Button on small screens */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className={`p-2 rounded-lg lg:hidden transition ${isDark ? "text-slate-300 hover:bg-slate-800" : "text-slate-700 hover:bg-slate-100"}`}
+              className={`p-2 rounded-lg lg:hidden transition ${isDark ? "text-zinc-300 hover:bg-zinc-800" : "text-zinc-700 hover:bg-zinc-100"}`}
               title="Open Navigation"
               aria-label="Open Navigation"
             >
@@ -2118,10 +2118,10 @@ export default function Home() {
               title="Click to view Biometric Terminal Settings & Hardware Diagnostics"
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer hover:opacity-90 active:scale-95 ${
                 biometricSettings.status === "Connected"
-                  ? isDark ? "bg-emerald-950/40 border-emerald-800/50 text-emerald-400 glow-emerald" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  ? isDark ? "bg-emerald-950/30 border-emerald-800/50 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-xs"
                   : biometricSettings.status === "Syncing"
-                  ? isDark ? "bg-amber-950/40 border-amber-800/50 text-amber-400 glow-amber" : "bg-amber-50 border-amber-200 text-amber-700"
-                  : isDark ? "bg-rose-950/40 border-rose-800/50 text-rose-400" : "bg-rose-50 border-rose-200 text-rose-700"
+                  ? isDark ? "bg-amber-950/30 border-amber-800/50 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-700 shadow-xs"
+                  : isDark ? "bg-rose-950/30 border-rose-800/50 text-rose-400" : "bg-rose-50 border-rose-200 text-rose-700 shadow-xs"
               }`}
             >
               <span className={`w-2 h-2 shrink-0 rounded-full ${biometricSettings.status === "Connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-ping"}`}/>
@@ -2133,28 +2133,28 @@ export default function Home() {
             <button
               onClick={triggerSync}
               disabled={biometricSettings.status === "Syncing"}
-              className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg border transition-smooth flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-2 shrink-0 ${
                 isDark
-                  ? "bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-200"
-                  : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
+                  ? "bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-200 shadow-xs"
+                  : "bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 shadow-xs"
               }`}
             >
-              <Icons.Refresh className={`w-3.5 h-3.5 ${biometricSettings.status === "Syncing" ? "animate-spin text-amber-400" : "text-[#38bdf8]"}`} />
+              <Icons.Refresh className={`w-3.5 h-3.5 ${biometricSettings.status === "Syncing" ? "animate-spin text-amber-400" : "text-sky-500 dark:text-sky-400"}`} />
               <span className="hidden xl:inline">{biometricSettings.status === "Syncing" ? "Syncing Logs..." : "Refresh Cloud Logs"}</span>
               <span className="inline xl:hidden">{biometricSettings.status === "Syncing" ? "Syncing..." : "Sync"}</span>
             </button>
 
-            <div className={`flex items-center gap-2 sm:gap-2.5 px-2 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold shrink-0 ${isDark ? "bg-slate-900/90 border-slate-800 text-slate-200" : "bg-white border-slate-200 text-slate-800 shadow-sm"}`}>
-              <div className="w-7 h-7 shrink-0 rounded-lg bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0F85B0]/30 font-extrabold flex items-center justify-center text-xs shadow-xs">
+            <div className={`flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold shrink-0 ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-200" : "bg-white border-zinc-200 text-zinc-800 shadow-xs"}`}>
+              <div className="w-6 h-6 shrink-0 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold flex items-center justify-center text-xs">
                 {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
               </div>
               <div className="hidden xs:flex sm:flex flex-col text-left shrink-0">
                 <span className="font-bold text-xs leading-none whitespace-nowrap">{currentUser?.name || "Clinic Administrator"}</span>
-                <span className="text-[9px] text-[#38bdf8] font-semibold uppercase tracking-wider leading-none mt-0.5">{currentUser?.role || "Admin"}</span>
+                <span className="text-[9px] text-sky-600 dark:text-sky-400 font-semibold uppercase tracking-wider leading-none mt-0.5">{currentUser?.role || "Admin"}</span>
               </div>
               <button
                 onClick={logoutUser}
-                className="ml-1 px-1.5 sm:px-2 py-1 text-[10px] font-bold rounded border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition shrink-0 whitespace-nowrap"
+                className="ml-1 px-2 py-1 text-[10px] font-bold rounded-md border border-rose-500/20 text-rose-500 dark:text-rose-400 hover:bg-rose-500/10 transition shrink-0 whitespace-nowrap"
                 title="Sign Out"
               >
                 Sign Out
@@ -2170,34 +2170,33 @@ export default function Home() {
           {activeTab === "dashboard" && (
             <div className="space-y-6">
 
-              {/* Stat cards with gradient borders & modern counters */}
+              {/* Stat cards - High-craft typography & aligned metrics */}
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                 {[
-                  { label: "Total Staff", value: dashboardMetrics.totalStaff, color: "from-[#0ea5e9] to-[#0F85B0]", badge: "Active", icon: <Icons.Users className="w-4 h-4 text-[#38bdf8]" /> },
-                  { label: "Present Today", value: dashboardMetrics.present, color: "from-emerald-500 to-teal-600", badge: "On Time", icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
-                  { label: "Late Arrivals", value: dashboardMetrics.late, color: "from-amber-500 to-orange-600", badge: salarySettings.punctualGraceType === "Strict" ? "Strict" : `Grace ${salarySettings.punctualGraceMinutes ?? 15}m`, icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
-                  { label: "On Leave", value: dashboardMetrics.onLeave, color: "from-[#0ea5e9] to-[#0F85B0]", badge: "Approved", icon: <Icons.Sun className="w-4 h-4 text-purple-400" /> },
-                  { label: "Absent", value: dashboardMetrics.absent, color: "from-rose-500 to-red-600", badge: "Action Req", icon: <Icons.AlertTriangle className="w-4 h-4 text-rose-400" /> },
+                  { label: "Total Staff", value: dashboardMetrics.totalStaff, badge: "Active", icon: <Icons.Users className="w-4 h-4 text-sky-500" /> },
+                  { label: "Present Today", value: dashboardMetrics.present, badge: "On Time", icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-500" /> },
+                  { label: "Late Arrivals", value: dashboardMetrics.late, badge: salarySettings.punctualGraceType === "Strict" ? "Strict" : `Grace ${salarySettings.punctualGraceMinutes ?? 15}m`, icon: <Icons.Clock className="w-4 h-4 text-amber-500" /> },
+                  { label: "On Leave", value: dashboardMetrics.onLeave, badge: "Approved", icon: <Icons.Sun className="w-4 h-4 text-indigo-500" /> },
+                  { label: "Absent", value: dashboardMetrics.absent, badge: "Action Req", icon: <Icons.AlertTriangle className="w-4 h-4 text-rose-500" /> },
                 ].map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-3 sm:p-4 rounded-xl border transition-smooth relative overflow-hidden group backdrop-blur-xl ${
+                    className={`p-4 rounded-xl border transition-all duration-200 relative overflow-hidden group ${
                       isDark
-                        ? "bg-white/5 border-white/10 hover:border-white/20 shadow-xl"
-                        : "bg-white/80 border-black/5 hover:border-black/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                        ? "bg-[#111114] border-white/[0.08] hover:border-white/[0.14] shadow-xs"
+                        : "bg-white border-zinc-200/90 hover:border-zinc-300 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate mr-1">{item.label}</span>
-                      <span className="text-base shrink-0">{item.icon}</span>
+                      <span className="text-[11px] font-semibold tracking-tight text-zinc-500 dark:text-zinc-400 truncate mr-1">{item.label}</span>
+                      <span className="shrink-0 p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-850 text-zinc-600 dark:text-zinc-300">{item.icon}</span>
                     </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                      <span className={`text-xl sm:text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{item.value}</span>
-                      <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${isDark ? "bg-slate-800/40 text-slate-300 border border-slate-700/50" : "bg-slate-100 text-slate-700 border border-slate-200"}`}>
+                    <div className="mt-3 flex items-baseline justify-between gap-2">
+                      <span className={`text-2xl font-bold tracking-tight font-mono ${isDark ? "text-zinc-50" : "text-zinc-900"}`}>{item.value}</span>
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${isDark ? "bg-zinc-800/60 text-zinc-300 border-zinc-700/60" : "bg-zinc-100 text-zinc-700 border-zinc-200/80"}`}>
                         {item.badge}
                       </span>
                     </div>
-                    <div className={`h-1 w-full bg-gradient-to-r ${item.color} rounded-full mt-2.5 sm:mt-3 opacity-80 group-hover:opacity-100 transition-smooth`} />
                   </div>
                 ))}
               </div>
@@ -3845,17 +3844,17 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button onClick={downloadPayrollCSV} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-smooth ${isDark ? "bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={downloadPayrollCSV} className={`px-3 py-1.5 text-xs font-semibold rounded-lg border flex items-center gap-1.5 transition-all ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-xs"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>Export CSV</span>
                   </button>
                   {!isCurrentMonthFinalized && (
-                    <button onClick={handleFinalizePayroll} className="px-3.5 py-2 text-xs font-bold rounded-xl bg-[#0F85B0] hover:bg-[#0c6c8f] text-white shadow-md shadow-[#0F85B0]/20 transition-smooth flex items-center gap-1.5">
+                    <button onClick={handleFinalizePayroll} className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
                       <Icons.LockClosed className="w-3.5 h-3.5" />
                       <span>Finalize Month</span>
                     </button>
                   )}
-                  <button onClick={downloadEpfFormC} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-smooth ${isDark ? "bg-zinc-850 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={downloadEpfFormC} className={`px-3 py-1.5 text-xs font-semibold rounded-lg border flex items-center gap-1.5 transition-all ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-xs"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>EPF Form C3</span>
                   </button>
@@ -3863,118 +3862,120 @@ export default function Home() {
               </div>
 
               {/* 4 Executive Metric Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {/* Gross Salaries Pool */}
-                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-4 rounded-xl border transition-all ${isDark ? "bg-[#111114] border-white/[0.08]" : "bg-white border-zinc-200/90 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">Gross Salaries Pool</span>
-                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"}`}>
-                      <Icons.Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate mr-1">Gross Salaries Pool</span>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isDark ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"}`}>
+                      <Icons.Briefcase className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <p className={`text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                  <p className={`text-xl sm:text-2xl font-bold font-mono tracking-tight mt-2 ${isDark ? "text-zinc-50" : "text-zinc-900"}`}>
                     LKR {payrollTotals.gross.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Total monthly salary allocation</p>
+                  <p className="text-[11px] text-zinc-400 mt-1 truncate">Total monthly salary allocation</p>
                 </div>
 
                 {/* Net Remittances */}
-                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-4 rounded-xl border transition-all ${isDark ? "bg-[#111114] border-white/[0.08]" : "bg-white border-zinc-200/90 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">Net Remittances</span>
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8] shrink-0">
-                      <Icons.Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate mr-1">Net Remittances</span>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-sky-500/10 text-sky-600 dark:text-sky-400 shrink-0">
+                      <Icons.Wallet className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <p className="text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 text-[#0F85B0] dark:text-[#38bdf8]">
+                  <p className="text-xl sm:text-2xl font-bold font-mono tracking-tight mt-2 text-sky-600 dark:text-sky-400">
                     LKR {payrollTotals.net.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Disbursable to staff accounts</p>
+                  <p className="text-[11px] text-zinc-400 mt-1 truncate">Disbursable to staff accounts</p>
                 </div>
 
                 {/* EPF (8% + 12%) */}
-                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-4 rounded-xl border transition-all ${isDark ? "bg-[#111114] border-white/[0.08]" : "bg-white border-zinc-200/90 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">EPF Total (8%+12%)</span>
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-teal-500/10 text-teal-600 dark:text-teal-400 shrink-0">
-                      <Icons.Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate mr-1">EPF Total (8%+12%)</span>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <Icons.Shield className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <p className={`text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 ${isDark ? "text-white" : "text-zinc-900"}`}>
+                  <p className={`text-xl sm:text-2xl font-bold font-mono tracking-tight mt-2 ${isDark ? "text-zinc-50" : "text-zinc-900"}`}>
                     LKR {(payrollTotals.epfEmp + payrollTotals.epfEmr).toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Statutory retirement fund total</p>
+                  <p className="text-[11px] text-zinc-400 mt-1 truncate">Statutory retirement fund total</p>
                 </div>
 
                 {/* APIT Total */}
-                <div className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${isDark ? "bg-zinc-900/60 border-zinc-800/80 shadow-lg shadow-black/20" : "bg-white border-zinc-200/90 shadow-sm"}`}>
+                <div className={`p-4 rounded-xl border transition-all ${isDark ? "bg-[#111114] border-white/[0.08]" : "bg-white border-zinc-200/90 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]"}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate mr-1">APIT Total</span>
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
-                      <Icons.FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate mr-1">APIT Total</span>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                      <Icons.FileText className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <p className="text-lg sm:text-xl font-extrabold mt-1.5 sm:mt-2 text-amber-600 dark:text-amber-400">
+                  <p className="text-xl sm:text-2xl font-bold font-mono tracking-tight mt-2 text-amber-600 dark:text-amber-400">
                     LKR {Math.round(payrollTotals.apit).toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-1 truncate">Inland revenue withholding tax</p>
+                  <p className="text-[11px] text-zinc-400 mt-1 truncate">Inland revenue withholding tax</p>
                 </div>
               </div>
 
               {/* Filter / Period Bar */}
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   {monthSelector(selectedMonth, setSelectedMonth)}
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-medium ${isDark ? "bg-zinc-850 border-zinc-800 text-zinc-400" : "bg-white border-zinc-200 text-zinc-500 shadow-2xs"}`}>
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-400" : "bg-white border-zinc-200 text-zinc-600 shadow-2xs"}`}>
                     <Icons.Calendar className="w-3.5 h-3.5 text-zinc-400" />
                     <span>{dateRange.startDate} → {dateRange.endDate}</span>
                   </div>
                   {isCurrentMonthFinalized ? (
-                    <span className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border flex items-center gap-1.5 ${statusColor("Finalized", isDark)}`}>
+                    <span className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1.5 ${statusColor("Finalized", isDark)}`}>
                       <Icons.LockClosed className="w-3 h-3" />
                       <span>Finalized</span>
                     </span>
                   ) : (
-                    <span className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border flex items-center gap-1.5 ${isDark ? "bg-sky-500/10 border-sky-500/30 text-sky-400" : "bg-sky-50 border-sky-200 text-[#0F85B0]"}`}>
+                    <span className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1.5 ${isDark ? "bg-sky-500/10 border-sky-500/30 text-sky-400" : "bg-sky-50 border-sky-200 text-sky-700"}`}>
                       <Icons.Clock className="w-3 h-3" />
                       <span>Active Cycle</span>
                     </span>
                   )}
-                  <span className={`px-2.5 py-1 rounded-xl text-[11px] font-medium border ${isDark ? "bg-slate-800/50 border-slate-700/60 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                  <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium border ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-400" : "bg-zinc-50 border-zinc-200 text-zinc-600"}`}>
                     {payrollCalcs.length} {payrollCalcs.length === 1 ? "Staff Member" : "Staff Members"} Active
                   </span>
                 </div>
               </div>
 
               {/* Payroll table Card */}
-              <div className={`rounded-2xl border overflow-hidden transition-smooth backdrop-blur-xl ${
+              <div className={`rounded-xl border overflow-hidden transition-all ${
                 isDark
-                  ? "bg-white/5 border-white/10 shadow-xl"
-                  : "bg-white/80 border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                  ? "bg-[#111114] border-white/[0.08] shadow-sm"
+                  : "bg-white border-zinc-200/90 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]"
               }`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
-                    <thead className={`border-b ${isDark ? "bg-slate-900/50 border-slate-800/80" : "bg-slate-50/80 border-slate-200/80"}`}>
+                    <thead className={`border-b ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50/90 border-zinc-200"}`}>
                       <tr>
-                        {["Staff Member", "Base (LKR)", "OT Earn", "Allowances", "No-Pay", "EPF (8%)", "APIT", "Net Salary", "Actions"].map((h, i) => (
-                          <th key={h} className={`px-3 py-3 font-extrabold text-[10px] uppercase tracking-wider text-slate-400 whitespace-nowrap ${
-                            i === 8 ? "text-right" : "text-left"
-                          }`}>
-                            {h}
-                          </th>
-                        ))}
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-left whitespace-nowrap">Staff Member</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">Base (LKR)</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">OT Earn</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">Allowances</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">No-Pay</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">EPF (8%)</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">APIT</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">Net Salary</th>
+                        <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className={`divide-y ${isDark ? "divide-slate-800/60" : "divide-slate-100"}`}>
+                    <tbody className={`divide-y ${isDark ? "divide-zinc-850" : "divide-zinc-100"}`}>
                       {payrollCalcs.length === 0 ? (
                         <tr>
                           <td colSpan={9} className="px-4 py-12 text-center text-zinc-400">
                             <div className="flex flex-col items-center justify-center gap-2">
-                              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+                              <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
                                 <Icons.Users className="w-5 h-5" />
                               </div>
-                              <p className={`font-bold text-xs ${isDark ? "text-slate-300" : "text-slate-700"}`}>No Staff Worked in This Payroll Cycle</p>
-                              <p className="text-[10px] text-slate-500 max-w-sm">Only employees with biometric attendance scans or approved leaves during this period are included in monthly payroll calculations.</p>
+                              <p className={`font-bold text-xs ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>No Staff Worked in This Payroll Cycle</p>
+                              <p className="text-[10px] text-zinc-500 max-w-sm">Only employees with biometric attendance scans or approved leaves during this period are included in monthly payroll calculations.</p>
                             </div>
                           </td>
                         </tr>
@@ -3985,52 +3986,56 @@ export default function Home() {
                         const hasAdjustment = existing && (existing.bonusAmount > 0 || existing.deductionAmount > 0 || (monthlyExcessIncome[adjKey] || 0) > 0);
 
                         return (
-                          <tr key={c.employee.id} className={`hover:${isDark ? "bg-slate-800/20" : "bg-slate-50/70"} transition-smooth ${isCurrentMonthFinalized ? "opacity-85" : ""}`}>
-                            <td className="px-3 py-3 whitespace-nowrap">
+                          <tr key={c.employee.id} className={`hover:${isDark ? "bg-zinc-850/50" : "bg-zinc-50/80"} transition-colors ${isCurrentMonthFinalized ? "opacity-90" : ""}`}>
+                            <td className="px-4 py-3 whitespace-nowrap">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-extrabold text-[11px] flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                                <div className="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center border border-sky-500/20 shrink-0">
                                   {c.employee.firstName[0]}{c.employee.lastName[0]}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-1.5">
-                                    <p className={`font-bold text-xs ${isDark ? "text-white" : "text-zinc-900"}`}>
+                                    <p className={`font-semibold text-xs ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>
                                       {c.employee.firstName} {c.employee.lastName}
                                     </p>
                                     {hasAdjustment && (
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#0ea5e9]" title="Manual adjustments active" />
+                                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500" title="Manual adjustments active" />
                                     )}
                                   </div>
-                                  <p className="text-[10px] text-zinc-400">
-                                    {c.employee.role} · <span className="font-semibold text-zinc-500 dark:text-zinc-400">{c.employee.payType}</span>
+                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                                    {c.employee.role} · <span className="text-zinc-600 dark:text-zinc-300">{c.employee.payType}</span>
                                   </p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-3 font-mono font-semibold whitespace-nowrap">
-                              <p className={isDark ? "text-zinc-200" : "text-zinc-800"}>LKR {c.basicEarnings.toLocaleString()}</p>
+                            <td className="px-4 py-3 text-right font-mono font-medium whitespace-nowrap">
+                              <p className={isDark ? "text-zinc-100" : "text-zinc-900"}>LKR {c.basicEarnings.toLocaleString()}</p>
                               {c.employee.payType === "Session-based" && (
-                                <p className="text-[9px] text-[#0ea5e9] mt-0.5 font-sans font-medium">{c.sessionCount} sessions</p>
+                                <p className="text-[10px] text-sky-600 dark:text-sky-400 mt-0.5 font-sans">{c.sessionCount} sessions</p>
                               )}
                             </td>
-                            <td className="px-3 py-3 font-mono text-zinc-400 whitespace-nowrap">
+                            <td className="px-4 py-3 text-right font-mono text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
                               LKR {Math.round(c.otPay).toLocaleString()}
                             </td>
-                            <td className="px-3 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            <td className="px-4 py-3 text-right font-mono font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                               +LKR {c.totalAllowances.toLocaleString()}
                             </td>
-                            <td className="px-3 py-3 font-mono font-bold text-rose-500 whitespace-nowrap">
-                              {c.noPayDeduction > 0 ? `-LKR ${Math.round(c.noPayDeduction).toLocaleString()}` : "LKR 0"}
+                            <td className="px-4 py-3 text-right font-mono whitespace-nowrap">
+                              {c.noPayDeduction > 0 ? (
+                                <span className="font-medium text-rose-600 dark:text-rose-400">-LKR {Math.round(c.noPayDeduction).toLocaleString()}</span>
+                              ) : (
+                                <span className="text-zinc-400 dark:text-zinc-500">LKR 0</span>
+                              )}
                             </td>
-                            <td className="px-3 py-3 font-mono text-zinc-400 whitespace-nowrap">
-                              {c.employee.epfEligible ? `-LKR ${Math.round(c.employeeEpf).toLocaleString()}` : "Exempt"}
+                            <td className="px-4 py-3 text-right font-mono text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                              {c.employee.epfEligible ? `-LKR ${Math.round(c.employeeEpf).toLocaleString()}` : <span className="text-zinc-400">Exempt</span>}
                             </td>
-                            <td className="px-3 py-3 font-mono text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                              {c.apitMonthly > 0 ? `-LKR ${Math.round(c.apitMonthly).toLocaleString()}` : "—"}
+                            <td className="px-4 py-3 text-right font-mono text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                              {c.apitMonthly > 0 ? `-LKR ${Math.round(c.apitMonthly).toLocaleString()}` : <span className="text-zinc-400">—</span>}
                             </td>
-                            <td className="px-3 py-3 font-mono font-extrabold text-xs text-[#0F85B0] dark:text-[#38bdf8] whitespace-nowrap">
+                            <td className="px-4 py-3 text-right font-mono font-bold text-xs text-zinc-950 dark:text-zinc-50 whitespace-nowrap">
                               LKR {Math.round(c.netSalary).toLocaleString()}
                             </td>
-                            <td className="px-3 py-3 text-right whitespace-nowrap">
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
                               <div className="inline-flex items-center gap-1.5">
                                 <button
                                   type="button"
@@ -4043,10 +4048,10 @@ export default function Home() {
                                     setManualExceedIncomeInput(monthlyExcessIncome[adjKey] || 0);
                                     setPayslipNoteInput(existing.note);
                                   }}
-                                  className={`px-2 py-1 rounded-lg border text-[10px] font-bold transition-smooth flex items-center gap-1 ${
+                                  className={`px-2.5 py-1 rounded-md border text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer ${
                                     isDark
-                                      ? "border-slate-700 bg-slate-800/80 text-sky-400 hover:bg-slate-700 hover:text-white"
-                                      : "border-slate-200 bg-white text-[#0F85B0] hover:bg-slate-50 shadow-2xs"
+                                      ? "border-zinc-700 bg-zinc-800 text-sky-400 hover:bg-zinc-700 hover:text-white"
+                                      : "border-zinc-200 bg-white text-sky-700 hover:bg-zinc-50 shadow-2xs"
                                   }`}
                                 >
                                   <Icons.Edit className="w-3 h-3" />
@@ -4055,9 +4060,9 @@ export default function Home() {
                                 <button
                                   type="button"
                                   onClick={() => setSelectedPaySlip(c.employee.id)}
-                                  className={`px-2 py-1 rounded-lg border text-[10px] font-bold transition-smooth active:scale-95 flex items-center gap-1 ${
+                                  className={`px-2.5 py-1 rounded-md border text-[11px] font-medium transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
                                     isDark
-                                      ? "border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                      ? "border-zinc-700 bg-zinc-850 text-zinc-300 hover:bg-zinc-750 hover:text-white"
                                       : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 shadow-2xs"
                                   }`}
                                 >
@@ -7352,36 +7357,36 @@ export default function Home() {
                         return (
                           <div
                             key={emp.id}
-                            className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                            className={`p-4 rounded-xl border transition-all ${
                               isDark
-                                ? "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
-                                : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-md"
+                                ? "bg-[#111114] border-white/[0.08] hover:border-white/[0.14]"
+                                : "bg-white border-zinc-200/90 hover:border-zinc-300 shadow-[0_1px_3px_0_rgba(0,0,0,0.03)]"
                             }`}
                           >
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                              <div className="flex items-start sm:items-center gap-3.5">
-                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#0F85B0]/25 via-sky-500/20 to-[#0ea5e9]/25 text-[#0F85B0] dark:text-[#38bdf8] font-black text-sm flex items-center justify-center border border-[#0F85B0]/30 shadow-xs shrink-0">
+                              <div className="flex items-start sm:items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center border border-sky-500/20 shrink-0">
                                   {initials}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <h4 className="font-black text-sm tracking-tight text-slate-900 dark:text-white">
+                                    <h4 className="font-semibold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
                                       {emp.firstName} {emp.lastName}
                                     </h4>
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                                      isDark ? "bg-[#042633]/60 border border-[#09526e]/50 text-[#7dd3fc]" : "bg-[#f0f9ff] border border-[#bae6fd] text-[#0c6c8f]"
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium border ${
+                                      isDark ? "bg-zinc-850 border-zinc-750 text-zinc-300" : "bg-zinc-100 border-zinc-200 text-zinc-700"
                                     }`}>
                                       {emp.role}
                                     </span>
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 ${
-                                      isDark ? "bg-slate-800 text-slate-300 border border-slate-700" : "bg-slate-100 text-slate-700 border border-slate-200"
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-medium flex items-center gap-1 ${
+                                      isDark ? "bg-zinc-900 text-zinc-400 border border-zinc-800" : "bg-zinc-50 text-zinc-600 border border-zinc-200"
                                     }`}>
-                                      <Icons.Camera className="w-2.5 h-2.5 text-[#0ea5e9]" />
+                                      <Icons.Camera className="w-2.5 h-2.5 text-sky-500" />
                                       <span>Biometric #{emp.biometricId || "Unlinked"}</span>
                                     </span>
                                     {emp.allowEarlyOt && (
-                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${
-                                        isDark ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20" : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium flex items-center gap-1 ${
+                                        isDark ? "bg-indigo-950/40 text-indigo-400 border border-indigo-800/50" : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                                       }`}>
                                         <Icons.Clock className="w-2.5 h-2.5" />
                                         <span>Early OT</span>
@@ -7390,25 +7395,25 @@ export default function Home() {
                                   </div>
 
                                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border flex items-center gap-1.5 ${
-                                      isDark ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border flex items-center gap-1.5 ${
+                                      isDark ? "bg-emerald-950/30 border-emerald-800/40 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"
                                     }`}>
                                       <Icons.Calendar className="w-3 h-3 shrink-0" />
                                       <span>Worked: LKR {workedRate.toLocaleString()}/day</span>
-                                      {emp.attendanceBonusRate > 0 && <span className="text-[8px] opacity-75 font-black uppercase">(Custom)</span>}
+                                      {emp.attendanceBonusRate > 0 && <span className="text-[8px] opacity-75 font-bold uppercase">(Custom)</span>}
                                     </span>
-                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border flex items-center gap-1.5 ${
-                                      isDark ? "bg-sky-500/10 border-sky-500/30 text-sky-400" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
+                                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border flex items-center gap-1.5 ${
+                                      isDark ? "bg-sky-950/30 border-sky-800/40 text-sky-400" : "bg-sky-50 border-sky-200 text-sky-700"
                                     }`}>
                                       <Icons.Clock className="w-3 h-3 shrink-0" />
                                       <span>Punctual: LKR {punctualRate.toLocaleString()}/day</span>
-                                      {emp.punctualBonusRate > 0 && <span className="text-[8px] opacity-75 font-black uppercase">(Custom)</span>}
+                                      {emp.punctualBonusRate > 0 && <span className="text-[8px] opacity-75 font-bold uppercase">(Custom)</span>}
                                     </span>
                                     {emp.allowanceIds.map(aid => {
                                       const al = allowances.find(a => a.id === aid);
                                       return al ? (
-                                        <span key={aid} className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium ${
-                                          isDark ? "border-slate-800 bg-slate-800/40 text-slate-400" : "border-slate-200 bg-slate-50 text-slate-600"
+                                        <span key={aid} className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${
+                                          isDark ? "border-zinc-800 bg-zinc-900 text-zinc-400" : "border-zinc-200 bg-zinc-50 text-zinc-600"
                                         }`}>
                                           {al.name}
                                         </span>
@@ -7418,33 +7423,31 @@ export default function Home() {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/60">
+                              <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800">
                                 <div className="text-left sm:text-right">
-                                  <p className="font-black text-sm text-slate-900 dark:text-white">
+                                  <p className="font-bold font-mono text-sm text-zinc-900 dark:text-zinc-100">
                                     {emp.payType === "Fixed Monthly"
                                       ? `LKR ${cardSalary.basicSalary.toLocaleString()}/mo`
                                       : emp.payType === "Session-based"
                                         ? `LKR ${(cardSalary.sessionRate || emp.sessionRate).toLocaleString()}/session`
                                         : `LKR ${(cardSalary.hourlyRate || emp.hourlyRate).toLocaleString()}/hr`}
                                   </p>
-                                  <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                                  <p className="text-[10px] font-medium text-zinc-400 mt-0.5">
                                     {emp.epfEligible ? "EPF Subject" : "EPF Exempt"}
                                     {emp.taxable ? " · APIT" : ""} · {emp.payType}
                                   </p>
                                 </div>
 
-                                <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-1.5 pl-3 border-l border-zinc-200 dark:border-zinc-800">
                                   <button
                                     type="button"
                                     onClick={() => openEditEmp(emp)}
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
-                                      isDark
-                                        ? "border-slate-700 bg-slate-800/60 text-slate-300 hover:text-white hover:bg-slate-700"
-                                        : "border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs"
+                                    className={`w-7 h-7 rounded-lg flex items-center justify-center border transition cursor-pointer ${
+                                      isDark ? "border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white" : "border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900 shadow-2xs"
                                     }`}
                                     title="Edit Staff Member"
                                   >
-                                    <Icons.Pencil className="w-3.5 h-3.5" />
+                                    <Icons.Edit className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     type="button"
@@ -7453,10 +7456,10 @@ export default function Home() {
                                         deleteEmployee(emp.id);
                                       }
                                     }}
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
+                                    className={`w-7 h-7 rounded-lg flex items-center justify-center border transition cursor-pointer ${
                                       isDark
                                         ? "border-rose-900/40 bg-rose-950/20 text-rose-400 hover:bg-rose-900/40"
-                                        : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-xs"
+                                        : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-2xs"
                                     }`}
                                     title="Delete Member"
                                   >
@@ -8303,59 +8306,59 @@ export default function Home() {
 
       {/* ═══════════════ MODAL: ADD/EDIT EMPLOYEE ═══════════════ */}
       {showAddEmpModal && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all ${isDark ? "bg-slate-950/75" : "bg-slate-900/40"}`}>
-          <div className={`w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border transition-all backdrop-blur-2xl ${
-            isDark ? "bg-slate-900/95 border-slate-800 shadow-black/60" : "bg-white/95 border-slate-200/90 shadow-2xl shadow-slate-900/10"
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 animate-in fade-in ${isDark ? "bg-black/75" : "bg-zinc-900/40"}`}>
+          <div className="absolute inset-0" onClick={() => setShowAddEmpModal(false)} />
+          <div className={`relative z-10 w-full max-w-2xl rounded-xl overflow-hidden shadow-2xl border transition-all duration-200 animate-in zoom-in-95 ease-out ${
+            isDark ? "bg-[#111114] border-white/[0.08] text-zinc-100" : "bg-white border-zinc-200 text-zinc-900"
           }`}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/80 dark:border-slate-800/80">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
-                  isDark ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/20 text-[#38bdf8]" : "bg-sky-50 border-sky-200 text-[#0F85B0]"
-                }`}>
-                  <Icons.User className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shrink-0">
+                  <Icons.User className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                  <h3 className={`text-sm font-semibold tracking-tight ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>
                     {editingEmpId ? "Edit Staff Profile" : "Register New Staff Profile"}
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                     {editingEmpId 
-                      ? `${newEmp.firstName} ${newEmp.lastName} • ${newEmp.role}` 
-                      : "Configure personal info, compensation, and biometric identifiers"}
+                      ? `${newEmp.firstName} ${newEmp.lastName} · ${newEmp.role}` 
+                      : "Configure identity, compensation, schedules, and biometric credentials"}
                   </p>
                 </div>
               </div>
               <button 
                 type="button"
                 onClick={() => setShowAddEmpModal(false)} 
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className={`w-7 h-7 rounded-lg flex items-center justify-center border transition cursor-pointer ${
+                  isDark ? "border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white" : "border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 shadow-xs"
+                }`}
+                aria-label="Close modal"
               >
-                <Icons.X className="w-5 h-5" />
+                <Icons.X className="w-3.5 h-3.5" />
               </button>
             </div>
 
             {/* Modal Form Body */}
-            <form onSubmit={handleAddEmployee} className="p-6 space-y-5 text-xs max-h-[78vh] overflow-y-auto">
+            <form onSubmit={handleAddEmployee} className="p-6 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
               {/* SECTION 1: IDENTITY & ROLE */}
-              <div className={`p-4 sm:p-5 rounded-2xl border ${
-                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
-              } space-y-4`}>
+              <div className={`p-4 rounded-xl border space-y-3.5 ${
+                isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-zinc-50/70 border-zinc-200/80"
+              }`}>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#0F85B0]" />
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  <Icons.User className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                     Basic Identity &amp; Position
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className={labelCls}>First Name</label>
                     <input 
                       required 
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                        isDark ? "bg-slate-900 border-slate-700 text-white placeholder:text-slate-500" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={inputCls(isDark)}
                       value={newEmp.firstName} 
                       onChange={e => setNewEmp(p => ({ ...p, firstName: e.target.value }))}
                       placeholder="e.g. Deshani"
@@ -8365,9 +8368,7 @@ export default function Home() {
                     <label className={labelCls}>Last Name</label>
                     <input 
                       required 
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                        isDark ? "bg-slate-900 border-slate-700 text-white placeholder:text-slate-500" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={inputCls(isDark)}
                       value={newEmp.lastName} 
                       onChange={e => setNewEmp(p => ({ ...p, lastName: e.target.value }))}
                       placeholder="e.g. Thennakoon"
@@ -8375,14 +8376,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                   <div>
                     <label className={labelCls}>Designation / Role</label>
                     <input 
                       required 
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                        isDark ? "bg-slate-900 border-slate-700 text-white placeholder:text-slate-500" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={inputCls(isDark)}
                       value={newEmp.role} 
                       onChange={e => setNewEmp(p => ({ ...p, role: e.target.value as Employee["role"] }))} 
                       placeholder="e.g. Lead Dental Nurse" 
@@ -8391,9 +8390,7 @@ export default function Home() {
                   <div>
                     <label className={labelCls}>Employment Pay Type</label>
                     <select 
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={inputCls(isDark)}
                       value={newEmp.payType} 
                       onChange={e => setNewEmp(p => ({ ...p, payType: e.target.value as Employee["payType"] }))}
                     >
@@ -8407,14 +8404,12 @@ export default function Home() {
                     <div className="relative">
                       <input 
                         required 
-                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-8 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                          isDark ? "bg-slate-900 border-slate-700 text-[#38bdf8]" : "bg-white border-slate-200 text-[#0F85B0]"
-                        }`}
+                        className={`${inputCls} font-mono pr-8 font-semibold text-sky-600 dark:text-sky-400`}
                         value={newEmp.biometricId} 
                         onChange={e => setNewEmp(p => ({ ...p, biometricId: e.target.value }))}
                         placeholder="e.g. SH001"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">ID</span>
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-medium text-zinc-400">ID</span>
                     </div>
                   </div>
                   <div>
@@ -8423,73 +8418,67 @@ export default function Home() {
                       <input 
                         required 
                         type="text"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-10 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                          isDark ? "bg-slate-900 border-slate-700 text-[#38bdf8]" : "bg-white border-slate-200 text-[#0F85B0]"
-                        }`}
+                        className={`${inputCls} font-mono pr-10 font-semibold text-sky-600 dark:text-sky-400`}
                         value={newEmp.portalPin || "1234"} 
                         onChange={e => setNewEmp(p => ({ ...p, portalPin: e.target.value }))}
                         placeholder="1234"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">PIN</span>
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-medium text-zinc-400">PIN</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* SECTION 2: COMPENSATION & HOURLY RATES */}
-              <div className={`p-4 sm:p-5 rounded-2xl border ${
-                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
-              } space-y-4`}>
+              <div className={`p-4 rounded-xl border space-y-3.5 ${
+                isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-zinc-50/70 border-zinc-200/80"
+              }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    <Icons.Wallet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Compensation &amp; Overtime Base Rate
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                     LKR Currency
                   </span>
                 </div>
 
                 {newEmp.payType === "Fixed Monthly" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className={labelCls}>Basic Salary (LKR)</label>
-                        <span className="text-[10px] text-slate-400">Monthly</span>
+                        <span className="text-[10px] text-zinc-400 font-sans">Monthly</span>
                       </div>
                       <div className="relative">
                         <input 
                           type="number" 
-                          className={`w-full border rounded-xl px-3.5 py-2.5 pr-14 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                            isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                          }`}
+                          className={`${inputCls(isDark)} font-mono pr-12 font-semibold`}
                           value={newEmp.basicSalary} 
                           onChange={e => setNewEmp(p => ({ ...p, basicSalary: parseFloat(e.target.value) || 0 }))}
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR</span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-zinc-400">LKR</span>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1">Base figure for statutory EPF/ETF contributions &amp; no-pay deductions.</p>
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">Base figure for statutory EPF/ETF contributions &amp; no-pay deductions.</p>
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className={labelCls}>Profile Hourly Rate (LKR)</label>
-                        <span className="text-[10px] font-bold text-[#0F85B0] dark:text-[#38bdf8]">OT Manual Base</span>
+                        <span className="text-[10px] font-medium text-sky-600 dark:text-sky-400">OT Manual Base</span>
                       </div>
                       <div className="relative">
                         <input 
                           type="number" 
-                          className={`w-full border rounded-xl px-3.5 py-2.5 pr-16 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                            isDark ? "bg-slate-900 border-slate-700 text-[#38bdf8]" : "bg-white border-slate-200 text-[#0F85B0]"
-                          }`}
+                          className={`${inputCls(isDark)} font-mono pr-16 font-semibold`}
                           value={newEmp.hourlyRate} 
                           onChange={e => setNewEmp(p => ({ ...p, hourlyRate: parseFloat(e.target.value) || 0 }))}
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR/hr</span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-zinc-400">LKR/hr</span>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1">Used when &ldquo;Employee Profile Fixed Hourly Rate&rdquo; is selected in OT settings.</p>
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">Used when &ldquo;Employee Profile Fixed Hourly Rate&rdquo; is selected in OT settings.</p>
                     </div>
                   </div>
                 )}
@@ -8500,13 +8489,11 @@ export default function Home() {
                     <div className="relative">
                       <input 
                         type="number" 
-                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-16 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                          isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                        }`}
+                        className={`${inputCls(isDark)} font-mono pr-20 font-semibold`}
                         value={newEmp.sessionRate} 
                         onChange={e => setNewEmp(p => ({ ...p, sessionRate: parseFloat(e.target.value) || 0 }))}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR/session</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-zinc-400">LKR/session</span>
                     </div>
                   </div>
                 )}
@@ -8517,25 +8504,23 @@ export default function Home() {
                     <div className="relative">
                       <input 
                         type="number" 
-                        className={`w-full border rounded-xl px-3.5 py-2.5 pr-16 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                          isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                        }`}
+                        className={`${inputCls(isDark)} font-mono pr-16 font-semibold`}
                         value={newEmp.hourlyRate} 
                         onChange={e => setNewEmp(p => ({ ...p, hourlyRate: parseFloat(e.target.value) || 0 }))}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR/hr</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-zinc-400">LKR/hr</span>
                     </div>
                   </div>
                 )}
 
                 {editingEmpId && (
-                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800">
-                    <div className="p-3 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/50">
+                  <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                    <div className={`p-3 rounded-lg border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-white border-zinc-200"}`}>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#0F85B0] dark:text-[#38bdf8] flex items-center gap-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
                           <Icons.Calendar className="w-3.5 h-3.5" /> Effective From Month
                         </label>
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                        <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                           Preserves Past Months
                         </span>
                       </div>
@@ -8543,12 +8528,10 @@ export default function Home() {
                         type="month" 
                         value={empEffectiveMonth} 
                         onChange={e => setEmpEffectiveMonth(e.target.value)} 
-                        className={`w-full border rounded-xl px-3.5 py-2 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                          isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                        }`}
+                        className={`${inputCls(isDark)} font-mono font-semibold`}
                       />
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                        Salary updates apply from this month onwards. Past unfinalized months will retain their historical rates.
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
+                        Salary updates apply from this month onwards. Past unfinalized months retain their historical rates.
                       </p>
                     </div>
                   </div>
@@ -8556,34 +8539,32 @@ export default function Home() {
               </div>
 
               {/* SECTION 3: DYNAMIC BONUSES */}
-              <div className={`p-4 sm:p-5 rounded-2xl border ${
-                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
-              } space-y-4`}>
+              <div className={`p-4 rounded-xl border space-y-3.5 ${
+                isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-zinc-50/70 border-zinc-200/80"
+              }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#0ea5e9]" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    <Icons.Star className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Biometric Dynamic Bonuses (Employee Overrides)
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400">Set 0 to inherit global</span>
+                  <span className="text-[10px] text-zinc-400">Set 0 to inherit global</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div>
                     <label className={labelCls}>Worked Day Bonus (LKR / day)</label>
                     <input
                       type="number"
                       min="0"
                       step="25"
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`${inputCls(isDark)} font-mono`}
                       placeholder={`Global: LKR ${salarySettings.globalWorkedDayBonus}`}
                       value={newEmp.attendanceBonusRate || ""}
                       onChange={e => setNewEmp(p => ({ ...p, attendanceBonusRate: parseFloat(e.target.value) || 0 }))}
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Default: LKR {salarySettings.globalWorkedDayBonus || 200}</p>
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">Default: LKR {salarySettings.globalWorkedDayBonus || 200}</p>
                   </div>
                   <div>
                     <label className={labelCls}>Punctual Bonus (LKR / day)</label>
@@ -8591,14 +8572,12 @@ export default function Home() {
                       type="number"
                       min="0"
                       step="25"
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`${inputCls(isDark)} font-mono`}
                       placeholder={`Global: LKR ${salarySettings.globalPunctualBonus}`}
                       value={newEmp.punctualBonusRate || ""}
                       onChange={e => setNewEmp(p => ({ ...p, punctualBonusRate: parseFloat(e.target.value) || 0 }))}
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Default: LKR {salarySettings.globalPunctualBonus || 200}</p>
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">Default: LKR {salarySettings.globalPunctualBonus || 200}</p>
                   </div>
                   <div>
                     <label className={labelCls}>Income Bonus (%)</label>
@@ -8607,33 +8586,31 @@ export default function Home() {
                       min="0"
                       max="100"
                       step="0.5"
-                      className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
-                        isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`${inputCls(isDark)} font-mono`}
                       placeholder={`Global: ${salarySettings.globalIncomeBonusPct}%`}
                       value={newEmp.incomeBonusPercentage || ""}
                       onChange={e => setNewEmp(p => ({ ...p, incomeBonusPercentage: parseFloat(e.target.value) || 0 }))}
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Default: {salarySettings.globalIncomeBonusPct}%</p>
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">Default: {salarySettings.globalIncomeBonusPct}%</p>
                   </div>
                 </div>
               </div>
 
               {/* SECTION 4: ASSIGN ALLOWANCES */}
-              <div className={`p-4 sm:p-5 rounded-2xl border ${
-                isDark ? "bg-slate-950/40 border-slate-800" : "bg-slate-50/70 border-slate-200/80"
-              } space-y-3`}>
+              <div className={`p-4 rounded-xl border space-y-3 ${
+                isDark ? "bg-zinc-900/50 border-zinc-800" : "bg-zinc-50/70 border-zinc-200/80"
+              }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Icons.Wallet className="w-3.5 h-3.5 text-[#0F85B0] dark:text-[#38bdf8]" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    <Icons.Wallet className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Assign Clinic Allowances
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400">{allowances.length} available</span>
+                  <span className="text-[10px] text-zinc-400">{allowances.length} available</span>
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 pt-0.5">
                   {allowances.map(al => {
                     const has = newEmp.allowanceIds.includes(al.id);
                     return (
@@ -8644,17 +8621,19 @@ export default function Home() {
                           ...p,
                           allowanceIds: has ? p.allowanceIds.filter(id => id !== al.id) : [...p.allowanceIds, al.id]
                         }))}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                           has 
-                            ? "bg-[#0F85B0] text-white border-[#0F85B0] shadow-sm shadow-[#0F85B0]/25" 
-                            : isDark ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                            ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-2xs" 
+                            : isDark 
+                              ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700" 
+                              : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 shadow-2xs"
                         }`}
                       >
-                        <div className={`w-3.5 h-3.5 rounded-md flex items-center justify-center ${has ? "bg-white/20 text-white" : "border border-slate-400/40"}`}>
+                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center ${has ? (isDark ? "bg-zinc-900 text-zinc-100" : "bg-white text-zinc-900") : "border border-zinc-400/40"}`}>
                           {has && <Icons.Check className="w-2.5 h-2.5 stroke-[3]" />}
                         </div>
                         <span>{al.name}</span>
-                        <span className={`text-[10px] ${has ? "text-white/80" : "text-slate-400"}`}>
+                        <span className={`text-[10px] font-mono ${has ? (isDark ? "text-zinc-600" : "text-zinc-300") : "text-zinc-400"}`}>
                           (LKR {al.amount.toLocaleString()})
                         </span>
                       </button>
@@ -8665,44 +8644,44 @@ export default function Home() {
 
               {/* SECTION 5: COMPLIANCE & CUSTOM SCHEDULE TOGGLES */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                <label className={`p-3 rounded-xl border cursor-pointer transition flex items-center gap-2.5 ${
                   newEmp.epfEligible 
-                    ? isDark ? "bg-emerald-950/20 border-emerald-500/40 text-emerald-300" : "bg-emerald-50/70 border-emerald-200 text-emerald-900"
-                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                    ? isDark ? "bg-emerald-500/[0.06] border-emerald-500/30 text-emerald-300" : "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+                    : isDark ? "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:border-zinc-700" : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                 }`}>
                   <input 
                     type="checkbox" 
                     checked={newEmp.epfEligible} 
                     onChange={e => setNewEmp(p => ({ ...p, epfEligible: e.target.checked }))} 
-                    className="w-4 h-4 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
                   />
                   <div>
-                    <span className="text-xs font-black block">EPF / ETF Eligible</span>
-                    <span className="text-[10px] opacity-75">Statutory 8% / 12% / 3%</span>
+                    <span className="text-xs font-semibold block">EPF / ETF Eligible</span>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Statutory 8% / 12% / 3%</span>
                   </div>
                 </label>
 
-                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                <label className={`p-3 rounded-xl border cursor-pointer transition flex items-center gap-2.5 ${
                   newEmp.taxable 
-                    ? isDark ? "bg-sky-950/20 border-sky-500/40 text-sky-300" : "bg-sky-50/70 border-sky-200 text-sky-900"
-                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                    ? isDark ? "bg-sky-500/[0.06] border-sky-500/30 text-sky-300" : "bg-sky-50/70 border-sky-200 text-sky-900"
+                    : isDark ? "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:border-zinc-700" : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                 }`}>
                   <input 
                     type="checkbox" 
                     checked={newEmp.taxable} 
                     onChange={e => setNewEmp(p => ({ ...p, taxable: e.target.checked }))} 
-                    className="w-4 h-4 rounded text-[#0F85B0] focus:ring-[#0F85B0]"
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 accent-sky-600"
                   />
                   <div>
-                    <span className="text-xs font-black block">APIT Taxable</span>
-                    <span className="text-[10px] opacity-75">Withholding tax slabs</span>
+                    <span className="text-xs font-semibold block">APIT Taxable</span>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Withholding tax slabs</span>
                   </div>
                 </label>
 
-                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                <label className={`p-3 rounded-xl border cursor-pointer transition flex items-center gap-2.5 ${
                   Boolean(newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0)
-                    ? isDark ? "bg-amber-950/20 border-amber-500/40 text-amber-300" : "bg-amber-50/70 border-amber-200 text-amber-900"
-                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                    ? isDark ? "bg-amber-500/[0.06] border-amber-500/30 text-amber-300" : "bg-amber-50/70 border-amber-200 text-amber-900"
+                    : isDark ? "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:border-zinc-700" : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                 }`}>
                   <input 
                     type="checkbox" 
@@ -8714,50 +8693,50 @@ export default function Home() {
                         setNewEmp(p => ({ ...p, customOperatingHours: [] }));
                       }
                     }} 
-                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
+                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-600"
                   />
                   <div>
-                    <span className="text-xs font-black block">Custom Schedule</span>
-                    <span className="text-[10px] opacity-75">Overrides clinic hours</span>
+                    <span className="text-xs font-semibold block">Custom Schedule</span>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Overrides clinic hours</span>
                   </div>
                 </label>
 
-                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                <label className={`p-3 rounded-xl border cursor-pointer transition flex items-center gap-2.5 ${
                   newEmp.allowEarlyOt 
-                    ? isDark ? "bg-indigo-950/20 border-indigo-500/40 text-indigo-300" : "bg-indigo-50/70 border-indigo-200 text-indigo-900"
-                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                    ? isDark ? "bg-indigo-500/[0.06] border-indigo-500/30 text-indigo-300" : "bg-indigo-50/70 border-indigo-200 text-indigo-900"
+                    : isDark ? "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:border-zinc-700" : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
                 }`}>
                   <input 
                     type="checkbox" 
                     checked={Boolean(newEmp.allowEarlyOt)} 
                     onChange={e => setNewEmp(p => ({ ...p, allowEarlyOt: e.target.checked }))} 
-                    className="w-4 h-4 rounded text-indigo-500 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
                   />
                   <div>
-                    <span className="text-xs font-black block">Early Arrival OT</span>
-                    <span className="text-[10px] opacity-75">Capped at clinic opening</span>
+                    <span className="text-xs font-semibold block">Early Arrival OT</span>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Capped at clinic opening</span>
                   </div>
                 </label>
               </div>
 
               {/* CUSTOM WEEKLY SCHEDULE DETAILS (IF ENABLED) */}
               {newEmp.customOperatingHours && newEmp.customOperatingHours.length > 0 && (
-                <div className={`p-4 sm:p-5 rounded-2xl border ${
-                  isDark ? "border-amber-500/30 bg-amber-500/5" : "border-amber-200 bg-amber-50/60"
-                } space-y-3`}>
+                <div className={`p-4 rounded-xl border space-y-3 ${
+                  isDark ? "border-zinc-800 bg-zinc-900/50" : "border-zinc-200 bg-zinc-50/70"
+                }`}>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      Personalized Shift Operating Hours
+                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                      <Icons.Clock className="w-3.5 h-3.5 text-amber-500" /> Personalized Shift Operating Hours
                     </h4>
-                    <span className="text-[10px] text-slate-400">Used for OT &amp; punctuality</span>
+                    <span className="text-[10px] text-zinc-400">Used for OT &amp; punctuality</span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
                     {newEmp.customOperatingHours.map((hour, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50">
-                        <label className="flex items-center gap-2 w-32 cursor-pointer">
+                      <div key={idx} className="flex items-center justify-between text-xs pt-1.5 first:pt-0">
+                        <label className="flex items-center gap-2.5 w-32 cursor-pointer">
                           <input 
                             type="checkbox" 
-                            className="w-3.5 h-3.5 rounded text-amber-500" 
+                            className="w-3.5 h-3.5 rounded text-sky-600 accent-sky-600" 
                             checked={hour.isOpen} 
                             onChange={e => {
                               const updated = [...newEmp.customOperatingHours!];
@@ -8765,7 +8744,7 @@ export default function Home() {
                               setNewEmp(p => ({ ...p, customOperatingHours: updated }));
                             }}
                           />
-                          <span className={`font-bold ${hour.isOpen ? (isDark ? "text-slate-200" : "text-slate-800") : "text-slate-400 line-through"}`}>
+                          <span className={`font-medium ${hour.isOpen ? (isDark ? "text-zinc-200" : "text-zinc-800") : "text-zinc-400 line-through"}`}>
                             {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][hour.dayOfWeek]}
                           </span>
                         </label>
@@ -8773,8 +8752,8 @@ export default function Home() {
                           <div className="flex items-center gap-2">
                             <input 
                               type="time" 
-                              className={`border rounded-lg px-2.5 py-1 text-xs font-mono font-bold ${
-                                isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                              className={`border rounded-md px-2.5 py-1 text-xs font-mono font-medium ${
+                                isDark ? "bg-zinc-900 border-zinc-800 text-zinc-100" : "bg-white border-zinc-200 text-zinc-900"
                               }`}
                               value={hour.startTime} 
                               onChange={e => {
@@ -8783,11 +8762,11 @@ export default function Home() {
                                 setNewEmp(p => ({ ...p, customOperatingHours: updated }));
                               }}
                             />
-                            <span className="text-slate-400 text-xs">to</span>
+                            <span className="text-zinc-400 text-xs">to</span>
                             <input 
                               type="time" 
-                              className={`border rounded-lg px-2.5 py-1 text-xs font-mono font-bold ${
-                                isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                              className={`border rounded-md px-2.5 py-1 text-xs font-mono font-medium ${
+                                isDark ? "bg-zinc-900 border-zinc-800 text-zinc-100" : "bg-white border-zinc-200 text-zinc-900"
                               }`}
                               value={hour.endTime} 
                               onChange={e => {
@@ -8798,7 +8777,7 @@ export default function Home() {
                             />
                           </div>
                         ) : (
-                          <span className="text-[10px] uppercase font-bold text-amber-500 px-3 py-1 rounded-md bg-amber-500/10">Closed</span>
+                          <span className="text-[10px] uppercase font-semibold text-zinc-400 px-2.5 py-0.5 rounded bg-zinc-200/50 dark:bg-zinc-800">Closed</span>
                         )}
                       </div>
                     ))}
@@ -8807,23 +8786,25 @@ export default function Home() {
               )}
 
               {/* MODAL FOOTER ACTIONS */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                 <button 
                   type="button" 
                   onClick={() => setShowAddEmpModal(false)} 
-                  className={`px-5 py-2.5 text-xs font-bold rounded-xl border transition active:scale-95 ${
+                  className={`px-4 py-2 text-xs font-medium rounded-lg border transition cursor-pointer ${
                     isDark 
-                      ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" 
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+                      ? "border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800" 
+                      : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 shadow-2xs"
                   }`}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-6 py-2.5 bg-gradient-to-r from-[#0F85B0] to-sky-500 hover:from-[#0c6c8f] hover:to-sky-600 text-white text-xs font-black rounded-xl shadow-lg shadow-[#0F85B0]/25 transition active:scale-95 flex items-center gap-2 cursor-pointer"
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg shadow-xs transition active:scale-[0.98] flex items-center gap-1.5 cursor-pointer ${
+                    isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-zinc-900 text-white hover:bg-zinc-800"
+                  }`}
                 >
-                  <Icons.Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <Icons.Check className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>{editingEmpId ? "Save Changes" : "Register Profile"}</span>
                 </button>
               </div>
@@ -10015,35 +9996,53 @@ export default function Home() {
         const period = payrollHistory.find(p => p.id === selectedHistoryPeriodId);
         if (!period) return null;
 
-        const periodCalcs = calculateMonthPayroll(period.month);
+        const periodCalcs = (period.slips && period.slips.length > 0)
+          ? period.slips.map(s => {
+              const matchedEmp = employees.find(e => e.id === s.employeeId || e.biometricId === s.biometricId);
+              return {
+                employee: matchedEmp || {
+                  id: s.employeeId,
+                  firstName: s.employeeName.split(" ")[0] || s.employeeName,
+                  lastName: s.employeeName.split(" ").slice(1).join(" ") || "",
+                  role: s.employeeRole as any,
+                  payType: s.payType as any,
+                  basicSalary: s.basicSalary,
+                },
+                basicEarnings: s.basicSalary,
+                totalAllowances: s.totalAllowances,
+                employeeEpf: s.employeeEpf,
+                netSalary: s.netSalary,
+              };
+            })
+          : calculateMonthPayroll(period.month);
 
         return (
-          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 animate-in fade-in ${isDark ? "bg-zinc-950/80" : "bg-slate-900/50"}`}>
+          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 animate-in fade-in ${isDark ? "bg-black/70" : "bg-zinc-900/40"}`}>
             <div className="absolute inset-0" onClick={() => setSelectedHistoryPeriodId(null)} />
-            <div className={`relative z-10 w-full max-w-3xl rounded-2xl shadow-2xl border overflow-hidden transition-all duration-200 animate-in zoom-in-95 ease-out ${isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"}`}>
+            <div className={`relative z-10 w-full max-w-3xl rounded-xl shadow-2xl border overflow-hidden transition-all duration-200 animate-in zoom-in-95 ease-out ${isDark ? "bg-[#111114] border-white/[0.08] text-zinc-100" : "bg-white border-zinc-200 text-zinc-900"}`}>
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#0F85B0]/10 text-[#0F85B0] dark:text-[#38bdf8] border border-[#0F85B0]/20">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shrink-0">
                     <Icons.Calendar className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className={`text-base font-extrabold ${isDark ? "text-white" : "text-zinc-900"}`}>{period.label} Payroll Summary</h3>
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
+                      <h3 className={`text-sm font-semibold tracking-tight ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>{period.label} Payroll Summary</h3>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">Finalized on <span className="font-mono">{period.finalizedAt}</span> · {period.employeeCount || periodCalcs.length} Staff Members Active</p>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Finalized on <span className="font-mono">{period.finalizedAt}</span> · {period.employeeCount || periodCalcs.length} Staff Members Active</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelectedHistoryPeriodId(null)}
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition ${
-                    isDark ? "border-zinc-700 bg-zinc-800 text-zinc-400 hover:text-white" : "border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 shadow-sm"
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center border transition cursor-pointer ${
+                    isDark ? "border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white" : "border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 shadow-xs"
                   }`}
                   aria-label="Close summary"
                 >
-                  <Icons.X className="w-4 h-4" />
+                  <Icons.X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
@@ -10051,32 +10050,32 @@ export default function Home() {
               <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
                 {/* Metrics summary cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Gross Pool</span>
-                    <span className={`text-lg font-extrabold block mt-0.5 ${isDark ? "text-white" : "text-zinc-900"}`}>LKR {period.grossSalaryPool.toLocaleString()}</span>
+                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200/80"}`}>
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 block">Gross Pool</span>
+                    <span className={`text-lg font-bold font-mono block mt-1 ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>LKR {period.grossSalaryPool.toLocaleString()}</span>
                   </div>
-                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Net Remittance</span>
-                    <span className="text-lg font-extrabold text-[#0F85B0] dark:text-[#38bdf8] block mt-0.5">LKR {period.netRemittances.toLocaleString()}</span>
+                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200/80"}`}>
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 block">Net Remittance</span>
+                    <span className="text-lg font-bold font-mono text-sky-600 dark:text-sky-400 block mt-1">LKR {period.netRemittances.toLocaleString()}</span>
                   </div>
-                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">EPF (8%+12%)</span>
-                    <span className={`text-lg font-extrabold block mt-0.5 ${isDark ? "text-white" : "text-zinc-900"}`}>LKR {period.totalEpf.toLocaleString()}</span>
+                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200/80"}`}>
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 block">EPF (8%+12%)</span>
+                    <span className={`text-lg font-bold font-mono block mt-1 ${isDark ? "text-zinc-100" : "text-zinc-900"}`}>LKR {period.totalEpf.toLocaleString()}</span>
                   </div>
-                  <div className={`p-3.5 rounded-xl border ${isDark ? "bg-zinc-950/50 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">ETF (3%)</span>
-                    <span className="text-lg font-extrabold text-emerald-500 block mt-0.5">LKR {period.totalEtf.toLocaleString()}</span>
+                  <div className={`p-3.5 rounded-lg border ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200/80"}`}>
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 block">ETF (3%)</span>
+                    <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 block mt-1">LKR {period.totalEtf.toLocaleString()}</span>
                   </div>
                 </div>
 
                 {/* Breakdown Table */}
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">Staff Salary Breakdown</h4>
-                  <div className={`rounded-xl border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200"}`}>
+                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2.5">Staff Salary Breakdown</h4>
+                  <div className={`rounded-lg border overflow-hidden ${isDark ? "border-zinc-800" : "border-zinc-200/80"}`}>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className={`text-[10px] uppercase tracking-wider text-zinc-400 border-b ${isDark ? "bg-zinc-950/60 border-zinc-800" : "bg-zinc-100 border-zinc-200"}`}>
+                          <tr className={`text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold border-b ${isDark ? "bg-zinc-900/60 border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                             <th className="text-left py-2.5 px-3">Staff Name</th>
                             <th className="text-left py-2.5 px-3">Role</th>
                             <th className="text-right py-2.5 px-3">Base Pay</th>
@@ -10085,7 +10084,7 @@ export default function Home() {
                             <th className="text-right py-2.5 px-3">Net Salary</th>
                           </tr>
                         </thead>
-                        <tbody className={`divide-y ${isDark ? "divide-zinc-800/60" : "divide-zinc-100"}`}>
+                        <tbody className={`divide-y ${isDark ? "divide-zinc-850" : "divide-zinc-100"}`}>
                           {periodCalcs.length === 0 ? (
                             <tr>
                               <td colSpan={6} className="py-6 text-center text-zinc-400 text-xs">
@@ -10094,17 +10093,17 @@ export default function Home() {
                             </tr>
                           ) : (
                             periodCalcs.map(calc => (
-                              <tr key={calc.employee.id} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-zinc-50"}>
-                                <td className="py-2.5 px-3 font-semibold">{calc.employee.firstName} {calc.employee.lastName}</td>
-                                <td className="py-2.5 px-3 text-zinc-400">{calc.employee.role}</td>
-                                <td className="py-2.5 px-3 text-right font-mono">LKR {calc.basicEarnings.toLocaleString()}</td>
-                                <td className="py-2.5 px-3 text-right font-mono text-emerald-500">
+                              <tr key={calc.employee.id} className={isDark ? "hover:bg-zinc-850/50" : "hover:bg-zinc-50"}>
+                                <td className="py-2.5 px-3 font-semibold text-zinc-900 dark:text-zinc-100">{calc.employee.firstName} {calc.employee.lastName}</td>
+                                <td className="py-2.5 px-3 text-zinc-500 dark:text-zinc-400">{calc.employee.role}</td>
+                                <td className="py-2.5 px-3 text-right font-mono text-zinc-900 dark:text-zinc-100">LKR {calc.basicEarnings.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right font-mono font-medium text-emerald-600 dark:text-emerald-400">
                                   {calc.totalAllowances > 0 ? `+LKR ${calc.totalAllowances.toLocaleString()}` : "LKR 0"}
                                 </td>
-                                <td className="py-2.5 px-3 text-right font-mono text-zinc-400">
+                                <td className="py-2.5 px-3 text-right font-mono text-zinc-500 dark:text-zinc-400">
                                   {calc.employeeEpf > 0 ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString()}` : "Exempt"}
                                 </td>
-                                <td className="py-2.5 px-3 text-right font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]">
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-zinc-950 dark:text-zinc-50">
                                   LKR {Math.round(calc.netSalary).toLocaleString()}
                                 </td>
                               </tr>
@@ -10120,11 +10119,11 @@ export default function Home() {
               {/* Footer Actions */}
               <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-200 dark:border-zinc-800">
                 <div className="flex gap-2">
-                  <button onClick={() => downloadPayrollCSV(period.month)} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={() => downloadPayrollCSV(period.month)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg border flex items-center gap-1.5 transition cursor-pointer ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-xs"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>Export Period CSV</span>
                   </button>
-                  <button onClick={() => downloadEpfFormC(period.month)} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={() => downloadEpfFormC(period.month)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg border flex items-center gap-1.5 transition cursor-pointer ${isDark ? "bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-xs"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>EPF Form C3</span>
                   </button>
@@ -10132,7 +10131,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setSelectedHistoryPeriodId(null)}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl shadow-md transition ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-[#0F85B0] text-white hover:bg-[#0c6c8f]"}`}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-lg shadow-xs transition cursor-pointer ${isDark ? "bg-white text-zinc-900 hover:bg-zinc-100" : "bg-zinc-900 text-white hover:bg-zinc-800"}`}
                 >
                   Close Summary
                 </button>

@@ -3,69 +3,76 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --font-sans: var(--font-sans), system-ui, sans-serif;
-  --font-mono: var(--font-mono), monospace;
+  --background: #fafafa;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-border: #e4e4e7;
+  --muted: #71717a;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .dark {
-  --background: #090d16;
-  --foreground: #f8fafc;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #111114;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --muted: #a1a1aa;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* ═══════════════ GLASS & GRADIENT CARDS ═══════════════ */
-.glass-panel-dark {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* ═══════════════ TABULAR NUMBERS & FINANCIAL DATA ═══════════════ */
+.tabular-nums, .font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
-.glass-panel-light {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.gradient-border-card {
+/* ═══════════════ HIGH-CRAFT CARDS & SURFACES ═══════════════ */
+.craft-card {
   position: relative;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.25s ease-in-out;
+  border-radius: 14px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.gradient-border-card:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.2);
-  transform: translateY(-2px);
+.craft-card-dark {
+  background: #111114;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
-/* ═══════════════ GLOW EFFECTS ═══════════════ */
-.glow-ocean {
-  box-shadow: 0 0 25px -5px rgba(15, 133, 176, 0.4);
+.craft-card-dark:hover {
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
-.glow-emerald {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
+.craft-card-light {
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
 }
 
-.glow-rose {
-  box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.3);
+.craft-card-light:hover {
+  border-color: #d4d4d8;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 }
 
-.glow-amber {
-  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.3);
+/* ═══════════════ REFINED FOCUS & INPUTS ═══════════════ */
+.craft-input {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.craft-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+  border-color: #0284c7;
 }
 
 /* ═══════════════ MICRO-ANIMATIONS & TRANSITIONS ═══════════════ */
