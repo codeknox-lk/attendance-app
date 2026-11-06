@@ -96,6 +96,8 @@ model Employee {
   leaveRequests  LeaveRequest[]
   allowances     EmployeeAllowance[]
   customOperatingHours EmployeeOperatingHours[]
+  salaryHistory        EmployeeSalaryHistory[]
+  payrollSlips         PayrollSlip[]
 
   @@unique([clinicId, biometricId])
 }
@@ -223,6 +225,62 @@ model PayrollPeriod {
   employeeCount   Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  slips           PayrollSlip[]
+}
+
+model PayrollSlip {
+  id               String        @id @default(cuid())
+  payrollPeriodId  String
+  payrollPeriod    PayrollPeriod @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  employeeId       String
+  employee         Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  employeeName     String
+  employeeRole     String
+  biometricId      String
+  payType          String
+
+  basicSalary      Float         @default(0)
+  otHours          Float         @default(0)
+  otPay            Float         @default(0)
+  totalAllowances  Float         @default(0)
+  noPayDays        Int           @default(0)
+  noPayDeduction   Float         @default(0)
+  manualBonus      Float         @default(0)
+  manualDeduction  Float         @default(0)
+  workedDaysBonus  Float         @default(0)
+  punctualBonus    Float         @default(0)
+  exceedBonus      Float         @default(0)
+
+  employeeEpf      Float         @default(0)
+  employerEpf      Float         @default(0)
+  employerEtf      Float         @default(0)
+  apit             Float         @default(0)
+  grossSalary      Float         @default(0)
+  netSalary        Float         @default(0)
+
+  workedSessions   Int           @default(0)
+  punctualSessions Int           @default(0)
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([payrollPeriodId, employeeId])
+}
+
+model EmployeeSalaryHistory {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  effectiveMonth String   // Format: YYYY-MM
+  basicSalary    Float    @default(0)
+  hourlyRate     Float    @default(0)
+  sessionRate    Float    @default(0)
+  note           String?
+  createdAt      DateTime @default(now())
+
+  @@unique([employeeId, effectiveMonth])
 }
 
 model PublicHoliday {

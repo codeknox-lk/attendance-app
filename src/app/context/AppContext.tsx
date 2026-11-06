@@ -21,6 +21,45 @@ export const apiFetch = async (url: string, init?: RequestInit) => {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export interface EmployeeSalaryHistory {
+  id?: string;
+  employeeId?: string;
+  effectiveMonth: string;
+  basicSalary: number;
+  hourlyRate: number;
+  sessionRate: number;
+  note?: string;
+}
+
+export interface PayrollSlip {
+  id?: string;
+  payrollPeriodId?: string;
+  employeeId: string;
+  employeeName: string;
+  employeeRole: string;
+  biometricId: string;
+  payType: string;
+  basicSalary: number;
+  otHours: number;
+  otPay: number;
+  totalAllowances: number;
+  noPayDays: number;
+  noPayDeduction: number;
+  manualBonus: number;
+  manualDeduction: number;
+  workedDaysBonus: number;
+  punctualBonus: number;
+  exceedBonus: number;
+  employeeEpf: number;
+  employerEpf: number;
+  employerEtf: number;
+  apit: number;
+  grossSalary: number;
+  netSalary: number;
+  workedSessions: number;
+  punctualSessions: number;
+}
+
 export interface Employee {
   id: string;
   firstName: string;
@@ -39,6 +78,7 @@ export interface Employee {
   branchId: string | null;
   allowanceIds: string[];
   customOperatingHours?: ClinicOperatingHours[];
+  salaryHistory?: EmployeeSalaryHistory[];
   leaveBalances: { annual: number; sick: number; casual: number };
   attendanceBonusRate: number;
   punctualBonusRate: number;
@@ -115,6 +155,7 @@ export interface PayrollPeriod {
   totalEtf: number;
   totalApit: number;
   employeeCount: number;
+  slips?: PayrollSlip[];
 }
 
 export interface Branch {
@@ -245,7 +286,7 @@ export interface AppContextProps {
   companyProfile: CompanyProfile;
   manualAdjustments: Record<string, PayslipAdjustment>;
   addEmployee: (emp: Omit<Employee, "id" | "active">) => void;
-  updateEmployee: (id: string, emp: Partial<Employee>) => void;
+  updateEmployee: (id: string, emp: Partial<Employee> & { effectiveMonth?: string }) => void;
   deleteEmployee: (id: string) => void;
   addAttendanceLog: (log: Omit<AttendanceLog, "id">) => void;
   updateAttendanceLog: (id: string, log: Partial<AttendanceLog>) => void;
@@ -263,7 +304,7 @@ export interface AppContextProps {
   approveLeave: (id: string) => void;
   rejectLeave: (id: string) => void;
   deleteLeaveRequest: (id: string) => void;
-  finalizePayroll: (period: Omit<PayrollPeriod, "id" | "finalizedAt" | "status">) => void;
+  finalizePayroll: (period: Omit<PayrollPeriod, "id" | "finalizedAt" | "status">, slips?: PayrollSlip[]) => void;
   addBranch: (branch: Omit<Branch, "id">) => void;
   updateBranch: (id: string, branch: Partial<Branch>) => void;
   deleteBranch: (id: string) => void;
@@ -702,6 +743,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 incomeBonusPercentage: Number(e.incomeBonusPercentage) || 0,
                 allowEarlyOt: Boolean(e.allowEarlyOt),
                 customOperatingHours: Array.isArray(e.customOperatingHours) ? e.customOperatingHours as ClinicOperatingHours[] : undefined,
+                salaryHistory: Array.isArray(e.salaryHistory) ? e.salaryHistory as EmployeeSalaryHistory[] : [],
               }));
               setEmployees(dbEmployees);
             }
@@ -813,6 +855,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 totalEtf: Number(p.totalEtf),
                 totalApit: Number(p.totalApit),
                 employeeCount: Number(p.employeeCount),
+                slips: Array.isArray(p.slips) ? p.slips as PayrollSlip[] : undefined,
               })));
             }
           } catch (e) {
@@ -966,15 +1009,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Offline fallback
     }
   };
-  const updateEmployee = async (id: string, f: Partial<Employee>) => {
+  const updateEmployee = async (id: string, f: Partial<Employee> & { effectiveMonth?: string }) => {
     setEmployees(p => p.map(e => e.id === id ? { ...e, ...f } : e));
     pushAudit({ action: "UPDATE", entity: "Employee", entityId: id, details: "Updated profile" });
     try {
-      await apiFetch("/api/employees", {
+      const res = await apiFetch("/api/employees", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...f }),
       });
+      const data = await res.json();
+      if (data.success && data.employee) {
+        setEmployees(p => p.map(e => e.id === id ? { ...e, ...data.employee } : e));
+      }
     } catch {}
   };
 
@@ -1230,17 +1277,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   };
 
-  const finalizePayroll = async (period: Omit<PayrollPeriod,"id"|"finalizedAt"|"status">) => {
+  const finalizePayroll = async (period: Omit<PayrollPeriod,"id"|"finalizedAt"|"status">, slips?: PayrollSlip[]) => {
     if (payrollHistory.find(p => p.month===period.month && p.status==="Finalized")) return;
-    const np: PayrollPeriod = { ...period, id: `PAY-${Date.now()}`, status: "Finalized", finalizedAt: nowStr() };
+    const np: PayrollPeriod = { ...period, slips, id: `PAY-${Date.now()}`, status: "Finalized", finalizedAt: nowStr() };
     setPayrollHistory(p => [np, ...p.filter(item => item.month !== period.month)]);
     pushAudit({ action: "FINALIZE", entity: "PayrollPeriod", entityId: np.id, details: `Finalized ${period.label}` });
     try {
-      await apiFetch("/api/payroll", {
+      const res = await apiFetch("/api/payroll", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(period),
+        body: JSON.stringify({ ...period, slips }),
       });
+      const data = await res.json();
+      if (data.success && data.payroll) {
+        setPayrollHistory(p => p.map(item => item.month === period.month ? data.payroll : item));
+      }
     } catch {}
   };
 

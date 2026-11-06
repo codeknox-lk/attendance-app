@@ -1061,6 +1061,7 @@ export default function Home() {
     biometricId:"", portalPin:"1234", epfEligible:true, taxable:false,  branchId:null,
     allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3}, attendanceBonusRate:0, punctualBonusRate:0, incomeBonusPercentage:0, allowEarlyOt:false,
   });
+  const [empEffectiveMonth, setEmpEffectiveMonth] = useState<string>("");
 
   const [drawerLogId, setDrawerLogId] = useState<string|null>(null);
   const [punchEdit, setPunchEdit] = useState({ checkIn:"", checkOut:"", status:"On-Time" as AttendanceLog["status"], overtimeHours:0, noPayHours:0 });
@@ -1404,9 +1405,99 @@ export default function Home() {
     return Math.max(0, tax / 12); // monthly
   }, [apitSlabs]);
 
+  // Historical salary resolver: finds the effective rate as of targetMonth
+  const getSalaryForMonth = useCallback((emp: Employee, targetMonth: string) => {
+    if (emp.salaryHistory && emp.salaryHistory.length > 0) {
+      const valid = emp.salaryHistory
+        .filter(h => h.effectiveMonth <= targetMonth)
+        .sort((a, b) => b.effectiveMonth.localeCompare(a.effectiveMonth));
+      if (valid.length > 0) {
+        return {
+          basicSalary: valid[0].basicSalary,
+          hourlyRate: valid[0].hourlyRate ?? emp.hourlyRate,
+          sessionRate: valid[0].sessionRate ?? emp.sessionRate,
+        };
+      }
+      const earliest = [...emp.salaryHistory].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth))[0];
+      if (earliest) {
+        return {
+          basicSalary: earliest.basicSalary,
+          hourlyRate: earliest.hourlyRate ?? emp.hourlyRate,
+          sessionRate: earliest.sessionRate ?? emp.sessionRate,
+        };
+      }
+    }
+    return {
+      basicSalary: emp.basicSalary,
+      hourlyRate: emp.hourlyRate,
+      sessionRate: emp.sessionRate,
+    };
+  }, []);
+
   // Payroll calculations with per-employee allowances, auto no-pay, auto APIT
   // Only employees who actually worked / had activity in this cycle are included to ensure accurate reports & remittances
   const calculateMonthPayroll = useCallback((targetMonth: string) => {
+    // Tier 2: If the month was finalized and has frozen slips, return the exact immutable slips!
+    const finalizedPeriod = payrollHistory.find(p => p.month === targetMonth && p.status === "Finalized");
+    if (finalizedPeriod && finalizedPeriod.slips && finalizedPeriod.slips.length > 0) {
+      return finalizedPeriod.slips.map(s => {
+        const matchedEmp = employees.find(e => e.id === s.employeeId || e.biometricId === s.biometricId);
+        const empFallback: Employee = matchedEmp ? { ...matchedEmp, basicSalary: s.basicSalary, payType: s.payType as any } : {
+          id: s.employeeId,
+          firstName: s.employeeName.split(" ")[0] || s.employeeName,
+          lastName: s.employeeName.split(" ").slice(1).join(" ") || "",
+          role: s.employeeRole,
+          payType: s.payType as any,
+          basicSalary: s.basicSalary,
+          hourlyRate: 0,
+          sessionRate: 0,
+          commissionRate: 0,
+          biometricId: s.biometricId,
+          epfEligible: s.employeeEpf > 0,
+          taxable: s.apit > 0,
+          active: true,
+          branchId: null,
+          allowanceIds: [],
+          leaveBalances: { annual: 0, sick: 0, casual: 0 },
+          attendanceBonusRate: 0,
+          punctualBonusRate: 0,
+          incomeBonusPercentage: 0,
+        };
+
+        return {
+          employee: empFallback,
+          sessionCount: s.workedSessions,
+          punctualCount: s.punctualSessions,
+          absentCount: s.noPayDays,
+          totalOtHours: s.otHours,
+          totalWorkHours: 0,
+          regularOtHours: s.otHours,
+          doubleOtHours: 0,
+          effectiveOtRate: s.otHours > 0 ? (s.otPay / s.otHours) : 0,
+          basicEarnings: s.basicSalary,
+          otPay: s.otPay,
+          sessionPay: s.payType === "Session-based" ? s.basicSalary : 0,
+          totalAllowances: s.totalAllowances,
+          noPayDeduction: s.noPayDeduction,
+          manualBonus: s.manualBonus,
+          manualDeduction: s.manualDeduction,
+          payslipNote: "",
+          employeeEpf: s.employeeEpf,
+          employerEpf: s.employerEpf,
+          employerEtf: s.employerEtf,
+          grossEarnings: s.grossSalary,
+          apitMonthly: s.apit,
+          netSalary: s.netSalary,
+          workedDaysBonus: s.workedDaysBonus,
+          punctualDaysBonus: s.punctualBonus,
+          exceedIncomeBonus: s.exceedBonus,
+          attBonusRate: 0,
+          puncBonusRate: 0,
+          incBonusPct: 0,
+        };
+      });
+    }
+
     const [yearStr, monthStr] = targetMonth.split("-");
     const year = parseInt(yearStr);
     const monthIndex = parseInt(monthStr) - 1;
@@ -1437,6 +1528,11 @@ export default function Home() {
     });
 
     return eligibleEmployees.map(emp => {
+      const empSalary = getSalaryForMonth(emp, targetMonth);
+      const empBasicSalary = empSalary.basicSalary;
+      const empHourlyRate = empSalary.hourlyRate;
+      const empSessionRate = empSalary.sessionRate;
+
       const empLogs = attendanceLogs.filter(l => 
         (l.employeeId === emp.id || l.employeeId === emp.biometricId || (l.employee && (l.employee.id === emp.id || l.employee.biometricId === emp.biometricId))) 
         && l.date >= rangeStart 
@@ -1499,21 +1595,21 @@ export default function Home() {
 
       let basicEarnings = 0; let otPay = 0; let sessionPay = 0; let effectiveOtRate = 0;
       // Auto no-pay from absent days
-      const noPayDeduction = emp.payType==="Fixed Monthly" ? (emp.basicSalary / (salarySettings.workingDaysPerMonth || 20)) * absentCount : 0;
+      const noPayDeduction = emp.payType==="Fixed Monthly" ? (empBasicSalary / (salarySettings.workingDaysPerMonth || 20)) * absentCount : 0;
 
       if (emp.payType==="Fixed Monthly") {
-        basicEarnings = emp.basicSalary;
+        basicEarnings = empBasicSalary;
         let baseRate = 0;
         const basis = salarySettings.otRateBasis || "Basic_200";
-        if (basis === "Profile_Hourly_Rate" && emp.hourlyRate) {
-          baseRate = emp.hourlyRate;
+        if (basis === "Profile_Hourly_Rate" && empHourlyRate) {
+          baseRate = empHourlyRate;
         } else if (basis === "Basic_WorkingDays_8h") {
-          baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 8);
+          baseRate = empBasicSalary / ((salarySettings.workingDaysPerMonth || 20) * 8);
         } else if (basis === "Basic_WorkingDays_9h") {
-          baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9);
+          baseRate = empBasicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9);
         } else {
           // Default: Basic_200 (Sri Lanka Shop & Office Act standard: Basic / 200)
-          baseRate = emp.basicSalary / 200;
+          baseRate = empBasicSalary / 200;
         }
         const mult = salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5;
         effectiveOtRate = baseRate * mult;
@@ -1521,13 +1617,13 @@ export default function Home() {
         otPay = Math.round(((regularOtHours * effectiveOtRate) + (doubleOtHours * baseRate * 2.0)) * 100) / 100;
         epfBase += basicEarnings;
       } else if (emp.payType==="Session-based") {
-        sessionPay = sessionCount * emp.sessionRate;
+        sessionPay = sessionCount * empSessionRate;
         basicEarnings = sessionPay;
         if (emp.epfEligible) epfBase += basicEarnings;
       } else {
-        effectiveOtRate = emp.hourlyRate * 1.5;
-        basicEarnings = sessionCount * 8 * emp.hourlyRate;
-        otPay = Math.round(((regularOtHours * emp.hourlyRate * 1.5) + (doubleOtHours * emp.hourlyRate * 2.0)) * 100) / 100;
+        effectiveOtRate = empHourlyRate * 1.5;
+        basicEarnings = sessionCount * 8 * empHourlyRate;
+        otPay = Math.round(((regularOtHours * empHourlyRate * 1.5) + (doubleOtHours * empHourlyRate * 2.0)) * 100) / 100;
         if (emp.epfEligible) epfBase += basicEarnings;
       }
 
@@ -1558,7 +1654,8 @@ export default function Home() {
       const netSalary = Math.max(0, preNetSalary - apitMonthly);
 
       return { 
-        employee:emp, sessionCount, punctualCount, absentCount, totalOtHours, totalWorkHours,
+        employee: { ...emp, basicSalary: empBasicSalary, hourlyRate: empHourlyRate, sessionRate: empSessionRate },
+        sessionCount, punctualCount, absentCount, totalOtHours, totalWorkHours,
         regularOtHours, doubleOtHours, effectiveOtRate,
         basicEarnings, otPay, sessionPay, totalAllowances:totalAllowancesVal, 
         noPayDeduction, manualBonus, manualDeduction, payslipNote: adj.note, 
@@ -1567,7 +1664,7 @@ export default function Home() {
         attBonusRate, puncBonusRate, incBonusPct
       };
     });
-  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, payrollCycleStartDay, calcApit, manualAdjustments, monthlyExcessIncome, salarySettings, operatingHours, publicHolidays]);
+  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, payrollCycleStartDay, calcApit, manualAdjustments, monthlyExcessIncome, salarySettings, operatingHours, publicHolidays, payrollHistory, employees, getSalaryForMonth]);
 
   const payrollCalcs = useMemo(() => calculateMonthPayroll(selectedMonth), [calculateMonthPayroll, selectedMonth]);
 
@@ -1577,9 +1674,24 @@ export default function Home() {
 
   // ── Handlers ──
 
-  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, portalPin:emp.portalPin || "1234", epfEligible:emp.epfEligible, taxable:emp.taxable,  branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage, allowEarlyOt: Boolean(emp.allowEarlyOt), customOperatingHours: emp.customOperatingHours || [] }); setShowAddEmpModal(true); };
+  const openEditEmp = (emp: Employee) => {
+    setEditingEmpId(emp.id);
+    setEmpEffectiveMonth(selectedMonth || new Date().toISOString().slice(0, 7));
+    setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, portalPin:emp.portalPin || "1234", epfEligible:emp.epfEligible, taxable:emp.taxable,  branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage, allowEarlyOt: Boolean(emp.allowEarlyOt), customOperatingHours: emp.customOperatingHours || [] });
+    setShowAddEmpModal(true);
+  };
 
-  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",portalPin:"1234",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,allowEarlyOt:false,customOperatingHours:[]}); };
+  const handleAddEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingEmpId) {
+      updateEmployee(editingEmpId, { ...newEmp, effectiveMonth: empEffectiveMonth });
+      setEditingEmpId(null);
+    } else {
+      addEmployee(newEmp);
+    }
+    setShowAddEmpModal(false);
+    setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",portalPin:"1234",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,allowEarlyOt:false,customOperatingHours:[]});
+  };
 
   const openDrawer = (log: AttendanceLog) => {
     if (!isUserAdmin) {
@@ -1606,7 +1718,42 @@ export default function Home() {
     if (isCurrentMonthFinalized) return;
     const [y,m] = selectedMonth.split("-");
     const monthLabel = new Date(parseInt(y), parseInt(m)-1, 1).toLocaleString("default",{month:"long",year:"numeric"});
-    finalizePayroll({ month:selectedMonth, label:monthLabel, grossSalaryPool:payrollTotals.gross, netRemittances:payrollTotals.net, totalEpf:payrollTotals.epfEmp+payrollTotals.epfEmr, totalEtf:payrollTotals.etf, totalApit:payrollTotals.apit, employeeCount:payrollCalcs.length });
+    const slips = payrollCalcs.map(c => ({
+      employeeId: c.employee.id,
+      employeeName: `${c.employee.firstName} ${c.employee.lastName}`,
+      employeeRole: c.employee.role,
+      biometricId: c.employee.biometricId,
+      payType: c.employee.payType,
+      basicSalary: c.basicEarnings,
+      otHours: c.totalOtHours,
+      otPay: c.otPay,
+      totalAllowances: c.totalAllowances,
+      noPayDays: c.absentCount,
+      noPayDeduction: c.noPayDeduction,
+      manualBonus: c.manualBonus,
+      manualDeduction: c.manualDeduction,
+      workedDaysBonus: c.workedDaysBonus,
+      punctualBonus: c.punctualDaysBonus,
+      exceedBonus: c.exceedIncomeBonus,
+      employeeEpf: c.employeeEpf,
+      employerEpf: c.employerEpf,
+      employerEtf: c.employerEtf,
+      apit: c.apitMonthly,
+      grossSalary: c.grossEarnings,
+      netSalary: c.netSalary,
+      workedSessions: c.sessionCount,
+      punctualSessions: c.punctualCount,
+    }));
+    finalizePayroll({
+      month: selectedMonth,
+      label: monthLabel,
+      grossSalaryPool: payrollTotals.gross,
+      netRemittances: payrollTotals.net,
+      totalEpf: payrollTotals.epfEmp + payrollTotals.epfEmr,
+      totalEtf: payrollTotals.etf,
+      totalApit: payrollTotals.apit,
+      employeeCount: payrollCalcs.length
+    }, slips);
   };
 
 
@@ -6503,16 +6650,17 @@ export default function Home() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
                           {activeEmployees.filter(e => e.payType === "Fixed Monthly").map(emp => {
+                            const empSal = getSalaryForMonth(emp, selectedMonth);
                             let baseRate = 0;
                             const basis = salarySettings.otRateBasis || "Basic_200";
-                            if (basis === "Profile_Hourly_Rate" && emp.hourlyRate) {
-                              baseRate = emp.hourlyRate;
+                            if (basis === "Profile_Hourly_Rate" && empSal.hourlyRate) {
+                              baseRate = empSal.hourlyRate;
                             } else if (basis === "Basic_WorkingDays_8h") {
-                              baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 8);
+                              baseRate = empSal.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 8);
                             } else if (basis === "Basic_WorkingDays_9h") {
-                              baseRate = emp.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9);
+                              baseRate = empSal.basicSalary / ((salarySettings.workingDaysPerMonth || 20) * 9);
                             } else {
-                              baseRate = emp.basicSalary / 200;
+                              baseRate = empSal.basicSalary / 200;
                             }
                             const mult = salarySettings.otMultiplier !== undefined ? salarySettings.otMultiplier : 1.5;
                             const effectiveOtRate = baseRate * mult;
@@ -6539,7 +6687,7 @@ export default function Home() {
                                     </button>
                                   </div>
                                   <p className="text-[10px] text-slate-400 truncate">
-                                    Basic: LKR {emp.basicSalary.toLocaleString()} {emp.hourlyRate ? `• Profile: LKR ${emp.hourlyRate}/h` : "• Profile: Not Set"}
+                                    Basic: LKR {empSal.basicSalary.toLocaleString()} {empSal.hourlyRate ? `• Profile: LKR ${empSal.hourlyRate}/h` : "• Profile: Not Set"}
                                   </p>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -7200,6 +7348,7 @@ export default function Home() {
                         const initials = `${emp.firstName[0] || ""}${emp.lastName[0] || ""}`.toUpperCase();
                         const workedRate = emp.attendanceBonusRate || salarySettings.globalWorkedDayBonus || 0;
                         const punctualRate = emp.punctualBonusRate || salarySettings.globalPunctualBonus || 0;
+                        const cardSalary = getSalaryForMonth(emp, selectedMonth);
                         return (
                           <div
                             key={emp.id}
@@ -7273,10 +7422,10 @@ export default function Home() {
                                 <div className="text-left sm:text-right">
                                   <p className="font-black text-sm text-slate-900 dark:text-white">
                                     {emp.payType === "Fixed Monthly"
-                                      ? `LKR ${emp.basicSalary.toLocaleString()}/mo`
+                                      ? `LKR ${cardSalary.basicSalary.toLocaleString()}/mo`
                                       : emp.payType === "Session-based"
-                                        ? `LKR ${emp.sessionRate.toLocaleString()}/session`
-                                        : `LKR ${emp.hourlyRate.toLocaleString()}/hr`}
+                                        ? `LKR ${(cardSalary.sessionRate || emp.sessionRate).toLocaleString()}/session`
+                                        : `LKR ${(cardSalary.hourlyRate || emp.hourlyRate).toLocaleString()}/hr`}
                                   </p>
                                   <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
                                     {emp.epfEligible ? "EPF Subject" : "EPF Exempt"}
@@ -8375,6 +8524,32 @@ export default function Home() {
                         onChange={e => setNewEmp(p => ({ ...p, hourlyRate: parseFloat(e.target.value) || 0 }))}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">LKR/hr</span>
+                    </div>
+                  </div>
+                )}
+
+                {editingEmpId && (
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                    <div className="p-3 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/50">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#0F85B0] dark:text-[#38bdf8] flex items-center gap-1.5">
+                          <Icons.Calendar className="w-3.5 h-3.5" /> Effective From Month
+                        </label>
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                          Preserves Past Months
+                        </span>
+                      </div>
+                      <input 
+                        type="month" 
+                        value={empEffectiveMonth} 
+                        onChange={e => setEmpEffectiveMonth(e.target.value)} 
+                        className={`w-full border rounded-xl px-3.5 py-2 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#0F85B0]/30 focus:border-[#0F85B0] transition ${
+                          isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+                        }`}
+                      />
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        Salary updates apply from this month onwards. Past unfinalized months will retain their historical rates.
+                      </p>
                     </div>
                   </div>
                 )}

@@ -112,4 +112,69 @@ describe("MedSync Statutory Payroll & Overtime Engine", () => {
     expect(summary.totalDeductions).toBe(7400); // 6400 + 1000
     expect(summary.netSalary).toBe(104600); // 112000 - 7400
   });
+
+  describe("Historical Salary Preservation Engine", () => {
+    function resolveEmployeeSalaryForMonth(
+      salaryHistory: { effectiveMonth: string; basicSalary: number; hourlyRate?: number }[] | undefined,
+      currentSalary: { basicSalary: number; hourlyRate?: number },
+      targetMonth: string
+    ): { basicSalary: number; hourlyRate: number } {
+      if (salaryHistory && salaryHistory.length > 0) {
+        const valid = salaryHistory
+          .filter(h => h.effectiveMonth <= targetMonth)
+          .sort((a, b) => b.effectiveMonth.localeCompare(a.effectiveMonth));
+        if (valid.length > 0) {
+          return {
+            basicSalary: valid[0].basicSalary,
+            hourlyRate: valid[0].hourlyRate ?? currentSalary.hourlyRate ?? 0,
+          };
+        }
+        const earliest = [...salaryHistory].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth))[0];
+        if (earliest) {
+          return {
+            basicSalary: earliest.basicSalary,
+            hourlyRate: earliest.hourlyRate ?? currentSalary.hourlyRate ?? 0,
+          };
+        }
+      }
+      return {
+        basicSalary: currentSalary.basicSalary,
+        hourlyRate: currentSalary.hourlyRate ?? 0,
+      };
+    }
+
+    it("preserves past unfinalized months with historical salary when increased in later months", () => {
+      // Worker had 15,000 up to September, then updated to 18,000 effective October
+      const history = [
+        { effectiveMonth: "2026-01", basicSalary: 15000, hourlyRate: 300 },
+        { effectiveMonth: "2026-10", basicSalary: 18000, hourlyRate: 350 },
+      ];
+      const liveEmp = { basicSalary: 18000, hourlyRate: 350 };
+
+      // September 2026 should preserve 15,000
+      const sep = resolveEmployeeSalaryForMonth(history, liveEmp, "2026-09");
+      expect(sep.basicSalary).toBe(15000);
+      expect(sep.hourlyRate).toBe(300);
+
+      // August 2026 should preserve 15,000
+      const aug = resolveEmployeeSalaryForMonth(history, liveEmp, "2026-08");
+      expect(aug.basicSalary).toBe(15000);
+
+      // October 2026 reflects the new 18,000
+      const oct = resolveEmployeeSalaryForMonth(history, liveEmp, "2026-10");
+      expect(oct.basicSalary).toBe(18000);
+      expect(oct.hourlyRate).toBe(350);
+
+      // November 2026 continues with the 18,000 rate
+      const nov = resolveEmployeeSalaryForMonth(history, liveEmp, "2026-11");
+      expect(nov.basicSalary).toBe(18000);
+    });
+
+    it("falls back gracefully to current salary when no history records exist", () => {
+      const liveEmp = { basicSalary: 60000, hourlyRate: 400 };
+      const res = resolveEmployeeSalaryForMonth([], liveEmp, "2026-08");
+      expect(res.basicSalary).toBe(60000);
+      expect(res.hourlyRate).toBe(400);
+    });
+  });
 });

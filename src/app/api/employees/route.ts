@@ -10,7 +10,11 @@ export async function GET(req: NextRequest) {
 
     const employees = await db.employee.findMany({
       where: { clinicId },
-      orderBy: { createdAt: "desc" }, include: { customOperatingHours: true }
+      orderBy: { createdAt: "desc" },
+      include: {
+        customOperatingHours: true,
+        salaryHistory: { orderBy: { effectiveMonth: "asc" } },
+      },
     });
     return NextResponse.json({ success: true, employees });
   } catch (error: unknown) {
@@ -40,6 +44,7 @@ export async function POST(req: NextRequest) {
       incomeBonusPercentage,
       allowEarlyOt,
       customOperatingHours,
+      effectiveMonth,
     } = body;
 
     const clinicId = await getClinicId(req);
@@ -105,6 +110,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (employee) {
+      const effMonth = (effectiveMonth && /^\d{4}-\d{2}$/.test(effectiveMonth))
+        ? effectiveMonth
+        : new Date().toISOString().slice(0, 7);
+
+      await db.employeeSalaryHistory.upsert({
+        where: {
+          employeeId_effectiveMonth: {
+            employeeId: employee.id,
+            effectiveMonth: effMonth,
+          },
+        },
+        update: {
+          basicSalary: Number(employee.basicSalary),
+          hourlyRate: Number(employee.hourlyRate),
+          sessionRate: Number(employee.sessionRate),
+        },
+        create: {
+          employeeId: employee.id,
+          effectiveMonth: effMonth,
+          basicSalary: Number(employee.basicSalary),
+          hourlyRate: Number(employee.hourlyRate),
+          sessionRate: Number(employee.sessionRate),
+        },
+      });
+
+      const fullEmployee = await db.employee.findUnique({
+        where: { id: employee.id },
+        include: {
+          customOperatingHours: true,
+          salaryHistory: { orderBy: { effectiveMonth: "asc" } },
+        },
+      });
+
+      return NextResponse.json({ success: true, employee: fullEmployee });
+    }
+
     return NextResponse.json({ success: true, employee });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error creating employee";
@@ -135,6 +177,7 @@ export async function PUT(req: NextRequest) {
       incomeBonusPercentage,
       allowEarlyOt,
       customOperatingHours,
+      effectiveMonth,
     } = body;
 
     const clinicId = await getClinicId(req);
@@ -207,6 +250,43 @@ export async function PUT(req: NextRequest) {
           incomeBonusPercentage: incomeBonusPercentage !== undefined ? Number(incomeBonusPercentage) : 0,
         },
       });
+    }
+
+    if (employee) {
+      const effMonth = (effectiveMonth && /^\d{4}-\d{2}$/.test(effectiveMonth))
+        ? effectiveMonth
+        : new Date().toISOString().slice(0, 7);
+
+      await db.employeeSalaryHistory.upsert({
+        where: {
+          employeeId_effectiveMonth: {
+            employeeId: employee.id,
+            effectiveMonth: effMonth,
+          },
+        },
+        update: {
+          basicSalary: Number(employee.basicSalary),
+          hourlyRate: Number(employee.hourlyRate),
+          sessionRate: Number(employee.sessionRate),
+        },
+        create: {
+          employeeId: employee.id,
+          effectiveMonth: effMonth,
+          basicSalary: Number(employee.basicSalary),
+          hourlyRate: Number(employee.hourlyRate),
+          sessionRate: Number(employee.sessionRate),
+        },
+      });
+
+      const fullEmployee = await db.employee.findUnique({
+        where: { id: employee.id },
+        include: {
+          customOperatingHours: true,
+          salaryHistory: { orderBy: { effectiveMonth: "asc" } },
+        },
+      });
+
+      return NextResponse.json({ success: true, employee: fullEmployee });
     }
 
     return NextResponse.json({ success: true, employee });
