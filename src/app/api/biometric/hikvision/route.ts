@@ -332,16 +332,19 @@ export async function POST(req: NextRequest) {
       console.error("[HIKVISION] Error fetching clinic settings:", err);
     }
 
+    let clinicHours: { startTime: string; endTime: string; isOpen: boolean } | null = null;
     try {
       const currentDayOfWeek = new Date(Date.UTC(slYear, slMonth - 1, slDay, 12)).getUTCDay();
+      clinicHours = await db.clinicOperatingHours.findUnique({
+        where: { clinicId_dayOfWeek: { clinicId, dayOfWeek: currentDayOfWeek } }
+      });
+
       let targetHours: { startTime: string; endTime: string } | null = await db.employeeOperatingHours.findUnique({
         where: { employeeId_dayOfWeek: { employeeId, dayOfWeek: currentDayOfWeek } }
       });
 
       if (!targetHours) {
-        targetHours = await db.clinicOperatingHours.findUnique({
-          where: { clinicId_dayOfWeek: { clinicId, dayOfWeek: currentDayOfWeek } }
-        });
+        targetHours = clinicHours;
       }
       
       if (targetHours) {
@@ -368,18 +371,42 @@ export async function POST(req: NextRequest) {
 
         if (otType === "Manual" || otType === "Disabled") {
           overtimeHours = 0;
-        } else if (otType === "Strict") {
-          if (arrivalTimeMinutes > shiftEndMinutes) {
-            const otMinutes = arrivalTimeMinutes - shiftEndMinutes;
-            overtimeHours = Math.round((otMinutes / 60) * 10) / 10;
+        } else {
+          let lateOtMinutes = 0;
+          if (otType === "Strict") {
+            if (arrivalTimeMinutes > shiftEndMinutes) {
+              lateOtMinutes = arrivalTimeMinutes - shiftEndMinutes;
+            }
+          } else if (otType === "Grace Period") {
+            if (arrivalTimeMinutes > shiftEndMinutes + otGrace) {
+              lateOtMinutes = arrivalTimeMinutes - shiftEndMinutes;
+            }
           }
-        } else if (otType === "Grace Period") {
-          if (arrivalTimeMinutes > shiftEndMinutes + otGrace) {
-            const otMinutes = arrivalTimeMinutes - shiftEndMinutes;
-            overtimeHours = Math.round((otMinutes / 60) * 10) / 10;
-          } else {
-            overtimeHours = 0;
+
+          // Option A: Early Arrival OT (if employee is eligible, capped at clinic opening)
+          let earlyOtMinutes = 0;
+          if (employee.allowEarlyOt && existingLog.checkIn) {
+            const [inH, inM] = existingLog.checkIn.split(':').map(Number);
+            if (!isNaN(inH) && !isNaN(inM)) {
+              const checkInMinutes = inH * 60 + inM;
+              if (checkInMinutes < shiftStartMinutes) {
+                let clinicOpenMin = shiftStartMinutes;
+                if (clinicHours && clinicHours.isOpen) {
+                  const [cH, cM] = clinicHours.startTime.split(':').map(Number);
+                  if (!isNaN(cH) && !isNaN(cM)) {
+                    clinicOpenMin = cH * 60 + cM;
+                  }
+                }
+                const effectiveStartMin = Math.max(checkInMinutes, clinicOpenMin);
+                if (shiftStartMinutes > effectiveStartMin) {
+                  earlyOtMinutes = shiftStartMinutes - effectiveStartMin;
+                }
+              }
+            }
           }
+
+          const totalOtMinutes = lateOtMinutes + earlyOtMinutes;
+          overtimeHours = Math.round((totalOtMinutes / 60) * 10) / 10;
         }
       } catch (err) {
         console.error("[HIKVISION] Error calculating clinic OT:", err);

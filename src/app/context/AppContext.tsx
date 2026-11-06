@@ -43,6 +43,7 @@ export interface Employee {
   attendanceBonusRate: number;
   punctualBonusRate: number;
   incomeBonusPercentage: number;
+  allowEarlyOt?: boolean;
 }
 
 export interface AttendanceLog {
@@ -699,6 +700,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 attendanceBonusRate: Number(e.attendanceBonusRate) || 0,
                 punctualBonusRate: Number(e.punctualBonusRate) || 0,
                 incomeBonusPercentage: Number(e.incomeBonusPercentage) || 0,
+                allowEarlyOt: Boolean(e.allowEarlyOt),
+                customOperatingHours: Array.isArray(e.customOperatingHours) ? e.customOperatingHours as ClinicOperatingHours[] : undefined,
               }));
               setEmployees(dbEmployees);
             }
@@ -1508,6 +1511,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           attendanceBonusRate: 0,
           punctualBonusRate: 0,
           incomeBonusPercentage: 0,
+          allowEarlyOt: false,
         });
       } else {
         await updateEmployee(existing.id, {

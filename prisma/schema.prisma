@@ -87,6 +87,7 @@ model Employee {
   attendanceBonusRate   Float    @default(0)
   punctualBonusRate     Float    @default(0)
   incomeBonusPercentage Float    @default(0)
+  allowEarlyOt          Boolean  @default(false)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

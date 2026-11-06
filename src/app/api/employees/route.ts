@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       attendanceBonusRate,
       punctualBonusRate,
       incomeBonusPercentage,
+      allowEarlyOt,
       customOperatingHours,
     } = body;
 
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
           ...(portalPin !== undefined && { portalPin: String(portalPin).trim() }),
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
+          ...(allowEarlyOt !== undefined && { allowEarlyOt: Boolean(allowEarlyOt) }),
           attendanceBonusRate: attendanceBonusRate !== undefined ? Number(attendanceBonusRate) : undefined,
           punctualBonusRate: punctualBonusRate !== undefined ? Number(punctualBonusRate) : undefined,
           incomeBonusPercentage: incomeBonusPercentage !== undefined ? Number(incomeBonusPercentage) : undefined,
@@ -90,6 +92,7 @@ export async function POST(req: NextRequest) {
           portalPin: portalPin ? String(portalPin).trim() : "1234",
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
+          allowEarlyOt: allowEarlyOt !== undefined ? Boolean(allowEarlyOt) : false,
           attendanceBonusRate: attendanceBonusRate !== undefined ? Number(attendanceBonusRate) : 0,
           punctualBonusRate: punctualBonusRate !== undefined ? Number(punctualBonusRate) : 0,
           incomeBonusPercentage: incomeBonusPercentage !== undefined ? Number(incomeBonusPercentage) : 0,
@@ -130,6 +133,7 @@ export async function PUT(req: NextRequest) {
       attendanceBonusRate,
       punctualBonusRate,
       incomeBonusPercentage,
+      allowEarlyOt,
       customOperatingHours,
     } = body;
 
@@ -169,6 +173,7 @@ export async function PUT(req: NextRequest) {
           ...(epfEligible !== undefined && { epfEligible: Boolean(epfEligible) }),
           ...(taxable !== undefined && { taxable: Boolean(taxable) }),
           ...(active !== undefined && { active: Boolean(active) }),
+          ...(allowEarlyOt !== undefined && { allowEarlyOt: Boolean(allowEarlyOt) }),
           ...(attendanceBonusRate !== undefined && { attendanceBonusRate: Number(attendanceBonusRate) }),
           ...(punctualBonusRate !== undefined && { punctualBonusRate: Number(punctualBonusRate) }),
           ...(incomeBonusPercentage !== undefined && { incomeBonusPercentage: Number(incomeBonusPercentage) }),
@@ -196,6 +201,7 @@ export async function PUT(req: NextRequest) {
           epfEligible: epfEligible ?? true,
           taxable: taxable ?? false,
           active: active ?? true,
+          allowEarlyOt: allowEarlyOt !== undefined ? Boolean(allowEarlyOt) : false,
           attendanceBonusRate: attendanceBonusRate !== undefined ? Number(attendanceBonusRate) : 0,
           punctualBonusRate: punctualBonusRate !== undefined ? Number(punctualBonusRate) : 0,
           incomeBonusPercentage: incomeBonusPercentage !== undefined ? Number(incomeBonusPercentage) : 0,

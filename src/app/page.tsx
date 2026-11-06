@@ -132,7 +132,9 @@ const calculateOvertimeHours = (
   operatingHours: { dayOfWeek: number; isOpen: boolean; startTime: string; endTime: string }[],
   otCalculationType: string = "Strict",
   graceMinutes: number = 30,
-  checkIn?: string | null | undefined
+  checkIn?: string | null | undefined,
+  clinicOperatingHours?: { dayOfWeek: number; isOpen: boolean; startTime: string; endTime: string }[],
+  allowEarlyOt: boolean = false
 ): number => {
   if (otCalculationType === "Manual" || otCalculationType === "Disabled") return 0;
   if (!checkOut || checkOut === "–" || checkOut.toLowerCase().includes("active")) return 0;
@@ -158,21 +160,54 @@ const calculateOvertimeHours = (
     return 0;
   }
 
-  // Case 2: Clinic is OPEN on this day -> hours worked past shift closing time
-  const [endH, endM] = opHour.endTime.split(":").map(Number);
-  if (isNaN(endH) || isNaN(endM)) return 0;
-  const shiftEndMinutes = endH * 60 + endM;
+  // Case 2: Clinic is OPEN on this day
+  let totalOtMinutes = 0;
 
-  if (otCalculationType === "Strict") {
-    if (checkOutMinutes > shiftEndMinutes) {
-      return Math.round(((checkOutMinutes - shiftEndMinutes) / 60) * 100) / 100;
-    }
-  } else if (otCalculationType === "Grace Period") {
-    if (checkOutMinutes > shiftEndMinutes + graceMinutes) {
-      return Math.round(((checkOutMinutes - shiftEndMinutes) / 60) * 100) / 100;
+  // 1. Late Overtime (hours worked past shift closing time)
+  const [endH, endM] = opHour.endTime.split(":").map(Number);
+  if (!isNaN(endH) && !isNaN(endM)) {
+    const shiftEndMinutes = endH * 60 + endM;
+
+    if (otCalculationType === "Strict") {
+      if (checkOutMinutes > shiftEndMinutes) {
+        totalOtMinutes += (checkOutMinutes - shiftEndMinutes);
+      }
+    } else if (otCalculationType === "Grace Period") {
+      if (checkOutMinutes > shiftEndMinutes + graceMinutes) {
+        totalOtMinutes += (checkOutMinutes - shiftEndMinutes);
+      }
     }
   }
-  return 0;
+
+  // 2. Early Arrival Overtime (Option A: early arrival before shift start, capped at clinic opening time)
+  if (allowEarlyOt && checkIn && checkIn !== "–" && !checkIn.toLowerCase().includes("active")) {
+    const [inH, inM] = checkIn.split(":").map(Number);
+    const [startH, startM] = opHour.startTime.split(":").map(Number);
+    if (!isNaN(inH) && !isNaN(inM) && !isNaN(startH) && !isNaN(startM)) {
+      const checkInMinutes = inH * 60 + inM;
+      const shiftStartMinutes = startH * 60 + startM;
+
+      if (checkInMinutes < shiftStartMinutes) {
+        // Clinic opening time for this day (determines the cap)
+        const clinicHour = clinicOperatingHours?.find(h => h.dayOfWeek === dayOfWeek);
+        let clinicOpenMinutes = shiftStartMinutes;
+        if (clinicHour && clinicHour.isOpen) {
+          const [cH, cM] = clinicHour.startTime.split(":").map(Number);
+          if (!isNaN(cH) && !isNaN(cM)) {
+            clinicOpenMinutes = cH * 60 + cM;
+          }
+        }
+
+        // Option A: Capped at clinic opening time
+        const effectiveStartMinutes = Math.max(checkInMinutes, clinicOpenMinutes);
+        if (shiftStartMinutes > effectiveStartMinutes) {
+          totalOtMinutes += (shiftStartMinutes - effectiveStartMinutes);
+        }
+      }
+    }
+  }
+
+  return Math.round((totalOtMinutes / 60) * 100) / 100;
 };
 
 const calculateIsPunctual = (
@@ -1024,7 +1059,7 @@ export default function Home() {
     firstName:"", lastName:"", role:"Nurse", payType:"Fixed Monthly",
     basicSalary:50000, hourlyRate:300, sessionRate:0, commissionRate:0,
     biometricId:"", portalPin:"1234", epfEligible:true, taxable:false,  branchId:null,
-    allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3}, attendanceBonusRate:0, punctualBonusRate:0, incomeBonusPercentage:0,
+    allowanceIds:[], leaveBalances:{annual:14,sick:7,casual:3}, attendanceBonusRate:0, punctualBonusRate:0, incomeBonusPercentage:0, allowEarlyOt:false,
   });
 
   const [drawerLogId, setDrawerLogId] = useState<string|null>(null);
@@ -1415,7 +1450,7 @@ export default function Home() {
 
       empLogs.forEach(l => {
         const ot = (salarySettings.otCalculationType !== "Manual")
-          ? calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn)
+          ? calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn, operatingHours, emp.allowEarlyOt)
           : (l.overtimeHours || 0);
 
         if (ot > 0) {
@@ -1526,17 +1561,19 @@ export default function Home() {
 
   // ── Handlers ──
 
-  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, portalPin:emp.portalPin || "1234", epfEligible:emp.epfEligible, taxable:emp.taxable,  branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage, customOperatingHours: emp.customOperatingHours || [] }); setShowAddEmpModal(true); };
+  const openEditEmp = (emp: Employee) => { setEditingEmpId(emp.id); setNewEmp({ firstName:emp.firstName, lastName:emp.lastName, role:emp.role, payType:emp.payType, basicSalary:emp.basicSalary, hourlyRate:emp.hourlyRate, sessionRate:emp.sessionRate, commissionRate:emp.commissionRate, biometricId:emp.biometricId, portalPin:emp.portalPin || "1234", epfEligible:emp.epfEligible, taxable:emp.taxable,  branchId:emp.branchId, allowanceIds:emp.allowanceIds, leaveBalances:emp.leaveBalances, attendanceBonusRate:emp.attendanceBonusRate, punctualBonusRate:emp.punctualBonusRate, incomeBonusPercentage:emp.incomeBonusPercentage, allowEarlyOt: Boolean(emp.allowEarlyOt), customOperatingHours: emp.customOperatingHours || [] }); setShowAddEmpModal(true); };
 
-  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",portalPin:"1234",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,customOperatingHours:[]}); };
+  const handleAddEmployee = (e: React.FormEvent) => { e.preventDefault(); if(editingEmpId){updateEmployee(editingEmpId,newEmp);setEditingEmpId(null);}else{addEmployee(newEmp);} setShowAddEmpModal(false); setNewEmp({firstName:"",lastName:"",role:"Nurse",payType:"Fixed Monthly",basicSalary:50000,hourlyRate:300,sessionRate:0,commissionRate:0,biometricId:"",portalPin:"1234",epfEligible:true,taxable:false,branchId:null,allowanceIds:[],leaveBalances:{annual:14,sick:7,casual:3},attendanceBonusRate:0,punctualBonusRate:0,incomeBonusPercentage:0,allowEarlyOt:false,customOperatingHours:[]}); };
 
   const openDrawer = (log: AttendanceLog) => {
     if (!isUserAdmin) {
       setShowAdminPinModal(true);
       return;
     }
+    const emp = employees.find(e => e.id === log.employeeId || e.biometricId === log.employeeId);
+    const effectiveHours = emp?.customOperatingHours?.length ? emp.customOperatingHours : operatingHours;
     const effectiveOt = (salarySettings.otCalculationType !== "Manual")
-      ? calculateOvertimeHours(log.checkOut, log.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, log.checkIn)
+      ? calculateOvertimeHours(log.checkOut, log.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, log.checkIn, operatingHours, emp?.allowEarlyOt)
       : (log.overtimeHours || 0);
 
     setPunchEdit({
@@ -2266,7 +2303,11 @@ export default function Home() {
                   { label: "Total Logs", value: statusCounts.All, color: "from-[#0ea5e9] to-[#0F85B0]", badge: selectedMonth, icon: <Icons.Clock className="w-4 h-4 text-[#38bdf8]" /> },
                   { label: "On-Time Rate", value: `${Math.min(100, Math.round(((statusCounts["On-Time"] || 0) / (statusCounts.All || 1)) * 100))}%`, color: "from-emerald-500 to-teal-600", badge: `${statusCounts["On-Time"] || 0} Punches`, icon: <Icons.CheckCircle className="w-4 h-4 text-emerald-400" /> },
                   { label: "Late Arrivals", value: statusCounts["Late"] || 0, color: "from-amber-500 to-orange-600", badge: "Grace Check", icon: <Icons.Clock className="w-4 h-4 text-amber-400" /> },
-                  { label: "Overtime Logged", value: formatHoursAndMins(filteredLogs.reduce((s, l) => s + ((salarySettings.otCalculationType !== "Manual") ? calculateOvertimeHours(l.checkOut, l.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn) : (l.overtimeHours || 0)), 0)), color: "from-indigo-500 to-purple-600", badge: "Approved OT", icon: <Icons.TrendingUp className="w-4 h-4 text-indigo-400" /> },
+                  { label: "Overtime Logged", value: formatHoursAndMins(filteredLogs.reduce((s, l) => {
+                    const emp = employees.find(e => e.id === l.employeeId || e.biometricId === l.employeeId);
+                    const effectiveHours = emp?.customOperatingHours?.length ? emp.customOperatingHours : operatingHours;
+                    return s + ((salarySettings.otCalculationType !== "Manual") ? calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn, operatingHours, emp?.allowEarlyOt) : (l.overtimeHours || 0));
+                  }, 0)), color: "from-indigo-500 to-purple-600", badge: "Approved OT", icon: <Icons.TrendingUp className="w-4 h-4 text-indigo-400" /> },
                 ].map((item, idx) => (
                   <div
                     key={idx}
@@ -2405,7 +2446,7 @@ export default function Home() {
                         const effectiveHours = emp?.customOperatingHours?.length ? emp.customOperatingHours : operatingHours;
                         const workedHours = calculateWorkedHours(log.checkIn, log.checkOut);
                         const otHours = (salarySettings.otCalculationType !== "Manual")
-                          ? calculateOvertimeHours(log.checkOut, log.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, log.checkIn)
+                          ? calculateOvertimeHours(log.checkOut, log.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, log.checkIn, operatingHours, emp?.allowEarlyOt)
                           : (log.overtimeHours || 0);
 
                         const isPunctual = ["On-Time", "Late"].includes(log.status)
@@ -4659,7 +4700,7 @@ export default function Home() {
                           }
 
                           const ot = (salarySettings.otCalculationType !== "Manual")
-                            ? calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn)
+                            ? calculateOvertimeHours(l.checkOut, l.date, effectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, l.checkIn, operatingHours, selfServiceEmp.allowEarlyOt)
                             : (l.overtimeHours || 0);
 
                           return (
@@ -6312,6 +6353,21 @@ export default function Home() {
                         )}
                       </div>
 
+                      {/* Early Arrival Overtime Notice */}
+                      <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
+                        isDark ? "bg-indigo-950/20 border-indigo-500/30 text-indigo-300" : "bg-indigo-50/70 border-indigo-200 text-indigo-900"
+                      }`}>
+                        <Icons.Clock className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
+                        <div className="space-y-0.5 text-xs">
+                          <span className="font-black block text-[11px] uppercase tracking-wider text-indigo-500">
+                            Early Arrival Overtime (Per-Worker Option A)
+                          </span>
+                          <p className="text-[11px] opacity-90 leading-relaxed">
+                            Staff members can be individually enabled for early arrival OT in <strong>Staff Directory &rarr; Edit Profile &rarr; Early Arrival OT</strong>. When enabled, hours worked before their scheduled shift start are credited as OT, strictly capped at clinic opening time.
+                          </p>
+                        </div>
+                      </div>
+
                       {/* DYNAMIC OT HOURLY RATE BASIS & MULTIPLIER CONFIGURATION */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
                         {/* Rate Calculation Basis Selector */}
@@ -7150,6 +7206,14 @@ export default function Home() {
                                       <Icons.Camera className="w-2.5 h-2.5 text-[#0ea5e9]" />
                                       <span>Biometric #{emp.biometricId || "Unlinked"}</span>
                                     </span>
+                                    {emp.allowEarlyOt && (
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${
+                                        isDark ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20" : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                      }`}>
+                                        <Icons.Clock className="w-2.5 h-2.5" />
+                                        <span>Early OT</span>
+                                      </span>
+                                    )}
                                   </div>
 
                                   <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -7965,8 +8029,10 @@ export default function Home() {
                       value={punchEdit.checkOut}
                       onChange={e => {
                         const newOut = e.target.value;
+                        const drawerEmp = activeDrawerLog ? employees.find(e => e.id === activeDrawerLog.employeeId || e.biometricId === activeDrawerLog.employeeId) : null;
+                        const drawerEffectiveHours = drawerEmp?.customOperatingHours?.length ? drawerEmp.customOperatingHours : operatingHours;
                         const autoOt = activeDrawerLog
-                          ? calculateOvertimeHours(newOut, activeDrawerLog.date, operatingHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, activeDrawerLog.checkIn)
+                          ? calculateOvertimeHours(newOut, activeDrawerLog.date, drawerEffectiveHours, salarySettings.otCalculationType, salarySettings.otGracePeriodMinutes, activeDrawerLog.checkIn, operatingHours, drawerEmp?.allowEarlyOt)
                           : 0;
                         setPunchEdit(p => ({
                           ...p,
@@ -8399,7 +8465,7 @@ export default function Home() {
               </div>
 
               {/* SECTION 5: COMPLIANCE & CUSTOM SCHEDULE TOGGLES */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
                   newEmp.epfEligible 
                     ? isDark ? "bg-emerald-950/20 border-emerald-500/40 text-emerald-300" : "bg-emerald-50/70 border-emerald-200 text-emerald-900"
@@ -8454,6 +8520,23 @@ export default function Home() {
                   <div>
                     <span className="text-xs font-black block">Custom Schedule</span>
                     <span className="text-[10px] opacity-75">Overrides clinic hours</span>
+                  </div>
+                </label>
+
+                <label className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center gap-3 ${
+                  newEmp.allowEarlyOt 
+                    ? isDark ? "bg-indigo-950/20 border-indigo-500/40 text-indigo-300" : "bg-indigo-50/70 border-indigo-200 text-indigo-900"
+                    : isDark ? "bg-slate-950/30 border-slate-800 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+                }`}>
+                  <input 
+                    type="checkbox" 
+                    checked={Boolean(newEmp.allowEarlyOt)} 
+                    onChange={e => setNewEmp(p => ({ ...p, allowEarlyOt: e.target.checked }))} 
+                    className="w-4 h-4 rounded text-indigo-500 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <span className="text-xs font-black block">Early Arrival OT</span>
+                    <span className="text-[10px] opacity-75">Capped at clinic opening</span>
                   </div>
                 </label>
               </div>

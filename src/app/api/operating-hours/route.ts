@@ -111,6 +111,13 @@ export async function POST(req: Request) {
             clinicId,
             checkOut: { not: null },
           },
+          include: {
+            employee: {
+              include: {
+                customOperatingHours: true,
+              },
+            },
+          },
         });
 
         for (const log of logs) {
@@ -120,12 +127,16 @@ export async function POST(req: Request) {
           const dayOfWeek = logDate.getUTCDay();
           const daySchedule = updated.find(h => h.dayOfWeek === dayOfWeek);
 
+          const emp = log.employee;
+          const empCustom = emp?.customOperatingHours?.find(h => h.dayOfWeek === dayOfWeek);
+          const effectiveSchedule = empCustom || daySchedule;
+
           const [outH, outM] = log.checkOut.split(":").map(Number);
           if (isNaN(outH) || isNaN(outM)) continue;
           const outMinutes = outH * 60 + outM;
 
           let newOt = 0;
-          if (!daySchedule || !daySchedule.isOpen) {
+          if (!effectiveSchedule || !effectiveSchedule.isOpen) {
             // Closed/off-day: all worked hours count as overtime
             if (log.checkIn && log.checkIn !== "–" && !log.checkIn.toLowerCase().includes("active")) {
               const [inH, inM] = log.checkIn.split(":").map(Number);
@@ -136,16 +147,43 @@ export async function POST(req: Request) {
               }
             }
           } else {
-            // Open day: hours past shift closing
-            const [endH, endM] = daySchedule.endTime.split(":").map(Number);
+            // Open day: late hours past shift closing
+            let lateOtMin = 0;
+            const [endH, endM] = effectiveSchedule.endTime.split(":").map(Number);
             if (!isNaN(endH) && !isNaN(endM)) {
               const shiftEndMin = endH * 60 + endM;
               if (otType === "Strict" && outMinutes > shiftEndMin) {
-                newOt = Math.round(((outMinutes - shiftEndMin) / 60) * 100) / 100;
+                lateOtMin = outMinutes - shiftEndMin;
               } else if (otType === "Grace Period" && outMinutes > shiftEndMin + otGrace) {
-                newOt = Math.round(((outMinutes - shiftEndMin) / 60) * 100) / 100;
+                lateOtMin = outMinutes - shiftEndMin;
               }
             }
+
+            // Early arrival OT (Option A: capped at clinic opening time)
+            let earlyOtMin = 0;
+            if (emp?.allowEarlyOt && log.checkIn && log.checkIn !== "–" && !log.checkIn.toLowerCase().includes("active")) {
+              const [inH, inM] = log.checkIn.split(":").map(Number);
+              const [startH, startM] = effectiveSchedule.startTime.split(":").map(Number);
+              if (!isNaN(inH) && !isNaN(inM) && !isNaN(startH) && !isNaN(startM)) {
+                const checkInMin = inH * 60 + inM;
+                const shiftStartMin = startH * 60 + startM;
+                if (checkInMin < shiftStartMin) {
+                  let clinicOpenMin = shiftStartMin;
+                  if (daySchedule && daySchedule.isOpen) {
+                    const [cH, cM] = daySchedule.startTime.split(":").map(Number);
+                    if (!isNaN(cH) && !isNaN(cM)) {
+                      clinicOpenMin = cH * 60 + cM;
+                    }
+                  }
+                  const effectiveStartMin = Math.max(checkInMin, clinicOpenMin);
+                  if (shiftStartMin > effectiveStartMin) {
+                    earlyOtMin = shiftStartMin - effectiveStartMin;
+                  }
+                }
+              }
+            }
+
+            newOt = Math.round(((lateOtMin + earlyOtMin) / 60) * 100) / 100;
           }
 
           if (log.overtimeHours !== newOt) {
