@@ -1,260 +1,304 @@
-// MedSync Clinic OS — Bespoke Editorial Site Interactions
+// MedSync Clinic OS — Interactive Marketing Engine
+// Built for Smile Hub Dental Practice Architecture
 
 document.addEventListener('DOMContentLoaded', () => {
 
   // =========================================================================
-  // 1. Hero Interactive Clinic Ledger (Sri Lankan Clinic Simulation)
+  // 1. Interactive Smile Hub Clinical Team Simulator
   // =========================================================================
-  const staffData = {
-    matron: {
-      name: "Sister Nirmala Jayasinghe",
-      role: "Head Matron · EPF #SUN-004 · Hikvision Face ID #104",
-      status: "100% PUNCTUAL · 22/22 DAYS",
-      basic: "LKR 95,000.00",
-      ot: "+ LKR 12,468.75",
-      allowance: "+ LKR 8,500.00",
-      epf: "- LKR 7,600.00",
-      apit: "- LKR 1,850.00",
-      net: "LKR 106,518.75",
-      employerEpf: "LKR 11,400.00",
-      employerEtf: "LKR 2,850.00"
+  const dentalStaffData = {
+    assistant: {
+      name: "Dilani D.",
+      role: "Dental Chairside Assistant · Station #Chair-2",
+      bioId: "Face ID #SH005 (Hikvision DS-K1T)",
+      shifts: "22 Working Days · Split Morning/Evening Shift",
+      hours: "08:00 AM – 01:30 PM & 04:00 PM – 07:30 PM",
+      basic: "LKR 60,000.00",
+      ot: "+ LKR 7,850.00 (14 hrs Evening OT @ 1.5x)",
+      allowance: "+ LKR 5,000.00 (Sterilization Hazard)",
+      puncBonus: "+ LKR 4,400.00 (22 Days Punctual)",
+      epf: "- LKR 4,800.00",
+      apit: "LKR 0.00 (Below APIT Threshold)",
+      net: "LKR 72,450.00",
+      employerEpf: "LKR 7,200.00 (12%)",
+      employerEtf: "LKR 1,800.00 (3%)",
+      c3Status: "CBSL Certified Match",
+      recentPunch: "07:53:12 AM · Facial Recognition (Terminal 01 - Reception)"
+    },
+    nurse: {
+      name: "Deshani T.",
+      role: "Lead Dental Nurse & Clinical Coordinator",
+      bioId: "Fingerprint ID #SH001 (Hikvision DS-K1T)",
+      shifts: "24 Working Days · Full Day & Ortho Surgery Assist",
+      hours: "08:00 AM – 06:00 PM (Clinical Operations)",
+      basic: "LKR 75,000.00",
+      ot: "+ LKR 12,450.00 (18 hrs Post-Shift Surgery OT)",
+      allowance: "+ LKR 9,000.00 (Clinical Lead & Inventory)",
+      puncBonus: "+ LKR 4,800.00 (24 Days Punctual)",
+      epf: "- LKR 6,000.00",
+      apit: "- LKR 1,250.00 (Withholding APIT)",
+      net: "LKR 94,000.00",
+      employerEpf: "LKR 9,000.00 (12%)",
+      employerEtf: "LKR 2,250.00 (3%)",
+      c3Status: "CBSL Certified Match",
+      recentPunch: "07:48:05 AM · Fingerprint Scan (Terminal 02 - Staff Lobby)"
     },
     doctor: {
-      name: "Dr. V. Jayasuriya, MBBS, MS",
-      role: "Consultant Surgeon · Visiting OPD · Registration #SLMC-18294",
-      status: "14 SURGICAL SESSIONS · 0 ABSENCES",
-      basic: "LKR 240,000.00",
-      ot: "+ LKR 45,000.00 (Emergency Callouts)",
-      allowance: "+ LKR 15,000.00 (Theatre Allowance)",
-      epf: "- LKR 19,200.00",
-      apit: "- LKR 18,500.00 (Inland Revenue APIT)",
-      net: "LKR 262,300.00",
-      employerEpf: "LKR 28,800.00",
-      employerEtf: "LKR 7,200.00"
+      name: "Dr. Jayasuriya, BDS, MD",
+      role: "Consultant Orthodontist & Dental Surgeon",
+      bioId: "SLMC Reg #D-9402 · RFID Card #SH101",
+      shifts: "16 Scheduled Clinic Sessions · 4 Surgical Callouts",
+      hours: "Consulting & Minor Surgery Appointments",
+      basic: "LKR 220,000.00",
+      ot: "+ LKR 36,000.00 (Sunday Emergency Clinic Callout)",
+      allowance: "+ LKR 15,000.00 (Implant Surgery Allowance)",
+      puncBonus: "LKR 0.00 (Consultant Exemption)",
+      epf: "- LKR 17,600.00",
+      apit: "- LKR 14,800.00 (Inland Revenue APIT Slabs)",
+      net: "LKR 238,600.00",
+      employerEpf: "LKR 26,400.00 (12%)",
+      employerEtf: "LKR 6,600.00 (3%)",
+      c3Status: "CBSL Certified Match",
+      recentPunch: "08:15:20 AM · RFID Keycard (Terminal 01 - Reception)"
     },
     reception: {
-      name: "T. Fernando",
-      role: "Dispensary & Reception Lead · EPF #SUN-009 · Fingerprint #202",
-      status: "18/18 WEEKDAYS · 4/4 SATURDAY HALF-DAYS",
-      basic: "LKR 65,000.00",
-      ot: "+ LKR 5,200.00 (Saturday Evening)",
-      allowance: "+ LKR 4,000.00 (Attendance Bonus)",
-      epf: "- LKR 5,200.00",
+      name: "Nikila S.",
+      role: "Front Desk & Patient Care Coordinator",
+      bioId: "Face ID #SH002 (Hikvision DS-K1T)",
+      shifts: "22 Days Full-Shift · 4 Saturday Appointments",
+      hours: "07:45 AM – 05:00 PM (Reception Desk)",
+      basic: "LKR 55,000.00",
+      ot: "+ LKR 5,725.00 (Saturday Evening Overtime)",
+      allowance: "+ LKR 3,000.00 (Cash Handling Allowance)",
+      puncBonus: "+ LKR 4,400.00 (22 Days Punctual)",
+      epf: "- LKR 4,400.00",
       apit: "LKR 0.00 (Below APIT Threshold)",
-      net: "LKR 69,000.00",
-      employerEpf: "LKR 7,800.00",
-      employerEtf: "LKR 1,950.00"
+      net: "LKR 63,725.00",
+      employerEpf: "LKR 6,600.00 (12%)",
+      employerEtf: "LKR 1,650.00 (3%)",
+      c3Status: "CBSL Certified Match",
+      recentPunch: "07:42:55 AM · Facial Recognition (Terminal 01 - Reception)"
     }
   };
 
   const staffPillBtns = document.querySelectorAll('.staff-pill-btn');
-  const heroStaffName = document.getElementById('heroStaffName');
-  const heroStaffRole = document.getElementById('heroStaffRole');
-  const heroAttendanceStatus = document.getElementById('heroAttendanceStatus');
-  const heroMathBasic = document.getElementById('heroMathBasic');
-  const heroMathOT = document.getElementById('heroMathOT');
-  const heroMathAllowance = document.getElementById('heroMathAllowance');
-  const heroMathEPF = document.getElementById('heroMathEPF');
-  const heroMathAPIT = document.getElementById('heroMathAPIT');
-  const heroMathNet = document.getElementById('heroMathNet');
-  const heroLockStamp = document.getElementById('heroLockStamp');
-  const simulateFinalizeBtn = document.getElementById('simulateFinalizeBtn');
-  const resetLedgerBtn = document.getElementById('resetLedgerBtn');
+  const simStaffName = document.getElementById('simStaffName');
+  const simStaffRole = document.getElementById('simStaffRole');
+  const simBioId = document.getElementById('simBioId');
+  const simShiftHours = document.getElementById('simShiftHours');
+  const simRecentPunch = document.getElementById('simRecentPunch');
+  const simMathBasic = document.getElementById('simMathBasic');
+  const simMathOT = document.getElementById('simMathOT');
+  const simMathAllowance = document.getElementById('simMathAllowance');
+  const simMathPunc = document.getElementById('simMathPunc');
+  const simMathEPF = document.getElementById('simMathEPF');
+  const simMathAPIT = document.getElementById('simMathAPIT');
+  const simMathNet = document.getElementById('simMathNet');
+  const simEmployerEpf = document.getElementById('simEmployerEpf');
+  const simEmployerEtf = document.getElementById('simEmployerEtf');
+  const simFinalizeBtn = document.getElementById('simFinalizeBtn');
+  const simLockBadge = document.getElementById('simLockBadge');
+  const simResetBtn = document.getElementById('simResetBtn');
 
-  let currentRole = 'matron';
+  function renderStaffData(key) {
+    const d = dentalStaffData[key];
+    if (!d) return;
 
-  function renderStaffData(roleKey) {
-    const data = staffData[roleKey];
-    if (!data) return;
-
-    heroStaffName.textContent = data.name;
-    heroStaffRole.textContent = data.role;
-    heroAttendanceStatus.textContent = data.status;
-    heroMathBasic.textContent = data.basic;
-    heroMathOT.textContent = data.ot;
-    heroMathAllowance.textContent = data.allowance;
-    heroMathEPF.textContent = data.epf;
-    heroMathAPIT.textContent = data.apit;
-    heroMathNet.textContent = data.net;
+    if (simStaffName) simStaffName.textContent = d.name;
+    if (simStaffRole) simStaffRole.textContent = d.role;
+    if (simBioId) simBioId.textContent = d.bioId;
+    if (simShiftHours) simShiftHours.textContent = d.hours;
+    if (simRecentPunch) simRecentPunch.textContent = d.recentPunch;
+    if (simMathBasic) simMathBasic.textContent = d.basic;
+    if (simMathOT) simMathOT.textContent = d.ot;
+    if (simMathAllowance) simMathAllowance.textContent = d.allowance;
+    if (simMathPunc) simMathPunc.textContent = d.puncBonus;
+    if (simMathEPF) simMathEPF.textContent = d.epf;
+    if (simMathAPIT) simMathAPIT.textContent = d.apit;
+    if (simMathNet) simMathNet.textContent = d.net;
+    if (simEmployerEpf) simEmployerEpf.textContent = d.employerEpf;
+    if (simEmployerEtf) simEmployerEtf.textContent = d.employerEtf;
   }
 
   staffPillBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       staffPillBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentRole = btn.getAttribute('data-role');
-      renderStaffData(currentRole);
+      const role = btn.getAttribute('data-role');
+      renderStaffData(role);
     });
   });
 
-  if (simulateFinalizeBtn) {
-    simulateFinalizeBtn.addEventListener('click', () => {
-      isFinalized = true;
-      heroLockStamp.textContent = "FINALIZED & LOCKED";
-      heroLockStamp.style.background = "#E6F0ED";
-      heroLockStamp.style.color = "#0C4E44";
-      heroLockStamp.style.borderColor = "#BCD8D0";
-      simulateFinalizeBtn.style.display = 'none';
-      if (resetLedgerBtn) resetLedgerBtn.style.display = 'inline-flex';
+  if (simFinalizeBtn) {
+    simFinalizeBtn.addEventListener('click', () => {
+      simLockBadge.textContent = "FINALIZED & IMMUTABLE";
+      simLockBadge.style.background = "#D1FAE5";
+      simLockBadge.style.color = "#065F46";
+      simLockBadge.style.borderColor = "#A7F3D0";
+      simFinalizeBtn.style.display = "none";
+      if (simResetBtn) simResetBtn.style.display = "inline-flex";
     });
   }
 
-  if (resetLedgerBtn) {
-    resetLedgerBtn.addEventListener('click', () => {
-      isFinalized = false;
-      heroLockStamp.textContent = "DRAFT AUDIT";
-      heroLockStamp.style.background = "#FEF3C7";
-      heroLockStamp.style.color = "#92400E";
-      heroLockStamp.style.borderColor = "#FDE68A";
-      simulateFinalizeBtn.style.display = 'inline-flex';
-      resetLedgerBtn.style.display = 'none';
+  if (simResetBtn) {
+    simResetBtn.addEventListener('click', () => {
+      simLockBadge.textContent = "ACTIVE CYCLE (DRAFT)";
+      simLockBadge.style.background = "#FEF3C7";
+      simLockBadge.style.color = "#92400E";
+      simLockBadge.style.borderColor = "#FDE68A";
+      simFinalizeBtn.style.display = "inline-flex";
+      simResetBtn.style.display = "none";
     });
   }
 
   // =========================================================================
-  // 2. Unfiltered System Tour (Real Light Mode Screenshots)
+  // 2. Interactive System Tour (Screenshots Showcase)
   // =========================================================================
-  const screenData = {
+  const tourScreens = {
     payroll: {
-      title: "Automated Sri Lankan Payroll & Audit Locking",
-      badge: "STATUTORY AUDIT ENGINE",
-      url: "medsync.app/payroll · Finalized Payroll Period",
+      title: "Statutory Payroll Engine & Frozen Wage Ledger",
+      badge: "FINALIZED CYCLE · OCT 2026",
       img: "/marketing/assets/screenshots/payroll_finalized_light.png",
-      text: "MedSync aggregates raw terminal logs, calculates base pay, overtime, punctuality bonuses, and calculates Employee EPF (8%), Employer EPF (12%), and Employer ETF (3%). Clicking 'Finalize Month' permanently seals the period with cryptographic protection.",
-      callouts: [
-        { title: "Permanent Lock State", desc: "Prevents post-payout edits or accidental spreadsheet corruption." },
-        { title: "Central Bank Validated", desc: "Generates official C3 remittance files with one click." },
-        { title: "Itemized Payslips", desc: "Complete wage statements formatted for print and direct staff download." }
-      ]
-    },
-    reports: {
-      title: "Audit Statements, Payslips & Central Bank C3",
-      badge: "HISTORICAL ARCHIVE & C3",
-      url: "medsync.app/reports · Statutory Reports & Export",
-      img: "/marketing/assets/screenshots/reports_light.png",
-      text: "Every finalized month produces an immutable compliance archive. Generate individual PDF payslips with official clinic stamp, export the Central Bank EPF Form C3, and view multi-month salary comparisons.",
-      callouts: [
-        { title: "Electronic Form C3", desc: "Meets exact specifications of Sri Lankan commercial bank portals." },
-        { title: "Clinical Payslip Format", desc: "Includes basic, allowances, OT hours, EPF/ETF splits, and net remittance." },
-        { title: "Department of Labour Ready", desc: "Complete audit logs ready for any labour officer inspection." }
+      desc: "Aggregates raw Hikvision punches, calculates statutory employee EPF (8%), employer EPF (12%), employer ETF (3%), and APIT withholding tax. Sealing the month permanently locks individual salary slips against retroactive changes.",
+      features: [
+        "Historical Salary Preservation (Past unfinalized and finalized records protected)",
+        "Zero-Pay & Punctuality Bonus Automation (LKR 200/day punctuality allowance)",
+        "Individual Payslip PDF Generation with Official Clinic Seal"
       ]
     },
     attendance: {
       title: "Real-Time Biometric Punch Stream",
-      badge: "TERMINAL SYNCHRONIZATION",
-      url: "medsync.app/attendance · Live Biometric Stream",
+      badge: "HIKVISION LAN & ISUP PUSH",
       img: "/marketing/assets/screenshots/attendance_light.png",
-      text: "Punches from your Hikvision and ZKTeco terminals stream in directly over your local clinic network. The system automatically tags punctuality status, calculates overtime hours, and records verification methods (Face, Fingerprint, RFID).",
-      callouts: [
-        { title: "Hardware Verification Type", desc: "Distinguishes facial scan, fingerprint, and card punch." },
-        { title: "Automated Status Tagging", desc: "On-Time, Late, Half-Day, or Absent calculated against clinic shift times." },
-        { title: "Zero Manual Re-typing", desc: "Eliminates USB flash drives and manual Excel data entry entirely." }
+      desc: "Live stream of incoming clock-ins from wall-mounted terminals at the dental reception and staff room. Automatic status detection (On-Time, Late, Half-Day) against custom clinic shifts.",
+      features: [
+        "180ms Latency Hardware Push directly over clinic LAN (No USB flash drives)",
+        "Biometric Method Tagging (Facial recognition, fingerprint, RFID card)",
+        "Auto-calculation of overtime hours and grace period compliance"
+      ]
+    },
+    reports: {
+      title: "Central Bank EPF Form C3 & Regulatory Archive",
+      badge: "EPF FORM C3 & ETF 3%",
+      img: "/marketing/assets/screenshots/reports_light.png",
+      desc: "Produce Central Bank of Sri Lanka EPF Form C3 electronic submission files compatible with Commercial Bank, BOC, and Sampath Bank corporate payment portals.",
+      features: [
+        "Certified 8% + 12% EPF and 3% ETF statutory mathematical formatting",
+        "Multi-period historical wage comparisons and staff headcount audits",
+        "Full tamper-proof audit trails for Department of Labour inspections"
       ]
     },
     dashboard: {
-      title: "Live Clinic Command & Shift Roster",
+      title: "Live Dental Surgery Command Dashboard",
       badge: "CLINIC COMMAND",
-      url: "medsync.app/dashboard · Live Operational Overview",
       img: "/marketing/assets/screenshots/dashboard_light.png",
-      text: "Gain complete visibility over your clinical staff at a glance. See who is currently on-duty, who is on approved leave, and monitor monthly payroll pool projections in real time.",
-      callouts: [
-        { title: "Live Roster Headcount", desc: "Instant visibility of nurses, doctors, and dispensary staff on shift." },
-        { title: "Punctuality Analytics", desc: "Monthly punctuality percentage and attendance rate tracking." },
-        { title: "Leave Conflict Detection", desc: "Prevents understaffing critical emergency and outpatient stations." }
+      desc: "Instant operational command over all clinical staff, on-duty surgeons, chairside assistants, and approved leaves across your practice.",
+      features: [
+        "Live on-duty status indicators for dental assistants and receptionists",
+        "Monthly punctuality rate tracking and real-time biometric heartbeat",
+        "Statutory payroll pool projections updated with every incoming punch"
+      ]
+    },
+    hours: {
+      title: "Split-Shift & Weekend Clinic Rostering",
+      badge: "OPERATING HOURS ENGINE",
+      img: "/marketing/assets/screenshots/settings_operating_hours_light.png",
+      desc: "Configure morning OPD sessions, evening doctor appointments, and Sunday emergency clinics. Set personalized schedules for part-time specialists and visiting surgeons.",
+      features: [
+        "Independent weekday, Saturday, and Sunday shift operating windows",
+        "15-minute punctuality grace periods before overtime counts",
+        "Per-employee custom schedule overrides for visiting consultants"
       ]
     },
     salary: {
-      title: "Statutory EPF, ETF & Overtime Multipliers",
-      badge: "COMPLIANCE CONFIGURATION",
-      url: "medsync.app/settings · Salary & Statutory Rules",
+      title: "Statutory Sri Lankan Rates & EPF Configuration",
+      badge: "CENTRAL BANK COMPLIANCE",
       img: "/marketing/assets/screenshots/settings_salary_light.png",
-      text: "Configure statutory rates to match Sri Lankan legal requirements. Set EPF to employee 8% / employer 12%, ETF to 3%, define overtime grace windows, and set custom hourly divisors.",
-      callouts: [
-        { title: "Statutory 8/12/3 Engine", desc: "Strict adherence to Central Bank and Labour Department formulas." },
-        { title: "Overtime Grace Windows", desc: "Set 15 or 30-minute buffers before overtime starts counting." },
-        { title: "Poya & Holiday Rates", desc: "Automated 1.5x and 2.0x multipliers for gazetted public holidays." }
-      ]
-    },
-    biometric: {
-      title: "Hikvision DS-K1T Terminal Configuration",
-      badge: "HARDWARE FLEET",
-      url: "medsync.app/settings · Biometric Device Fleet",
-      img: "/marketing/assets/screenshots/settings_biometric_light.png",
-      text: "Manage all wall-mounted terminals across your practice. Enter the local IP address, port, and credentials. MedSync connects over local LAN to pull punch records and push staff biometric IDs.",
-      callouts: [
-        { title: "Local LAN ISAPI Streaming", desc: "Direct HTTP event streaming without intermediary cloud latency." },
-        { title: "Multi-Terminal Support", desc: "Coordinate devices at main entrance, operation theatre, and pharmacy." },
-        { title: "Offline Resilience Buffer", desc: "Terminals preserve punches in internal memory during power drops." }
+      desc: "Centralized statutory rules strictly adherent to Sri Lankan labour laws. Configure employee EPF rate (8%), employer EPF rate (12%), ETF rate (3%), and gazetted holiday multipliers.",
+      features: [
+        "Pre-loaded Sri Lankan Poya Days & Gazette Mercantile Holidays",
+        "Automatic 1.5x regular overtime and 2.0x holiday emergency rates",
+        "Inland Revenue APIT withholding slabs calculation"
       ]
     }
   };
 
-  const tourNavItems = document.querySelectorAll('.tour-nav-item');
-  const tourMainImage = document.getElementById('tourMainImage');
-  const tourCaptionTitle = document.getElementById('tourCaptionTitle');
-  const tourCaptionBadge = document.getElementById('tourCaptionBadge');
-  const tourCaptionText = document.getElementById('tourCaptionText');
-  const tourScreenTitle = document.getElementById('tourScreenTitle');
-  const tourCalloutGrid = document.getElementById('tourCalloutGrid');
+  const tourTabBtns = document.querySelectorAll('.tour-tab-btn');
+  const tourTitle = document.getElementById('tourTitle');
+  const tourBadge = document.getElementById('tourBadge');
+  const tourImg = document.getElementById('tourImg');
+  const tourDesc = document.getElementById('tourDesc');
+  const tourFeatureList = document.getElementById('tourFeatureList');
 
-  tourNavItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const screenKey = item.getAttribute('data-screen');
-      const data = screenData[screenKey];
-      if (!data) return;
+  function renderTour(key) {
+    const s = tourScreens[key];
+    if (!s) return;
 
-      tourNavItems.forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-
-      tourMainImage.src = data.img;
-      tourCaptionTitle.textContent = data.title;
-      tourCaptionBadge.textContent = data.badge;
-      tourCaptionText.textContent = data.text;
-      tourScreenTitle.textContent = data.url;
-
-      tourCalloutGrid.innerHTML = data.callouts.map(c => `
-        <div class="tour-callout-item">
-          <strong>${c.title}</strong>
-          <p>${c.desc}</p>
-        </div>
+    if (tourTitle) tourTitle.textContent = s.title;
+    if (tourBadge) tourBadge.textContent = s.badge;
+    if (tourDesc) tourDesc.textContent = s.desc;
+    if (tourImg) {
+      tourImg.style.opacity = '0';
+      setTimeout(() => {
+        tourImg.src = s.img;
+        tourImg.style.opacity = '1';
+      }, 150);
+    }
+    if (tourFeatureList) {
+      tourFeatureList.innerHTML = s.features.map(f => `
+        <li class="tour-feature-item">
+          <svg class="tour-check-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          <span>${f}</span>
+        </li>
       `).join('');
+    }
+  }
+
+  tourTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tourTabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const screenKey = btn.getAttribute('data-screen');
+      renderTour(screenKey);
     });
   });
 
   // =========================================================================
-  // 3. Consultation & Walkthrough Modal
+  // 3. Demo Walkthrough Modal
   // =========================================================================
-  const demoModal = document.getElementById('demoModal');
   const openModalBtns = document.querySelectorAll('.open-demo-modal');
+  const modalOverlay = document.getElementById('demoModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
-  const demoForm = document.getElementById('demoRequestForm');
+  const demoForm = document.getElementById('demoAuditForm');
+  const modalSuccessMsg = document.getElementById('modalSuccessMsg');
 
   openModalBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      demoModal.classList.add('active');
+      if (modalOverlay) modalOverlay.classList.add('active');
     });
   });
 
-  if (closeModalBtn) {
+  if (closeModalBtn && modalOverlay) {
     closeModalBtn.addEventListener('click', () => {
-      demoModal.classList.remove('active');
+      modalOverlay.classList.remove('active');
     });
-  }
-
-  if (demoModal) {
-    demoModal.addEventListener('click', (e) => {
-      if (e.target === demoModal) demoModal.classList.remove('active');
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) modalOverlay.classList.remove('active');
     });
   }
 
   if (demoForm) {
     demoForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const clinicName = document.getElementById('modalClinicName').value;
-      alert(`Thank you. A Code Knox clinical systems specialist has received your request for "${clinicName}". We will contact you within 2 business hours to schedule your live walkthrough.`);
-      demoModal.classList.remove('active');
-      demoForm.reset();
+      demoForm.style.display = 'none';
+      if (modalSuccessMsg) modalSuccessMsg.style.display = 'block';
     });
   }
+
+  // Default initialization
+  renderStaffData('assistant');
+  renderTour('payroll');
 });
