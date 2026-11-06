@@ -1406,16 +1406,30 @@ export default function Home() {
 
   // Payroll calculations with per-employee allowances, auto no-pay, auto APIT
   // Only employees who actually worked / had activity in this cycle are included to ensure accurate reports & remittances
-  const payrollCalcs = useMemo(() => {
+  const calculateMonthPayroll = useCallback((targetMonth: string) => {
+    const [yearStr, monthStr] = targetMonth.split("-");
+    const year = parseInt(yearStr);
+    const monthIndex = parseInt(monthStr) - 1;
+    let rangeStart = `${yearStr}-${monthStr}-01`;
+    let rangeEnd = `${yearStr}-${monthStr}-${String(new Date(year, monthIndex + 1, 0).getDate()).padStart(2, "0")}`;
+
+    if (payrollCycleStartDay !== 1) {
+      const prev = new Date(year, monthIndex - 1, 1);
+      const pY = String(prev.getFullYear());
+      const pM = String(prev.getMonth() + 1).padStart(2, "0");
+      rangeStart = `${pY}-${pM}-${String(payrollCycleStartDay).padStart(2, "0")}`;
+      rangeEnd = `${yearStr}-${monthStr}-${String(payrollCycleStartDay - 1).padStart(2, "0")}`;
+    }
+
     const eligibleEmployees = activeEmployees.filter(emp => {
       const empLogs = attendanceLogs.filter(l => 
         (l.employeeId === emp.id || l.employeeId === emp.biometricId || (l.employee && (l.employee.id === emp.id || l.employee.biometricId === emp.biometricId))) 
-        && l.date >= dateRange.startDate 
-        && l.date <= dateRange.endDate
+        && l.date >= rangeStart 
+        && l.date <= rangeEnd
       );
       const workedSessions = empLogs.filter(l => ["On-Time", "Late", "Half-Day"].includes(l.status)).length;
       const onLeaveSessions = empLogs.filter(l => l.status === "On-Leave").length;
-      const adjKey = `${selectedMonth}_${emp.id}`;
+      const adjKey = `${targetMonth}_${emp.id}`;
       const existingAdj = manualAdjustments[adjKey];
       const hasManualAdjustment = existingAdj && (existingAdj.bonusAmount > 0 || existingAdj.deductionAmount > 0 || (monthlyExcessIncome[adjKey] || 0) > 0);
 
@@ -1425,8 +1439,8 @@ export default function Home() {
     return eligibleEmployees.map(emp => {
       const empLogs = attendanceLogs.filter(l => 
         (l.employeeId === emp.id || l.employeeId === emp.biometricId || (l.employee && (l.employee.id === emp.id || l.employee.biometricId === emp.biometricId))) 
-        && l.date >= dateRange.startDate 
-        && l.date <= dateRange.endDate
+        && l.date >= rangeStart 
+        && l.date <= rangeEnd
       );
       const sessionCount = empLogs.filter(l => ["On-Time","Late","Half-Day"].includes(l.status)).length;
       const effectiveHours = (emp.customOperatingHours && emp.customOperatingHours.length > 0)
@@ -1517,7 +1531,7 @@ export default function Home() {
         if (emp.epfEligible) epfBase += basicEarnings;
       }
 
-      const adjKey = `${selectedMonth}_${emp.id}`;
+      const adjKey = `${targetMonth}_${emp.id}`;
       const adj = manualAdjustments[adjKey] || { bonusAmount: 0, deductionAmount: 0, note: "" };
       const manualBonus = adj.bonusAmount || 0;
       const manualDeduction = adj.deductionAmount || 0;
@@ -1529,10 +1543,10 @@ export default function Home() {
 
       const workedDaysBonus = sessionCount * attBonusRate;
       const punctualDaysBonus = punctualCount * puncBonusRate;
-      const personBonusKey = `${selectedMonth}_${emp.id}`;
+      const personBonusKey = `${targetMonth}_${emp.id}`;
       const exceedIncomeBonus = monthlyExcessIncome[personBonusKey] !== undefined
         ? (monthlyExcessIncome[personBonusKey] || 0)
-        : ((monthlyExcessIncome[selectedMonth] || 0) * (incBonusPct / 100));
+        : ((monthlyExcessIncome[targetMonth] || 0) * (incBonusPct / 100));
 
       const employeeEpf = emp.epfEligible ? epfBase * (epfSettings.employeeRate/100) : 0;
       const employerEpf = emp.epfEligible ? epfBase * (epfSettings.employerRate/100) : 0;
@@ -1553,7 +1567,9 @@ export default function Home() {
         attBonusRate, puncBonusRate, incBonusPct
       };
     });
-  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, dateRange, calcApit, manualAdjustments, selectedMonth, monthlyExcessIncome, salarySettings, operatingHours, publicHolidays]);
+  }, [activeEmployees, attendanceLogs, allowances, employeeAllowances, epfSettings, payrollCycleStartDay, calcApit, manualAdjustments, monthlyExcessIncome, salarySettings, operatingHours, publicHolidays]);
+
+  const payrollCalcs = useMemo(() => calculateMonthPayroll(selectedMonth), [calculateMonthPayroll, selectedMonth]);
 
   const payrollTotals = useMemo(() => payrollCalcs.reduce((t,c) => ({ gross:t.gross+c.grossEarnings, net:t.net+c.netSalary, epfEmp:t.epfEmp+c.employeeEpf, epfEmr:t.epfEmr+c.employerEpf, etf:t.etf+c.employerEtf, apit:t.apit+c.apitMonthly }), {gross:0,net:0,epfEmp:0,epfEmr:0,etf:0,apit:0}), [payrollCalcs]);
 
@@ -1605,19 +1621,27 @@ export default function Home() {
     const blob = new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`attendance_${selectedMonth}.csv`; a.click(); URL.revokeObjectURL(url);
   };
 
-  const downloadPayrollCSV = () => {
+  const downloadPayrollCSV = (targetMonth?: string | React.MouseEvent) => {
+    const month = typeof targetMonth === "string" ? targetMonth : selectedMonth;
+    const calcs = month === selectedMonth ? payrollCalcs : calculateMonthPayroll(month);
     const rows = [["Employee","Role","Pay Type","Basic","OT","Allowances","No-Pay Deduction","EPF(8%)","APIT","Net Salary"]];
-    payrollCalcs.forEach(c => rows.push([`${c.employee.firstName} ${c.employee.lastName}`,c.employee.role,c.employee.payType,String(c.basicEarnings),String(c.otPay),String(c.totalAllowances),String(Math.round(c.noPayDeduction)),String(Math.round(c.employeeEpf)),String(Math.round(c.apitMonthly)),String(Math.round(c.netSalary))]));
-    const csv=rows.map(r=>r.join(",")).join("\n"); const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`payroll_${selectedMonth}.csv`; a.click(); URL.revokeObjectURL(url);
+    calcs.forEach(c => rows.push([`${c.employee.firstName} ${c.employee.lastName}`,c.employee.role,c.employee.payType,String(c.basicEarnings),String(c.otPay),String(c.totalAllowances),String(Math.round(c.noPayDeduction)),String(Math.round(c.employeeEpf)),String(Math.round(c.apitMonthly)),String(Math.round(c.netSalary))]));
+    const csv=rows.map(r=>r.join(",")).join("\n"); const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`payroll_${month}.csv`; a.click(); URL.revokeObjectURL(url);
   };
 
-  const downloadEpfFormC = () => {
+  const downloadEpfFormC = (targetMonth?: string | React.MouseEvent) => {
+    const month = typeof targetMonth === "string" ? targetMonth : selectedMonth;
+    const calcs = month === selectedMonth ? payrollCalcs : calculateMonthPayroll(month);
+    const epfEmpTotal = calcs.reduce((s, c) => s + c.employeeEpf, 0);
+    const epfEmrTotal = calcs.reduce((s, c) => s + c.employerEpf, 0);
+    const etfTotal = calcs.reduce((s, c) => s + c.employerEtf, 0);
+
     let content = "CENTRAL BANK OF SRI LANKA — EPF FORM C3\n";
-    content += `PERIOD: ${selectedMonth} | EMPLOYEE EPF: ${epfSettings.employeeRate}% | EMPLOYER EPF: ${epfSettings.employerRate}%\n`;
+    content += `PERIOD: ${month} | EMPLOYEE EPF: ${epfSettings.employeeRate}% | EMPLOYER EPF: ${epfSettings.employerRate}%\n`;
     content += "=========================================================================\n";
     content += "Member ID | Employee Name            | Basic Salary | Member Share | Employer Share\n";
     content += "-------------------------------------------------------------------------\n";
-    payrollCalcs.forEach(c => {
+    calcs.forEach(c => {
       if (!c.employee.epfEligible) return;
       const name = `${c.employee.firstName} ${c.employee.lastName}`.padEnd(24);
       const epfId = c.employee.biometricId.padStart(9, "0");
@@ -1627,13 +1651,13 @@ export default function Home() {
       content += `${epfId} | ${name} | ${basic} | ${empShare} | ${emrShare}\n`;
     });
     content += "=========================================================================\n";
-    content += `Total Employee Contribution : LKR ${Math.round(payrollTotals.epfEmp).toLocaleString()}\n`;
-    content += `Total Employer Contribution : LKR ${Math.round(payrollTotals.epfEmr).toLocaleString()}\n`;
-    content += `Total ETF Contribution (3%) : LKR ${Math.round(payrollTotals.etf).toLocaleString()}\n`;
+    content += `Total Employee Contribution : LKR ${Math.round(epfEmpTotal).toLocaleString()}\n`;
+    content += `Total Employer Contribution : LKR ${Math.round(epfEmrTotal).toLocaleString()}\n`;
+    content += `Total ETF Contribution (3%) : LKR ${Math.round(etfTotal).toLocaleString()}\n`;
     const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `EPF_Form_C3_${selectedMonth}.txt`; a.click();
+    a.href = url; a.download = `EPF_Form_C3_${month}.txt`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -9816,6 +9840,8 @@ export default function Home() {
         const period = payrollHistory.find(p => p.id === selectedHistoryPeriodId);
         if (!period) return null;
 
+        const periodCalcs = calculateMonthPayroll(period.month);
+
         return (
           <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 animate-in fade-in ${isDark ? "bg-zinc-950/80" : "bg-slate-900/50"}`}>
             <div className="absolute inset-0" onClick={() => setSelectedHistoryPeriodId(null)} />
@@ -9831,7 +9857,7 @@ export default function Home() {
                       <h3 className={`text-base font-extrabold ${isDark ? "text-white" : "text-zinc-900"}`}>{period.label} Payroll Summary</h3>
                       <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${statusColor(period.status, isDark)}`}>{period.status}</span>
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">Finalized on <span className="font-mono">{period.finalizedAt}</span> · {period.employeeCount || activeEmployees.length} Staff Members</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">Finalized on <span className="font-mono">{period.finalizedAt}</span> · {period.employeeCount || periodCalcs.length} Staff Members Active</p>
                   </div>
                 </div>
                 <button
@@ -9885,22 +9911,30 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className={`divide-y ${isDark ? "divide-zinc-800/60" : "divide-zinc-100"}`}>
-                          {activeEmployees.map(emp => {
-                            const base = emp.basicSalary || (emp.sessionRate * 15) || 50000;
-                            const allw = emp.allowanceIds.length * 8000;
-                            const epf = emp.epfEligible ? Math.round(base * 0.08) : 0;
-                            const net = base + allw - epf;
-                            return (
-                              <tr key={emp.id} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-zinc-50"}>
-                                <td className="py-2.5 px-3 font-semibold">{emp.firstName} {emp.lastName}</td>
-                                <td className="py-2.5 px-3 text-zinc-400">{emp.role}</td>
-                                <td className="py-2.5 px-3 text-right font-mono">LKR {base.toLocaleString()}</td>
-                                <td className="py-2.5 px-3 text-right font-mono text-emerald-500">+LKR {allw.toLocaleString()}</td>
-                                <td className="py-2.5 px-3 text-right font-mono text-zinc-400">{epf ? `-LKR ${epf.toLocaleString()}` : "Exempt"}</td>
-                                <td className="py-2.5 px-3 text-right font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]">LKR {net.toLocaleString()}</td>
+                          {periodCalcs.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="py-6 text-center text-zinc-400 text-xs">
+                                No staff members had active attendance or earnings recorded in this period.
+                              </td>
+                            </tr>
+                          ) : (
+                            periodCalcs.map(calc => (
+                              <tr key={calc.employee.id} className={isDark ? "hover:bg-zinc-800/30" : "hover:bg-zinc-50"}>
+                                <td className="py-2.5 px-3 font-semibold">{calc.employee.firstName} {calc.employee.lastName}</td>
+                                <td className="py-2.5 px-3 text-zinc-400">{calc.employee.role}</td>
+                                <td className="py-2.5 px-3 text-right font-mono">LKR {calc.basicEarnings.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right font-mono text-emerald-500">
+                                  {calc.totalAllowances > 0 ? `+LKR ${calc.totalAllowances.toLocaleString()}` : "LKR 0"}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono text-zinc-400">
+                                  {calc.employeeEpf > 0 ? `-LKR ${Math.round(calc.employeeEpf).toLocaleString()}` : "Exempt"}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-[#0F85B0] dark:text-[#38bdf8]">
+                                  LKR {Math.round(calc.netSalary).toLocaleString()}
+                                </td>
                               </tr>
-                            );
-                          })}
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -9911,11 +9945,11 @@ export default function Home() {
               {/* Footer Actions */}
               <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-200 dark:border-zinc-800">
                 <div className="flex gap-2">
-                  <button onClick={downloadPayrollCSV} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={() => downloadPayrollCSV(period.month)} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>Export Period CSV</span>
                   </button>
-                  <button onClick={downloadEpfFormC} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
+                  <button onClick={() => downloadEpfFormC(period.month)} className={`px-3.5 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition ${isDark ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm"}`}>
                     <Icons.Download className="w-3.5 h-3.5" />
                     <span>EPF Form C3</span>
                   </button>
