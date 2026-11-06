@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
         destination: "/marketing/index.html",
       },
       {
+        source: "/styles.css",
+        destination: "/marketing/styles.css",
+      },
+      {
+        source: "/app.js",
+        destination: "/marketing/app.js",
+      },
+      {
         source: "/ISUP/:path*",
         destination: "/api/biometric/hikvision",
       },

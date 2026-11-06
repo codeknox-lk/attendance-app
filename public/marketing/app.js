@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
       title: "Automated Sri Lankan Payroll & Audit Locking",
       badge: "STATUTORY AUDIT ENGINE",
       url: "medsync.app/payroll · Finalized Payroll Period",
-      img: "assets/screenshots/payroll_finalized_light.png",
+      img: "/marketing/assets/screenshots/payroll_finalized_light.png",
       text: "MedSync aggregates raw terminal logs, calculates base pay, overtime, punctuality bonuses, and calculates Employee EPF (8%), Employer EPF (12%), and Employer ETF (3%). Clicking 'Finalize Month' permanently seals the period with cryptographic protection.",
       callouts: [
         { title: "Permanent Lock State", desc: "Prevents post-payout edits or accidental spreadsheet corruption." },
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
       title: "Audit Statements, Payslips & Central Bank C3",
       badge: "HISTORICAL ARCHIVE & C3",
       url: "medsync.app/reports · Statutory Reports & Export",
-      img: "assets/screenshots/reports_light.png",
+      img: "/marketing/assets/screenshots/reports_light.png",
       text: "Every finalized month produces an immutable compliance archive. Generate individual PDF payslips with official clinic stamp, export the Central Bank EPF Form C3, and view multi-month salary comparisons.",
       callouts: [
         { title: "Electronic Form C3", desc: "Meets exact specifications of Sri Lankan commercial bank portals." },
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
       title: "Real-Time Biometric Punch Stream",
       badge: "TERMINAL SYNCHRONIZATION",
       url: "medsync.app/attendance · Live Biometric Stream",
-      img: "assets/screenshots/attendance_light.png",
+      img: "/marketing/assets/screenshots/attendance_light.png",
       text: "Punches from your Hikvision and ZKTeco terminals stream in directly over your local clinic network. The system automatically tags punctuality status, calculates overtime hours, and records verification methods (Face, Fingerprint, RFID).",
       callouts: [
         { title: "Hardware Verification Type", desc: "Distinguishes facial scan, fingerprint, and card punch." },
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
       title: "Live Clinic Command & Shift Roster",
       badge: "CLINIC COMMAND",
       url: "medsync.app/dashboard · Live Operational Overview",
-      img: "assets/screenshots/dashboard_light.png",
+      img: "/marketing/assets/screenshots/dashboard_light.png",
       text: "Gain complete visibility over your clinical staff at a glance. See who is currently on-duty, who is on approved leave, and monitor monthly payroll pool projections in real time.",
       callouts: [
         { title: "Live Roster Headcount", desc: "Instant visibility of nurses, doctors, and dispensary staff on shift." },
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
       title: "Statutory EPF, ETF & Overtime Multipliers",
       badge: "COMPLIANCE CONFIGURATION",
       url: "medsync.app/settings · Salary & Statutory Rules",
-      img: "assets/screenshots/settings_salary_light.png",
+      img: "/marketing/assets/screenshots/settings_salary_light.png",
       text: "Configure statutory rates to match Sri Lankan legal requirements. Set EPF to employee 8% / employer 12%, ETF to 3%, define overtime grace windows, and set custom hourly divisors.",
       callouts: [
         { title: "Statutory 8/12/3 Engine", desc: "Strict adherence to Central Bank and Labour Department formulas." },
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
       title: "Hikvision DS-K1T Terminal Configuration",
       badge: "HARDWARE FLEET",
       url: "medsync.app/settings · Biometric Device Fleet",
-      img: "assets/screenshots/settings_biometric_light.png",
+      img: "/marketing/assets/screenshots/settings_biometric_light.png",
       text: "Manage all wall-mounted terminals across your practice. Enter the local IP address, port, and credentials. MedSync connects over local LAN to pull punch records and push staff biometric IDs.",
       callouts: [
         { title: "Local LAN ISAPI Streaming", desc: "Direct HTTP event streaming without intermediary cloud latency." },
