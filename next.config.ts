@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        source: "/marketing",
+        destination: "/marketing/index.html",
+      },
+      {
         source: "/ISUP/:path*",
         destination: "/api/biometric/hikvision",
       },

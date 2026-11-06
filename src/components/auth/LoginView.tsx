@@ -525,7 +525,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </button>
               </div>
 
-              <div className="flex items-center justify-between w-full text-[12px] px-1 pt-1">
+              <div className="flex items-center justify-between w-full text-[12px] px-1 pt-1 gap-2">
+                <a
+                  href="/marketing"
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 font-medium flex items-center gap-1 cursor-pointer hover:underline"
+                >
+                  <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span>Marketing Site</span>
+                </a>
+
                 <button
                   type="button"
                   onClick={() => setShowGuideModal(true)}
@@ -534,7 +544,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <svg className="w-3.5 h-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>Setup Guide &amp; Demo Info</span>
+                  <span>Guide</span>
                 </button>
 
                 <button
@@ -551,7 +561,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   }}
                   className="font-bold text-[#0F85B0] dark:text-[#38bdf8] hover:underline cursor-pointer flex items-center gap-1"
                 >
-                  <span>Register Clinic</span>
+                  <span>Register</span>
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
